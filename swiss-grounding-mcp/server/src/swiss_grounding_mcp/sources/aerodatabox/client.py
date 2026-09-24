@@ -51,12 +51,18 @@ class AerodataboxClient:
                 f"AeroDataBox returned HTTP {response.status_code}: {response.text[:200]}"
             )
 
-        try:
-            body = response.json()
-        except ValueError as exc:
-            raise AerodataboxSourceError(
-                f"AeroDataBox returned an unparsable response: {exc}"
-            ) from exc
+        # AeroDataBox returns HTTP 204 with an empty body for "no matching
+        # flight", not a 2xx with an empty array/object. This is a valid
+        # "no match" result, not a provider failure.
+        if response.status_code == 204 or not response.content:
+            body = None
+        else:
+            try:
+                body = response.json()
+            except ValueError as exc:
+                raise AerodataboxSourceError(
+                    f"AeroDataBox returned an unparsable response: {exc}"
+                ) from exc
 
         self._cache[cache_key] = (time.monotonic(), body)
         return body

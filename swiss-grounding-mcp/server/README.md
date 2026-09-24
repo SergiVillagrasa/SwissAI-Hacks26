@@ -258,3 +258,7 @@ uv run pytest -v
   (e.g. tomorrow's timetable), which was the reason this module was
   switched from an earlier provider (Aviationstack) whose free tier
   could not filter by date at all.
+- **Confirmed via live testing:** AeroDataBox returns `HTTP 204` with an
+  empty body for "no matching flight" on the flight-by-number endpoint,
+  rather than `200` with an empty array. The client treats this as a
+  valid "no match" (`insufficient_evidence`), not a provider failure.

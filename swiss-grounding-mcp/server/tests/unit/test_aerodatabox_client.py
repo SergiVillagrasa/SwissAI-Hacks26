@@ -63,6 +63,18 @@ def test_get_flight_by_number_empty_array_does_not_raise():
     assert client.get_flight_by_number("XX9999", "2026-09-25") == []
 
 
+def test_get_flight_by_number_204_no_content_returns_empty_list_not_error():
+    # Confirmed live: AeroDataBox returns HTTP 204 with an empty body for
+    # "no such flight", not a 200 with an empty array. This must be
+    # treated as "no match", not a provider failure.
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(204, content=b"")
+
+    client = _client_with_transport(handler)
+
+    assert client.get_flight_by_number("ZZ9999", "2026-09-25") == []
+
+
 def test_get_airport_flights_sends_correct_path_and_query():
     seen = {}
 
