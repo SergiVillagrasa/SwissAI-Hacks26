@@ -201,6 +201,46 @@ cd swiss-grounding-mcp/server
 uv run pytest -v
 ```
 
+## Voice assistant
+
+`voice_assistant.py` is a hands-free conversational front end over all
+seven tools: microphone -> ElevenLabs Scribe STT -> intent routing -> tool
+call -> spoken summary -> ElevenLabs TTS -> speaker, looping until you say
+goodbye.
+
+```bash
+cd swiss-grounding-mcp/server
+uv pip install --python .venv/Scripts/python.exe elevenlabs sounddevice soundfile numpy  # or: uv sync --group voice
+./.venv/Scripts/python voice_assistant.py              # voice loop (needs ELEVENLABS_API_KEY in .env)
+./.venv/Scripts/python voice_assistant.py --text       # type instead of speaking
+./.venv/Scripts/python voice_assistant.py --mute       # print answers, skip TTS
+./.venv/Scripts/python voice_assistant.py --self-test  # mock end-to-end check, no mic needed
+./.venv/Scripts/python voice_assistant.py --list-devices
+```
+
+Understands English, German, and French phrasings for connections
+("Bern to Zurich", "Bern nach Zürich"), station boards ("departures from
+Zurich HB"), disruptions, flight numbers ("LX14"), airport guidance, and
+flight-to-train connections. `ELEVENLABS_API_KEY` (or `ELEVEN_LABS_API_KEY`)
+is read from `.env`/`.env.local`; `ELEVENLABS_VOICE_ID` overrides the
+default voice.
+
+### Conversational brain
+
+The assistant maintains full chat history and supports multi-turn
+clarification ("Zurich" → "do you want departures or a connection?" →
+"to Geneva" → `find_connections`). With an LLM key it uses real function
+calling over all seven tools; without one it falls back to a deterministic
+router with the same multi-turn memory:
+
+```bash
+OPENAI_API_KEY=...          # gpt-4o-mini (OPENAI_MODEL/OPENAI_BASE_URL override)
+GROQ_API_KEY=...            # or Groq (llama-3.3-70b-versatile)
+OPENROUTER_API_KEY=...      # or OpenRouter (openai/gpt-4o-mini)
+```
+
+Add any one to `.env`; the active brain is printed at startup.
+
 ## Manual verification checklist
 
 1. Start the server: `uv run swiss-grounding-mcp`. In another terminal, run

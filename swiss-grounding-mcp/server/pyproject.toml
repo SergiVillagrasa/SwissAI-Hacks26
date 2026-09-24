@@ -22,6 +22,13 @@ packages = ["src/swiss_grounding_mcp"]
 
 [dependency-groups]
 dev = ["pytest>=8.0"]
+voice = [
+    "elevenlabs>=2.69",
+    "sounddevice>=0.5",
+    "soundfile>=0.14",
+    "numpy>=2.0",
+    "openai>=1.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
