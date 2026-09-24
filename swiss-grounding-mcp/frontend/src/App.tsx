@@ -11,7 +11,7 @@ export interface Turn {
   widgets: WidgetEvent[];
 }
 
-const BACKEND_URL = import.meta.env.VITE_AGENT_BACKEND_URL ?? "http://127.0.0.1:8080";
+const BACKEND_URL = import.meta.env.VITE_AGENT_BACKEND_URL ?? "http://127.0.0.1:3001";
 
 function makeId(): string {
   return Math.random().toString(36).slice(2);
@@ -61,7 +61,7 @@ export default function App() {
         }
       }
       setHistory((current) => [...current, { role: "assistant", content: assistantText }]);
-    } catch (error) {
+    } catch {
       setTurns((current) =>
         current.map((turn) =>
           turn.id === assistantTurn.id

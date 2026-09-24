@@ -3,6 +3,12 @@
   "private": true,
   "scripts": {
     "dev:web": "npm --prefix frontend run dev -- --port 3000",
-    "dev:api": "cd agent-backend && uv run uvicorn agent_backend.main:app --reload --port 3001"
+    "dev:api": "cd agent-backend && .venv\\Scripts\\python.exe -m uvicorn agent_backend.main:app --reload --port 3001",
+    "dev:mcp": "cd server && .venv\\Scripts\\python.exe -m swiss_grounding_mcp.server --transport streamable-http --port 8000",
+    "dev:voice": "cd server && .venv\\Scripts\\python.exe voice_assistant.py",
+    "test:server": "cd server && .venv\\Scripts\\python.exe -m pytest tests",
+    "test:api": "cd agent-backend && .venv\\Scripts\\python.exe -m pytest tests",
+    "test:web": "npm --prefix frontend run test",
+    "test:all": "npm run test:server && npm run test:api && npm run test:web"
   }
 }

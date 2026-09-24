@@ -9,7 +9,9 @@ def test_health_endpoint_returns_ok():
     response = client.get("/api/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    body = response.json()
+    assert body["status"] == "ok"
+    assert isinstance(body["openai_configured"], bool)
 
 
 def test_cors_allows_every_configured_origin_not_just_the_first():
@@ -77,3 +79,21 @@ def test_chat_endpoint_streams_events_from_run_chat(monkeypatch):
     assert response.headers["content-type"].startswith("text/event-stream")
     assert 'data: {"type": "token", "text": "hello"}' in response.text
     assert 'data: {"type": "done"}' in response.text
+
+
+def test_chat_endpoint_reports_missing_openai_key(monkeypatch):
+    # Without a usable OpenAI key the app still serves a clean error
+    # event instead of crashing at import or mid-request.
+    monkeypatch.setattr(main_module, "_openai_client", None)
+
+    client = TestClient(main_module.app)
+    response = client.post("/api/chat", json={"messages": [{"role": "user", "content": "hi"}]})
+
+    assert response.status_code == 200
+    assert '"status": "source_error"' in response.text
+    assert "OPENAI_API_KEY" in response.text
+    assert 'data: {"type": "done"}' in response.text
+
+
+def test_build_openai_client_returns_none_without_key():
+    assert main_module._build_openai_client("") is None

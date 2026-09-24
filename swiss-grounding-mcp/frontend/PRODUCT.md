@@ -32,7 +32,7 @@ structured, verifiable widgets rather than free-form generated text.
 ## Operating Context
 
 - Requires the companion `agent-backend` service running locally (SSE chat
-  stream at `VITE_AGENT_BACKEND_URL`, default `http://127.0.0.1:8080`).
+  stream at `VITE_AGENT_BACKEND_URL`, default `http://127.0.0.1:3001`).
 - Route maps use Mapbox GL (`VITE_MAPBOX_TOKEN`); map widget degrades to a
   text fallback when unavailable.
 - Widgets carry provenance/source links back to the origin data source.

@@ -20,8 +20,14 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/swiss_grounding_mcp"]
 
+[tool.uv]
+# The shared dev venv is also the voice/eval runtime; keeping all groups in
+# the default set stops `uv sync`/`uv run` from pruning them.
+default-groups = ["dev", "eval", "voice"]
+
 [dependency-groups]
 dev = ["pytest>=8.0"]
+eval = ["galtea>=5.4,<6"]
 voice = [
     "elevenlabs>=2.69",
     "sounddevice>=0.5",
