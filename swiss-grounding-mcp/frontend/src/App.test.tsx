@@ -26,7 +26,7 @@ describe("App", () => {
   it("collapses the hero and renders the streamed reply after submitting", async () => {
     const frames = [
       'data: {"type": "token", "text": "Here is what I found."}\n\n',
-      'data: {"type": "widget", "tool": "find_connections", "status": "ok", "data": {"connections": []}}\n\n',
+      'data: {"type": "widget", "tool": "find_connections", "status": "ok", "data": {"connections": [{"departure": "2026-09-24T18:04:00Z", "arrival": "2026-09-24T18:10:00Z", "duration_minutes": 6, "changes": 0, "legs": []}]}}\n\n',
       'data: {"type": "done"}\n\n',
     ];
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(fakeStreamResponse(frames)));
@@ -40,7 +40,7 @@ describe("App", () => {
     await waitFor(() =>
       expect(screen.getByText("Here is what I found.")).toBeInTheDocument()
     );
-    expect(screen.getByTestId("widget-find_connections")).toBeInTheDocument();
+    expect(screen.getByText(/direct/i)).toBeInTheDocument();
   });
 
   it("re-enables the composer and shows an error turn when the stream fails", async () => {
