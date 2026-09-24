@@ -1,4 +1,4 @@
-import { ComponentType } from "react";
+import type { ComponentType } from "react";
 import { TrainConnectionsCard } from "../components/widgets/TrainConnectionsCard";
 import { StationBoardCard } from "../components/widgets/StationBoardCard";
 import { FaresCard } from "../components/widgets/FaresCard";

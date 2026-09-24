@@ -1,32 +1,31 @@
-# React + TypeScript + Vite
+# Swiss Grounding MCP — Chat Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Vite + React + TypeScript + Tailwind chat UI. Every travel-tool result
+renders as a visual widget (train connections, flights, a route map,
+station boards, fares, disruptions, airport guidance) instead of chat
+prose; every non-success tool status renders an honest status banner.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+cd swiss-grounding-mcp/frontend
+npm install
+cp .env.example .env.local
+# edit .env.local: VITE_AGENT_BACKEND_URL (defaults to http://127.0.0.1:8080)
+# and VITE_MAPBOX_TOKEN (get a free token at https://account.mapbox.com/)
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Running
+
+```bash
+npm run dev
+```
+
+Requires the agent backend (`swiss-grounding-mcp/agent-backend`) running
+at `VITE_AGENT_BACKEND_URL`.
+
+## Running the checks
+
+```bash
+npm run test
+```
