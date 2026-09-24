@@ -4,8 +4,8 @@ An MCP server that answers Swiss passenger-train connection questions using
 live data from [OJP 2.0](https://opentransportdata.swiss/en/cookbook/open-journey-planner-ojp-landing-page/)
 (`opentransportdata.swiss`, operated under a Federal Office of Transport
 mandate), and Zurich Airport (ZRH) flight and passenger-guidance questions
-using [Aviationstack](https://aviationstack.com/) and official Zurich
-Airport (`flughafen-zuerich.ch`) pages.
+using [AeroDataBox](https://aerodatabox.com/) (via RapidAPI) and official
+Zurich Airport (`flughafen-zuerich.ch`) pages.
 
 ## Declared scope
 
@@ -39,10 +39,12 @@ Airport (`flughafen-zuerich.ch`) pages.
   process, transfers, baggage, airport rail access, and flight-status
   verification; connecting a ZRH arrival to onward Swiss train travel.
 - **Geography:** Zurich Airport (ZRH / LSZH) only. Flight data covers any
-  route to/from ZRH that Aviationstack indexes.
-- **Reference period:** live/current flight data via Aviationstack. No
-  historical flight queries.
-- **Data quality note:** Aviationstack is a commercial flight-data
+  route to/from ZRH that AeroDataBox indexes.
+- **Reference period:** live and scheduled flight data via AeroDataBox,
+  including current-day and scheduled future flights (e.g. tomorrow's
+  timetable) via its dedicated flight-by-date endpoint. No historical
+  flight queries.
+- **Data quality note:** AeroDataBox is a commercial flight-data
   aggregator, not the airport operator or a Swiss aviation authority.
   Times, gates, and delays are reported only when present in the
   provider's response; the server never infers or guesses a value.
@@ -73,12 +75,21 @@ cp .env.example .env
   subscribe to the "OJP 2.0" product at
   <https://api-manager.opentransportdata.swiss/>. Free tier limits: 50
   requests/minute, 20,000/day.
-- `AVIATIONSTACK_API_KEY`: an API key for [Aviationstack](https://aviationstack.com/).
-  Sign up for the free plan (~100–500 requests/month, personal-use
-  license) or a paid plan for higher volume and a commercial license.
+- `AERODATABOX_API_KEY`: a RapidAPI key for
+  [AeroDataBox](https://rapidapi.com/aedbx-aedbx/api/aerodatabox). Sign
+  up for the free "Basic" plan (400 API units/month, 1 request/second)
+  or a paid plan ("Pro" and above) for higher volume.
   Without this key, the aviation flight-lookup and flight-search tools
   return `source_unavailable`; the airport-guidance tool still works
   (it uses static, pre-written content, not a live API call).
+  **Free-tier terms:** the "Basic" plan does not permit commercial use
+  and requires visible attribution to AeroDataBox with a link to
+  aerodatabox.com wherever the data is shown publicly (this server's
+  `provenance.source` field already reads `"AeroDataBox
+  (aerodatabox.com)"` for that purpose). For Swisscom's evaluation run,
+  or any use beyond personal development/testing, upgrade to a paid
+  plan (from ~$7.50–8/month), which lifts the commercial-use
+  restriction and makes attribution optional.
 
 No other credentials or API keys are required. The server makes no LLM
 calls itself.
@@ -207,14 +218,14 @@ uv run pytest -v
    it's out of scope.
 6. Call `find_flight_by_number` with a real ZRH flight number and
    today's or tomorrow's date; confirm an `answered` response with a
-   `provenance.source_url` under `aviationstack.com`.
+   `provenance.source_url` under `aerodatabox.com`.
 7. Call `get_airport_guidance` with `topic="transfers"`; confirm the
    `source_url` is under `flughafen-zuerich.ch`.
 8. Call `search_airport_flights` with `direction="departure"` and no
    `airport_iata`/`airport_icao`/`airline_iata`; confirm `needs_context`.
 9. Call `find_flight_by_number` with a nonexistent flight number;
    confirm `insufficient_evidence`, not a guessed answer.
-10. Temporarily set `AVIATIONSTACK_API_KEY` to an empty value and call
+10. Temporarily set `AERODATABOX_API_KEY` to an empty value and call
     `find_flight_by_number`; confirm `source_unavailable`, and that
     `get_airport_guidance` still returns `answered` (it needs no API key).
 11. Call `connect_flight_to_train` with a real flight number, date, a
@@ -230,21 +241,20 @@ uv run pytest -v
 - Station name resolution uses OJP's own fuzzy matching; extremely
   ambiguous or misspelled names may require a follow-up clarification.
 - The aviation module covers ZRH only, is backed by a third-party
-  aggregator (Aviationstack) rather than the airport operator, and does
+  aggregator (AeroDataBox) rather than the airport operator, and does
   not cover historical flights, fares, visas, or airline-specific rules.
-- The Aviationstack free tier has a small monthly request quota; the
-  client caches identical requests for `AVIATIONSTACK_CACHE_SECONDS`
-  (default 60s) to conserve it, but sustained heavy use requires a paid
-  plan.
-- **Confirmed via live testing:** Aviationstack's free-tier key rejects
-  the `flight_date` query parameter (`HTTP 403
-  function_access_restricted`); only `flight_iata`/`dep_iata`/`arr_iata`/
-  `airline_iata`/`limit` filters are permitted. `find_flight_by_number`
-  and `search_airport_flights` therefore never send `flight_date` to the
-  API — they fetch the provider's small rolling window of recent/current
-  flights for the given flight number or route and filter by date
-  client-side. If a requested date falls outside that window (in
-  practice, roughly yesterday through the very near future on the free
-  tier), the tool returns `insufficient_evidence` and says so, rather
-  than a false negative. A paid Aviationstack plan may return a wider
-  window; this design works unchanged on any plan tier.
+- The AeroDataBox free ("Basic") tier has a small monthly quota (400 API
+  units) and a 1 request/second rate limit; the client caches identical
+  requests for `AERODATABOX_CACHE_SECONDS` (default 60s) to conserve it,
+  but sustained heavy use requires a paid plan. The free tier also does
+  not permit commercial use and requires public attribution — see
+  "Required credentials" above.
+- `search_airport_flights` issues two API calls per search (AeroDataBox's
+  FIDS/airport-schedule endpoint caps each call's time range at 12
+  hours, so a full day requires two windows), which costs roughly twice
+  the API quota of a single-flight lookup.
+- AeroDataBox's flight-by-number-and-date endpoint (used by
+  `find_flight_by_number`) explicitly supports scheduled future flights
+  (e.g. tomorrow's timetable), which was the reason this module was
+  switched from an earlier provider (Aviationstack) whose free tier
+  could not filter by date at all.
