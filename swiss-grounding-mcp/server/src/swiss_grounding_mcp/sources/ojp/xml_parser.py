@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from defusedxml import ElementTree as SafeET
 
-from swiss_grounding_mcp.domain.models import Connection, Leg, StopCandidate
+from swiss_grounding_mcp.domain.models import (
+    Connection,
+    Leg,
+    StopCandidate,
+    StopEvent,
+)
 from swiss_grounding_mcp.sources.ojp.xml_builder import OJP_NS, SIRI_NS
 
 NS = {"ojp": OJP_NS, "siri": SIRI_NS}
@@ -139,3 +144,84 @@ def parse_trip_response(xml_bytes: bytes) -> list[Connection]:
         )
 
     return connections
+
+
+def _parse_iso_datetime(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _delay_minutes(planned: str | None, estimated: str | None) -> int | None:
+    planned_dt = _parse_iso_datetime(planned)
+    estimated_dt = _parse_iso_datetime(estimated)
+    if planned_dt is None or estimated_dt is None:
+        return None
+    return round((estimated_dt - planned_dt).total_seconds() / 60)
+
+
+def _call_point_names(stop_event, path: str) -> list[str]:
+    return [
+        el.text
+        for el in stop_event.findall(path, NS)
+        if el.text
+    ]
+
+
+def parse_stop_event_response(
+    xml_bytes: bytes, event_type: str = "departure"
+) -> list[StopEvent]:
+    root = SafeET.fromstring(xml_bytes)
+    events: list[StopEvent] = []
+
+    primary_tag = "ojp:ServiceDeparture" if event_type == "departure" else "ojp:ServiceArrival"
+    fallback_tag = "ojp:ServiceArrival" if event_type == "departure" else "ojp:ServiceDeparture"
+
+    for stop_event in root.findall(".//ojp:StopEvent", NS):
+        call = stop_event.find("ojp:ThisCall/ojp:CallAtStop", NS)
+        service = stop_event.find("ojp:Service", NS)
+        if call is None or service is None:
+            continue
+
+        timing = call.find(primary_tag, NS)
+        if timing is None:
+            timing = call.find(fallback_tag, NS)
+
+        planned = _text_of(timing, "ojp:TimetabledTime") if timing is not None else None
+        estimated = _text_of(timing, "ojp:EstimatedTime") if timing is not None else None
+
+        if event_type == "departure":
+            onward = _call_point_names(
+                stop_event, "ojp:OnwardCall/ojp:CallAtStop/ojp:StopPointName/ojp:Text"
+            )
+            direction = _text_of(service, "ojp:DestinationText/ojp:Text") or (
+                onward[-1] if onward else None
+            )
+        else:
+            previous = _call_point_names(
+                stop_event, "ojp:PreviousCall/ojp:CallAtStop/ojp:StopPointName/ojp:Text"
+            )
+            direction = _text_of(service, "ojp:OriginText/ojp:Text") or (
+                previous[0] if previous else None
+            )
+
+        platform = _text_of(call, "ojp:EstimatedQuay/ojp:Text") or _text_of(
+            call, "ojp:PlannedQuay/ojp:Text"
+        )
+
+        events.append(
+            StopEvent(
+                line=_text_of(service, "ojp:PublishedServiceName/ojp:Text"),
+                mode=_text_of(service, "ojp:Mode/ojp:PtMode"),
+                direction_name=direction,
+                planned_time=planned,
+                estimated_time=estimated,
+                platform=platform,
+                delay_minutes=_delay_minutes(planned, estimated),
+            )
+        )
+
+    return events

@@ -8,17 +8,18 @@ mandate).
 ## Declared scope
 
 - **Topics:** Swiss passenger-train connection lookups between two named
-  stations, for a given (optional) date/time.
+  stations, and departure/arrival boards at a named stop, for a given
+  (optional) date/time.
 - **Geography:** all stations reachable via the OJP 2.0 network (all of
   Switzerland), plus cross-border journeys where at least one end of the
   route is a Swiss station (e.g. Paris→Genève or Zürich→Milan). Purely
   foreign routes with no Swiss end are refused.
 - **Reference period:** live/current OJP timetable data at query time; no
   historical timetable queries.
-- **Out of scope:** fares, departure boards (single-stop next departures),
-  disruption/incident feeds, non-rail modes, and every other challenge
-  topic area (taxes, health insurance, waste collection, etc). Out-of-scope
-  questions get an honest "not covered" response, never a guess.
+- **Out of scope:** fares, disruption/incident feeds, non-public-transit
+  topics, and every other challenge topic area (taxes, health insurance,
+  waste collection, etc). Out-of-scope questions get an honest "not
+  covered" response, never a guess.
 - **Scope enforcement:** OJP 2.0 also indexes non-Swiss stops, which keeps
   legitimate cross-border journeys working. Both ends are resolved first;
   only when *neither* stop reference carries the Swiss `ch:` DiDok/SLOID
@@ -73,6 +74,19 @@ Output: a structured object with a `status` of `ok`, `needs_clarification`,
 `connections` (only for `ok`); `candidates` (only for `needs_clarification`);
 and a `provenance` block with source name, URL, and retrieval timestamp
 (only for `ok`).
+
+## The `get_station_board` tool
+
+Input: `station` (str), `mode` (`"departures"` default or `"arrivals"`),
+`when` (ISO 8601, optional — defaults to now), `results` (int, default 5,
+max 10).
+
+Output: same status set as `find_connections`; on `ok`, a `station_name`,
+`event_type`, and a list of `events` with `line`, `mode`,
+`direction_name` (destination for departures, origin for arrivals),
+`planned_time`, `estimated_time`, `platform`, `delay_minutes`, plus the
+`provenance` block. Foreign stations are refused as `out_of_scope`;
+departure boards exist only for the Swiss network.
 
 ## Configuration
 

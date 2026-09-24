@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OJP xmlns="http://www.vdv.de/ojp" xmlns:siri="http://www.siri.org.uk/siri" version="2.0">
+  <OJPResponse>
+    <siri:ServiceDelivery>
+      <siri:ResponseTimestamp>2026-09-24T12:00:00Z</siri:ResponseTimestamp>
+      <siri:Status>true</siri:Status>
+      <OJPStopEventDelivery>
+        <siri:ResponseTimestamp>2026-09-24T12:00:00Z</siri:ResponseTimestamp>
+        <siri:Status>true</siri:Status>
+        <StopEventResult>
+          <StopEvent>
+            <ThisCall>
+              <CallAtStop>
+                <siri:StopPointRef>ch:1:sloid:8503000</siri:StopPointRef>
+                <StopPointName><Text>Zürich HB</Text></StopPointName>
+                <PlannedQuay><Text>8</Text></PlannedQuay>
+                <EstimatedQuay><Text>9</Text></EstimatedQuay>
+                <ServiceDeparture>
+                  <TimetabledTime>2026-09-24T12:33:00Z</TimetabledTime>
+                  <EstimatedTime>2026-09-24T12:37:00Z</EstimatedTime>
+                </ServiceDeparture>
+              </CallAtStop>
+            </ThisCall>
+            <OnwardCall>
+              <CallAtStop>
+                <siri:StopPointRef>ch:1:sloid:8507000</siri:StopPointRef>
+                <StopPointName><Text>Bern</Text></StopPointName>
+              </CallAtStop>
+            </OnwardCall>
+            <OnwardCall>
+              <CallAtStop>
+                <siri:StopPointRef>ch:1:sloid:8501000</siri:StopPointRef>
+                <StopPointName><Text>Genève-Aéroport</Text></StopPointName>
+              </CallAtStop>
+            </OnwardCall>
+            <Service>
+              <OperatingDayRef>2026-09-24</OperatingDayRef>
+              <JourneyRef>ch:1:sjyid:100001:1-1</JourneyRef>
+              <Mode><PtMode>rail</PtMode></Mode>
+              <PublishedServiceName><Text>IC 1</Text></PublishedServiceName>
+              <DestinationText><Text>Genève-Aéroport</Text></DestinationText>
+            </Service>
+          </StopEvent>
+        </StopEventResult>
+        <StopEventResult>
+          <StopEvent>
+            <ThisCall>
+              <CallAtStop>
+                <siri:StopPointRef>ch:1:sloid:8503000</siri:StopPointRef>
+                <StopPointName><Text>Zürich HB</Text></StopPointName>
+                <PlannedQuay><Text>31</Text></PlannedQuay>
+                <ServiceDeparture>
+                  <TimetabledTime>2026-09-24T12:44:00Z</TimetabledTime>
+                </ServiceDeparture>
+              </CallAtStop>
+            </ThisCall>
+            <OnwardCall>
+              <CallAtStop>
+                <siri:StopPointRef>ch:1:sloid:8505000</siri:StopPointRef>
+                <StopPointName><Text>Luzern</Text></StopPointName>
+              </CallAtStop>
+            </OnwardCall>
+            <Service>
+              <OperatingDayRef>2026-09-24</OperatingDayRef>
+              <JourneyRef>ch:1:sjyid:100002:75-1</JourneyRef>
+              <Mode><PtMode>rail</PtMode></Mode>
+              <PublishedServiceName><Text>IR 75</Text></PublishedServiceName>
+            </Service>
+          </StopEvent>
+        </StopEventResult>
+      </OJPStopEventDelivery>
+    </siri:ServiceDelivery>
+  </OJPResponse>
+</OJP>
