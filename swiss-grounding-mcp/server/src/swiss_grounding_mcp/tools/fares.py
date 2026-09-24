@@ -4,8 +4,7 @@ from datetime import datetime, timezone
 from urllib.parse import quote, urlencode
 
 from swiss_grounding_mcp.config.settings import Settings
-from swiss_grounding_mcp.domain.models import FareSearchResult
-from swiss_grounding_mcp.evidence.provenance import build_provenance
+from swiss_grounding_mcp.domain.models import FareSearchResult, Provenance
 from swiss_grounding_mcp.sources.ojp.client import OjpSourceError
 from swiss_grounding_mcp.tools.resolution import is_swiss_stop, resolve_station
 
@@ -19,37 +18,55 @@ _LIVE_FARES_UNAVAILABLE_MESSAGE = (
     "due to OJP Fare Beta backend limits."
 )
 
+_NOT_FOUND_TEMPLATE = (
+    "This tool only covers the Swiss public-transport network. "
+    "The station '{}' was not found."
+)
+
 
 def build_sbb_deep_link(
-    origin: str, destination: str, date: str, time: str
+    origin: str,
+    destination: str,
+    travel_date: str | None = None,
 ) -> str:
-    """Return an SBB timetable/booking deep link for the requested journey."""
-    base_url = "https://www.sbb.ch/en/timetable.html"
-    params = {
-        "from": origin,
-        "to": destination,
-        "date": date,
-        "time": time,
+    """Return an SBB timetable deep link for the requested journey.
+
+    Only *origin* and *destination* are required.  ``travel_date`` is
+    optional (``YYYY-MM-DD``); when omitted the SBB website defaults to
+    today.
+    """
+    base_url = "https://sbb.ch/en"
+    params: dict[str, str] = {
+        "von": origin,
+        "nach": destination,
     }
+    if travel_date is not None:
+        params["date"] = travel_date
     query = urlencode(params, quote_via=quote)
     return f"{base_url}?{query}"
 
 
-def _split_departure_time(
-    departure_time: str | None,
-) -> tuple[str, str]:
-    """Return (date, time) strings suitable for the SBB deep link.
-
-    Defaults to the current UTC date/time if no departure_time is supplied.
-    """
+def _extract_date(departure_time: str | None) -> str | None:
+    """Return the ``YYYY-MM-DD`` portion of an ISO-8601 datetime, or *None*."""
     if departure_time is None:
-        dt = datetime.now(timezone.utc)
-    else:
-        try:
-            dt = datetime.fromisoformat(departure_time.replace("Z", "+00:00"))
-        except ValueError:
-            dt = datetime.now(timezone.utc)
-    return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
+        return None
+    try:
+        dt = datetime.fromisoformat(departure_time.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return dt.strftime("%Y-%m-%d")
+
+
+def _build_provenance(
+    booking_url: str,
+) -> Provenance:
+    """Build a ``Provenance`` whose ``source_url`` is the SBB deep link."""
+    return Provenance(
+        source="SBB Official / opentransportdata.swiss",
+        source_url=booking_url,
+        retrieved_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        booking_url=booking_url,
+    )
 
 
 def check_public_transport_fares(
@@ -79,6 +96,11 @@ def check_public_transport_fares(
 
     resolved_origin, failure = resolve_station(origin, origin_candidates, "origin")
     if failure is not None:
+        if failure.status == "not_found":
+            return FareSearchResult(
+                status="out_of_scope",
+                message=_NOT_FOUND_TEMPLATE.format(origin),
+            )
         return FareSearchResult(
             status="needs_clarification",
             message=failure.message,
@@ -94,24 +116,24 @@ def check_public_transport_fares(
         destination, destination_candidates, "destination"
     )
     if failure is not None:
+        if failure.status == "not_found":
+            return FareSearchResult(
+                status="out_of_scope",
+                message=_NOT_FOUND_TEMPLATE.format(destination),
+            )
         return FareSearchResult(
             status="needs_clarification",
             message=failure.message,
             candidates=failure.candidates,
         )
 
-    travel_date, travel_time = _split_departure_time(departure_time)
+    travel_date = _extract_date(departure_time)
     booking_url = build_sbb_deep_link(
         resolved_origin.name,
         resolved_destination.name,
         travel_date,
-        travel_time,
     )
-    provenance = build_provenance(
-        settings,
-        source="SBB Official / opentransportdata.swiss",
-        booking_url=booking_url,
-    )
+    provenance = _build_provenance(booking_url)
 
     if not is_swiss_stop(resolved_origin.stop_ref) or not is_swiss_stop(
         resolved_destination.stop_ref

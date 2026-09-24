@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OJP xmlns="http://www.vdv.de/ojp" version="2.0">
+  <OJPResponse>
+    <ServiceDelivery>
+      <ResponseTimestamp>2026-09-24T12:00:00Z</ResponseTimestamp>
+      <Status>true</Status>
+      <FareDelivery>
+        <FareResponse>
+          <FareResult>
+            <TripFareResult>
+              <fareProduct>
+                <Name>
+                  <Text>Single ticket</Text>
+                </Name>
+                <Price>15.50</Price>
+                <TravelClass>2</TravelClass>
+                <DiscountCard>Halbtax</DiscountCard>
+              </fareProduct>
+              <fareProduct>
+                <Name>
+                  <Text>Single ticket</Text>
+                </Name>
+                <Price>25.50</Price>
+                <TravelClass>1</TravelClass>
+                <DiscountCard>Halbtax</DiscountCard>
+              </fareProduct>
+            </TripFareResult>
+          </FareResult>
+        </FareResponse>
+      </FareDelivery>
+    </ServiceDelivery>
+  </OJPResponse>
+</OJP>
