@@ -90,6 +90,35 @@ def test_connect_flight_to_train_uses_both_clients(monkeypatch):
     assert captured["aviation_client"] is aviation_client
 
 
+def test_get_flight_fares_uses_flight_fares_client(monkeypatch):
+    captured = {}
+
+    def fake_get_flight_fares(origin_city, destination_city, outbound_date, currency, *, client, settings):
+        captured.update(
+            origin_city=origin_city, destination_city=destination_city,
+            outbound_date=outbound_date, currency=currency, client=client, settings=settings,
+        )
+        return "flight-fares-result"
+
+    monkeypatch.setattr(dispatch_module, "get_flight_fares", fake_get_flight_fares)
+
+    flight_fares_client, settings = _Sentinel(), _Sentinel()
+    result = dispatch(
+        "get_flight_fares",
+        {"origin_city": "Zurich", "destination_city": "Geneva"},
+        ojp_client=_Sentinel(), aviation_client=_Sentinel(), settings=settings,
+        flight_fares_client=flight_fares_client,
+    )
+
+    assert result == "flight-fares-result"
+    assert captured["origin_city"] == "Zurich"
+    assert captured["destination_city"] == "Geneva"
+    assert captured["outbound_date"] is None
+    assert captured["currency"] == "CHF"
+    assert captured["client"] is flight_fares_client
+    assert captured["settings"] is settings
+
+
 def test_unknown_tool_raises():
     with pytest.raises(UnknownToolError):
         dispatch("not_a_real_tool", {}, ojp_client=None, aviation_client=None, settings=None)

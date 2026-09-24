@@ -10,10 +10,10 @@ from swiss_grounding_mcp.config.settings import Settings as MCPSettings
 _SERVER_ENV_PATH = Path(__file__).resolve().parents[3] / "server" / ".env"
 _LOCAL_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 
-_DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
+_DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
 
 # Matches http(s)://localhost:<port> and http(s)://127.0.0.1:<port> for any
-# port. Dev tools (Vite's own port fallback when 5173 is busy, browser
+# port. Dev tools (Vite's own port fallback when 3000 is busy, browser
 # preview proxies, etc.) routinely serve the frontend from a port nobody
 # configured ahead of time; without this, every new port is a fresh CORS
 # rejection that has to be whitelisted by hand (see CORS_ALLOWED_ORIGIN and
@@ -50,7 +50,7 @@ class AgentSettings:
             openai_api_key=os.environ.get("OPENAI_API_KEY", ""),
             openai_model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
             host=os.environ.get("AGENT_BACKEND_HOST", "127.0.0.1"),
-            port=int(os.environ.get("AGENT_BACKEND_PORT", "8080")),
+            port=int(os.environ.get("AGENT_BACKEND_PORT", "3001")),
             cors_allowed_origin=cors_origins[0],
             cors_allowed_origins=cors_origins,
             cors_allow_any_local_port=_parse_bool(os.environ.get("CORS_ALLOW_ANY_LOCAL_PORT", "true")),

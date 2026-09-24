@@ -22,8 +22,10 @@ project's README, not here.
 ## Running
 
 ```bash
-uv run uvicorn agent_backend.main:app --reload --port 8080
+uv run uvicorn agent_backend.main:app --reload --port 3001
 ```
+
+Or, from the repository root: `make dev-api` / `npm run dev:api`.
 
 ## Endpoints
 

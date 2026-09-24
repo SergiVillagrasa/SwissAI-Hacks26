@@ -15,9 +15,10 @@ _SYSTEM_PROMPT_TEMPLATE = (
     "Friday') and pass an absolute ISO 8601 date/time to tools -- never "
     "guess a date from memory. Use the provided tools for any question "
     "about Swiss train connections, station boards, fares, disruptions, "
-    "or Zurich Airport (ZRH) flights. Never answer a travel question from "
-    "memory; always call the matching tool. For anything outside these "
-    "topics, say honestly that it is not covered. Keep your own reply to "
+    "Zurich Airport (ZRH) flights, or domestic Swiss flight fares. Never "
+    "answer a travel question from memory; always call the matching tool. "
+    "For anything outside these topics, say honestly that it is not "
+    "covered. Keep your own reply to "
     "one short sentence: the tool result is shown to the user as a "
     "visual card, so do not restate its details."
 )
@@ -33,6 +34,7 @@ def run_chat(
     aviation_client,
     settings,
     model: str,
+    flight_fares_client=None,
     now: datetime | None = None,
 ) -> Iterator[dict]:
     current_time = now or datetime.now(timezone.utc)
@@ -95,6 +97,7 @@ def run_chat(
                     ojp_client=ojp_client,
                     aviation_client=aviation_client,
                     settings=settings,
+                    flight_fares_client=flight_fares_client,
                 )
                 mapped = map_result(name, result)
             except UnknownToolError:

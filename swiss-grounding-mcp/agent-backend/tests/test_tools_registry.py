@@ -5,6 +5,7 @@ _EXPECTED_NAMES = {
     "find_disruptions",
     "get_station_board",
     "check_public_transport_fares",
+    "get_flight_fares",
     "find_flight_by_number",
     "search_airport_flights",
     "get_airport_guidance",
@@ -34,4 +35,14 @@ def test_find_connections_requires_origin_and_destination():
     assert set(schema["function"]["parameters"]["required"]) == {
         "origin",
         "destination",
+    }
+
+
+def test_get_flight_fares_requires_origin_and_destination_city():
+    schema = next(
+        s for s in TOOL_SCHEMAS if s["function"]["name"] == "get_flight_fares"
+    )
+    assert set(schema["function"]["parameters"]["required"]) == {
+        "origin_city",
+        "destination_city",
     }

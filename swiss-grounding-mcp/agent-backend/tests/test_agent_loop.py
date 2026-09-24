@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
-from swiss_grounding_mcp.domain.models import ConnectionSearchResult
+from swiss_grounding_mcp.domain.models import ConnectionSearchResult, FlightFareSearchResult
 
 from agent_backend import agent_loop
 from agent_backend.agent_loop import run_chat
@@ -76,7 +76,7 @@ def test_plain_text_reply_emits_token_then_done():
 
 
 def test_single_tool_call_emits_widget_before_final_text(monkeypatch):
-    def fake_dispatch(tool_name, arguments, *, ojp_client, aviation_client, settings):
+    def fake_dispatch(tool_name, arguments, *, ojp_client, aviation_client, settings, flight_fares_client=None):
         assert tool_name == "find_connections"
         assert arguments == {"origin": "Bern", "destination": "Zürich HB"}
         return ConnectionSearchResult(status="ok", connections=[])
@@ -103,6 +103,33 @@ def test_single_tool_call_emits_widget_before_final_text(monkeypatch):
     assert events[-1] == {"type": "done"}
     # the widget must appear before the follow-up text (ordering matters for the UI)
     assert events.index(widget_events[0]) < len(events) - 2
+
+
+def test_flight_fares_tool_call_forwards_flight_fares_client(monkeypatch):
+    def fake_dispatch(tool_name, arguments, *, ojp_client, aviation_client, settings, flight_fares_client=None):
+        assert tool_name == "get_flight_fares"
+        assert flight_fares_client == "serpapi"
+        return FlightFareSearchResult(status="ok", flights=[])
+
+    monkeypatch.setattr(agent_loop, "dispatch", fake_dispatch)
+
+    fake_openai = _FakeOpenAI([
+        _tool_call_response([
+            _tool_call("call_1", "get_flight_fares", '{"origin_city": "Zurich", "destination_city": "Geneva"}')
+        ]),
+        _text_response("Here are the fares."),
+    ])
+
+    events = list(run_chat(
+        [{"role": "user", "content": "flights from Zurich to Geneva"}],
+        openai_client=fake_openai, ojp_client="ojp", aviation_client="aviation",
+        flight_fares_client="serpapi", settings="settings", model="gpt-4o-mini",
+    ))
+
+    widget_events = [event for event in events if event["type"] == "widget"]
+    assert len(widget_events) == 1
+    assert widget_events[0]["tool"] == "get_flight_fares"
+    assert widget_events[0]["status"] == "ok"
 
 
 def test_openai_failure_emits_source_error_widget_and_done():
