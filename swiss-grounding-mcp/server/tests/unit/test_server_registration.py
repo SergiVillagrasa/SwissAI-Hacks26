@@ -25,6 +25,9 @@ class StubClient:
     def get_stop_events(self, *args, **kwargs):
         return []
 
+    def fare_request(self, *args, **kwargs):
+        return []
+
 
 def test_find_connections_tool_is_registered_and_callable(monkeypatch):
     monkeypatch.setattr(server_module, "get_client", lambda: StubClient())
@@ -35,11 +38,19 @@ def test_find_connections_tool_is_registered_and_callable(monkeypatch):
             names = [tool.name for tool in tools.tools]
             assert "find_connections" in names
             assert "get_station_board" in names
+            assert "check_public_transport_fares" in names
 
             result = await client.call_tool(
                 "find_connections", {"origin": "Bern", "destination": "Zürich HB"}
             )
             assert result.structured_content["status"] == "ok"
             assert len(result.structured_content["connections"]) == 1
+
+            fares_result = await client.call_tool(
+                "check_public_transport_fares",
+                {"origin": "Bern", "destination": "Zürich HB"},
+            )
+            assert fares_result.structured_content["status"] == "fallback_link"
+            assert "sbb.ch" in fares_result.structured_content["booking_url"]
 
     asyncio.run(run())

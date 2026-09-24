@@ -6,6 +6,7 @@ def test_defaults_when_env_empty():
 
     assert settings.ojp_api_token == ""
     assert settings.ojp_base_url == "https://api.opentransportdata.swiss/ojp20"
+    assert settings.ojp_fare_url == "https://api.opentransportdata.swiss/ojpfare/"
     assert settings.ojp_requestor_ref == "swiss-grounding-mcp"
     assert settings.ojp_timeout_seconds == 10.0
     assert settings.respect_robots_txt is True
@@ -17,6 +18,7 @@ def test_env_overrides_defaults():
     env = {
         "OJP_API_TOKEN": "secret-token",
         "OJP_BASE_URL": "https://example.test/ojp20",
+        "OJP_FARE_URL": "https://example.test/ojpfare/",
         "OJP_REQUESTOR_REF": "my-app",
         "OJP_TIMEOUT_SECONDS": "5",
         "RESPECT_ROBOTS_TXT": "false",
@@ -28,6 +30,7 @@ def test_env_overrides_defaults():
 
     assert settings.ojp_api_token == "secret-token"
     assert settings.ojp_base_url == "https://example.test/ojp20"
+    assert settings.ojp_fare_url == "https://example.test/ojpfare/"
     assert settings.ojp_requestor_ref == "my-app"
     assert settings.ojp_timeout_seconds == 5.0
     assert settings.respect_robots_txt is False

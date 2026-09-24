@@ -5,6 +5,13 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 Status = Literal["ok", "needs_clarification", "not_found", "out_of_scope", "source_error"]
+FareStatus = Literal[
+    "success",
+    "fallback_link",
+    "out_of_scope",
+    "needs_clarification",
+    "source_error",
+]
 
 
 class Leg(BaseModel):
@@ -34,6 +41,7 @@ class Provenance(BaseModel):
     source: str
     source_url: str
     retrieved_at: str
+    booking_url: str | None = None
 
 
 class ConnectionSearchResult(BaseModel):
@@ -60,5 +68,21 @@ class StationBoardResult(BaseModel):
     station_name: str | None = None
     event_type: str | None = None
     events: list[StopEvent] = Field(default_factory=list)
+    candidates: list[StopCandidate] = Field(default_factory=list)
+    provenance: Provenance | None = None
+
+
+class FareProduct(BaseModel):
+    product: str
+    price_chf: float
+    class_of_travel: str
+    discount: str | None = None
+
+
+class FareSearchResult(BaseModel):
+    status: FareStatus
+    message: str | None = None
+    fares: list[FareProduct] = Field(default_factory=list)
+    booking_url: str | None = None
     candidates: list[StopCandidate] = Field(default_factory=list)
     provenance: Provenance | None = None
