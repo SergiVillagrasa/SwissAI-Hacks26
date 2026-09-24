@@ -26,11 +26,12 @@ class Settings:
     respect_robots_txt: bool = True
     mcp_http_host: str = "127.0.0.1"
     mcp_http_port: int = 8000
-    aviationstack_api_key: str = ""
-    aviationstack_base_url: str = "https://api.aviationstack.com/v1"
-    aviationstack_timeout_seconds: float = 10.0
-    aviationstack_enable: bool = True
-    aviationstack_cache_seconds: float = 60.0
+    aerodatabox_api_key: str = ""
+    aerodatabox_host: str = "aerodatabox.p.rapidapi.com"
+    aerodatabox_base_url: str = "https://aerodatabox.p.rapidapi.com"
+    aerodatabox_timeout_seconds: float = 10.0
+    aerodatabox_enable: bool = True
+    aerodatabox_cache_seconds: float = 60.0
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "Settings":
@@ -49,24 +50,25 @@ class Settings:
             ),
             mcp_http_host=source.get("MCP_HTTP_HOST", defaults.mcp_http_host),
             mcp_http_port=int(source.get("MCP_HTTP_PORT", defaults.mcp_http_port)),
-            aviationstack_api_key=source.get(
-                "AVIATIONSTACK_API_KEY", defaults.aviationstack_api_key
+            aerodatabox_api_key=source.get(
+                "AERODATABOX_API_KEY", defaults.aerodatabox_api_key
             ),
-            aviationstack_base_url=source.get(
-                "AVIATIONSTACK_BASE_URL", defaults.aviationstack_base_url
+            aerodatabox_host=source.get("AERODATABOX_HOST", defaults.aerodatabox_host),
+            aerodatabox_base_url=source.get(
+                "AERODATABOX_BASE_URL", defaults.aerodatabox_base_url
             ),
-            aviationstack_timeout_seconds=float(
+            aerodatabox_timeout_seconds=float(
                 source.get(
-                    "AVIATIONSTACK_TIMEOUT_SECONDS", defaults.aviationstack_timeout_seconds
+                    "AERODATABOX_TIMEOUT_SECONDS", defaults.aerodatabox_timeout_seconds
                 )
             ),
-            aviationstack_enable=_parse_bool(
-                source.get("AVIATIONSTACK_ENABLE", str(defaults.aviationstack_enable)),
-                defaults.aviationstack_enable,
+            aerodatabox_enable=_parse_bool(
+                source.get("AERODATABOX_ENABLE", str(defaults.aerodatabox_enable)),
+                defaults.aerodatabox_enable,
             ),
-            aviationstack_cache_seconds=float(
+            aerodatabox_cache_seconds=float(
                 source.get(
-                    "AVIATIONSTACK_CACHE_SECONDS", defaults.aviationstack_cache_seconds
+                    "AERODATABOX_CACHE_SECONDS", defaults.aerodatabox_cache_seconds
                 )
             ),
         )
