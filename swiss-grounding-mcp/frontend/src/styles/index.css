@@ -50,6 +50,171 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* The composer pill and voice controls carry their own focus affordance
+   (glass "pop" on the pill, a themed ring on icon buttons) — the browser's
+   default focus-visible outline above duplicates/fights with it, drawing a
+   hard rectangle across a rounded pill. Quiet it here instead of globally,
+   so every other control keeps the themed default. */
+.quiet-focus-plain:focus-visible {
+  outline: none;
+}
+
+.quiet-focus:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.4);
+}
+
+/* Voice agent: a colorful, fluid glow that hugs the viewport edges while
+   listening or speaking, masked clear in the center so the conversation
+   underneath stays visible and usable. Both the glow and the mic button's
+   own pulse react to --level, the live mic/TTS amplitude (0..1). */
+.voice-border-glow {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+  pointer-events: none;
+  /* Classic vignette recipe: an ellipse sized to the box's farthest corner
+     (the default when no explicit size is given) keeps its 100%-opaque
+     stop right at the corner instead of past it, so the ring is actually
+     visible on screen — an explicit oversized radius pushes that stop
+     outside the viewport and the whole thing reads as invisible. */
+  mask-image: radial-gradient(ellipse at 50% 50%, transparent 48%, black 100%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 50%, transparent 48%, black 100%);
+}
+
+.voice-border-glow[data-state="processing"] {
+  opacity: 0.6;
+}
+
+.voice-border-glow__blob {
+  position: absolute;
+  width: 60vmax;
+  height: 60vmax;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: calc(0.65 + var(--level, 0) * 0.35);
+  transition: opacity 120ms linear;
+  will-change: transform;
+}
+
+.voice-border-glow__blob--a {
+  top: -28%;
+  left: -18%;
+  background: radial-gradient(circle, #7c6bff, transparent 70%);
+  animation: glow-drift-a 10s ease-in-out infinite;
+}
+
+.voice-border-glow__blob--b {
+  top: -32%;
+  right: -20%;
+  background: radial-gradient(circle, #ff5f7e, transparent 70%);
+  animation: glow-drift-b 12s ease-in-out infinite;
+}
+
+.voice-border-glow__blob--c {
+  bottom: -30%;
+  right: -18%;
+  background: radial-gradient(circle, #ff8a3d, transparent 70%);
+  animation: glow-drift-c 11s ease-in-out infinite;
+}
+
+.voice-border-glow__blob--d {
+  bottom: -28%;
+  left: -20%;
+  background: radial-gradient(circle, #ffd23f, transparent 70%);
+  animation: glow-drift-d 9s ease-in-out infinite;
+}
+
+.voice-border-glow__blob--e {
+  top: -14%;
+  left: 28%;
+  background: radial-gradient(circle, #ff4fa3, transparent 70%);
+  animation: glow-drift-e 13s ease-in-out infinite;
+}
+
+@keyframes glow-drift-a {
+  0%,
+  100% {
+    transform: translate(0%, 0%) scale(1);
+  }
+  50% {
+    transform: translate(8%, 10%) scale(1.15);
+  }
+}
+
+@keyframes glow-drift-b {
+  0%,
+  100% {
+    transform: translate(0%, 0%) scale(1.05);
+  }
+  50% {
+    transform: translate(-10%, 8%) scale(0.9);
+  }
+}
+
+@keyframes glow-drift-c {
+  0%,
+  100% {
+    transform: translate(0%, 0%) scale(0.95);
+  }
+  50% {
+    transform: translate(-8%, -10%) scale(1.15);
+  }
+}
+
+@keyframes glow-drift-d {
+  0%,
+  100% {
+    transform: translate(0%, 0%) scale(1);
+  }
+  50% {
+    transform: translate(10%, -8%) scale(1.1);
+  }
+}
+
+@keyframes glow-drift-e {
+  0%,
+  100% {
+    transform: translate(0%, 0%) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translate(-6%, 12%) rotate(20deg) scale(1.08);
+  }
+}
+
+/* Mic button while capturing: a soft pulsing ring confirms recording is
+   live even before the eye reaches the edge glow. */
+.voice-mic-active {
+  animation: voice-mic-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes voice-mic-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 95, 126, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 95, 126, 0.15);
+  }
+}
+
+.voice-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: currentColor;
+  animation: voice-spin 0.8s linear infinite;
+}
+
+@keyframes voice-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Newton's cradle "thinking" indicator, from Uiverse.io by dovatgabriel, retuned to the accent blue. */
 .newtons-cradle {
   --uib-size: 28px;

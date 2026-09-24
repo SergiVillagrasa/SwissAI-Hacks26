@@ -7,6 +7,9 @@ def _agent_settings() -> AgentSettings:
     return AgentSettings(
         openai_api_key="sk-test",
         openai_model="gpt-4o-mini",
+        openai_transcribe_model="whisper-1",
+        openai_tts_model="tts-1",
+        openai_tts_voice="alloy",
         host="127.0.0.1",
         port=8080,
         cors_allowed_origin="http://localhost:5173",

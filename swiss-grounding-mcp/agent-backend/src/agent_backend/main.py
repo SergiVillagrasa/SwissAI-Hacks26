@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
+import io
+
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from openai import OpenAI
 from pydantic import BaseModel
 
@@ -40,6 +42,10 @@ class ChatRequest(BaseModel):
     messages: list[ChatMessage]
 
 
+class SpeakRequest(BaseModel):
+    text: str
+
+
 @app.get("/api/health")
 def health() -> dict:
     return {"status": "ok"}
@@ -61,3 +67,33 @@ def chat(request: ChatRequest) -> StreamingResponse:
             yield format_sse(event)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@app.post("/api/voice/transcribe")
+async def transcribe(audio: UploadFile = File(...)) -> dict:
+    data = await audio.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="Empty audio upload")
+
+    buffer = io.BytesIO(data)
+    buffer.name = audio.filename or "utterance.webm"
+    transcript = _openai_client.audio.transcriptions.create(
+        model=settings.openai_transcribe_model,
+        file=buffer,
+    )
+    return {"text": (transcript.text or "").strip()}
+
+
+@app.post("/api/voice/speak")
+def speak(request: SpeakRequest) -> Response:
+    text = request.text.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Empty text")
+
+    audio = _openai_client.audio.speech.create(
+        model=settings.openai_tts_model,
+        voice=settings.openai_tts_voice,
+        input=text,
+        response_format="mp3",
+    )
+    return Response(content=audio.read(), media_type="audio/mpeg")

@@ -31,6 +31,9 @@ def _parse_bool(value: str) -> bool:
 class AgentSettings:
     openai_api_key: str
     openai_model: str
+    openai_transcribe_model: str
+    openai_tts_model: str
+    openai_tts_voice: str
     host: str
     port: int
     cors_allowed_origin: str
@@ -49,6 +52,9 @@ class AgentSettings:
         return cls(
             openai_api_key=os.environ.get("OPENAI_API_KEY", ""),
             openai_model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+            openai_transcribe_model=os.environ.get("OPENAI_TRANSCRIBE_MODEL", "whisper-1"),
+            openai_tts_model=os.environ.get("OPENAI_TTS_MODEL", "tts-1"),
+            openai_tts_voice=os.environ.get("OPENAI_TTS_VOICE", "alloy"),
             host=os.environ.get("AGENT_BACKEND_HOST", "127.0.0.1"),
             port=int(os.environ.get("AGENT_BACKEND_PORT", "3001")),
             cors_allowed_origin=cors_origins[0],
