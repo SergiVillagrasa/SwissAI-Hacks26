@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OJP version="2.0" xmlns:siri="http://www.siri.org.uk/siri" xmlns="http://www.vdv.de/ojp">
+    <OJPResponse>
+        <siri:ServiceDelivery>
+            <siri:ResponseTimestamp>2026-09-24T18:03:12Z</siri:ResponseTimestamp>
+            <siri:ProducerRef>MENTZ</siri:ProducerRef>
+            <OJPTripDelivery>
+                <siri:ResponseTimestamp>2026-09-24T18:03:12Z</siri:ResponseTimestamp>
+                <siri:RequestMessageRef>TR-1</siri:RequestMessageRef>
+                <TripResponseContext>
+                    <Places>
+                        <Place>
+                            <StopPoint>
+                                <siri:StopPointRef>ch:1:sloid:7000:0:1</siri:StopPointRef>
+                                <StopPointName>
+                                    <Text xml:lang="de">Bern</Text>
+                                </StopPointName>
+                            </StopPoint>
+                        </Place>
+                    </Places>
+                </TripResponseContext>
+                <TripResult>
+                    <Id>ID-TRIP-1</Id>
+                    <Trip>
+                        <Id>ID-TRIP-1</Id>
+                        <Duration>PT53M0S</Duration>
+                        <StartTime>2026-09-24T18:04:00Z</StartTime>
+                        <EndTime>2026-09-24T18:57:00Z</EndTime>
+                        <Leg>
+                            <Id>1</Id>
+                            <Duration>PT53M0S</Duration>
+                            <TimedLeg>
+                                <LegBoard>
+                                    <siri:StopPointRef>ch:1:sloid:7000:0:1</siri:StopPointRef>
+                                    <StopPointName>
+                                        <Text xml:lang="de">Bern</Text>
+                                    </StopPointName>
+                                    <ServiceDeparture>
+                                        <TimetabledTime>2026-09-24T18:04:00Z</TimetabledTime>
+                                    </ServiceDeparture>
+                                </LegBoard>
+                                <LegAlight>
+                                    <siri:StopPointRef>ch:1:sloid:8503000:0:1</siri:StopPointRef>
+                                    <StopPointName>
+                                        <Text xml:lang="de">Zürich HB</Text>
+                                    </StopPointName>
+                                    <ServiceArrival>
+                                        <TimetabledTime>2026-09-24T18:57:00Z</TimetabledTime>
+                                    </ServiceArrival>
+                                </LegAlight>
+                                <Service>
+                                    <Mode>
+                                        <PtMode>rail</PtMode>
+                                    </Mode>
+                                    <PublishedServiceName>
+                                        <Text xml:lang="de">IC 8</Text>
+                                    </PublishedServiceName>
+                                </Service>
+                            </TimedLeg>
+                        </Leg>
+                    </Trip>
+                </TripResult>
+                <TripResult>
+                    <Id>ID-TRIP-2</Id>
+                    <Trip>
+                        <Id>ID-TRIP-2</Id>
+                        <Duration>PT1H43M0S</Duration>
+                        <StartTime>2026-09-24T18:34:00Z</StartTime>
+                        <EndTime>2026-09-24T20:17:00Z</EndTime>
+                        <Leg>
+                            <Id>1</Id>
+                            <Duration>PT26M0S</Duration>
+                            <TimedLeg>
+                                <LegBoard>
+                                    <siri:StopPointRef>ch:1:sloid:7000:0:2</siri:StopPointRef>
+                                    <StopPointName>
+                                        <Text xml:lang="de">Bern</Text>
+                                    </StopPointName>
+                                    <ServiceDeparture>
+                                        <TimetabledTime>2026-09-24T18:34:00Z</TimetabledTime>
+                                    </ServiceDeparture>
+                                </LegBoard>
+                                <LegAlight>
+                                    <siri:StopPointRef>ch:1:sloid:8500218:0:1</siri:StopPointRef>
+                                    <StopPointName>
+                                        <Text xml:lang="de">Olten</Text>
+                                    </StopPointName>
+                                    <ServiceArrival>
+                                        <TimetabledTime>2026-09-24T19:00:00Z</TimetabledTime>
+                                    </ServiceArrival>
+                                </LegAlight>
+                                <Service>
+                                    <Mode>
+                                        <PtMode>rail</PtMode>
+                                    </Mode>
+                                    <PublishedServiceName>
+                                        <Text xml:lang="de">IR 15</Text>
+                                    </PublishedServiceName>
+                                </Service>
+                            </TimedLeg>
+                        </Leg>
+                        <Leg>
+                            <Id>2</Id>
+                            <Duration>PT1H17M0S</Duration>
+                            <TimedLeg>
+                                <LegBoard>
+                                    <siri:StopPointRef>ch:1:sloid:8500218:0:2</siri:StopPointRef>
+                                    <StopPointName>
+                                        <Text xml:lang="de">Olten</Text>
+                                    </StopPointName>
+                                    <ServiceDeparture>
+                                        <TimetabledTime>2026-09-24T19:00:00Z</TimetabledTime>
+                                    </ServiceDeparture>
+                                </LegBoard>
+                                <LegAlight>
+                                    <siri:StopPointRef>ch:1:sloid:8503000:0:2</siri:StopPointRef>
+                                    <StopPointName>
+                                        <Text xml:lang="de">Zürich HB</Text>
+                                    </StopPointName>
+                                    <ServiceArrival>
+                                        <TimetabledTime>2026-09-24T20:17:00Z</TimetabledTime>
+                                    </ServiceArrival>
+                                </LegAlight>
+                                <Service>
+                                    <Mode>
+                                        <PtMode>rail</PtMode>
+                                    </Mode>
+                                    <PublishedServiceName>
+                                        <Text xml:lang="de">S8</Text>
+                                    </PublishedServiceName>
+                                </Service>
+                            </TimedLeg>
+                        </Leg>
+                    </Trip>
+                </TripResult>
+            </OJPTripDelivery>
+        </siri:ServiceDelivery>
+    </OJPResponse>
+</OJP>

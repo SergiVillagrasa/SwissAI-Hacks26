@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OJP version="2.0" xmlns:siri="http://www.siri.org.uk/siri" xmlns="http://www.vdv.de/ojp">
+    <OJPResponse>
+        <siri:ServiceDelivery>
+            <siri:ResponseTimestamp>2026-09-24T17:03:09Z</siri:ResponseTimestamp>
+            <siri:ProducerRef>MENTZ</siri:ProducerRef>
+            <OJPLocationInformationDelivery>
+                <siri:ResponseTimestamp>2026-09-24T17:03:09Z</siri:ResponseTimestamp>
+                <siri:RequestMessageRef>LIR-3</siri:RequestMessageRef>
+                <CalcTime>1</CalcTime>
+            </OJPLocationInformationDelivery>
+        </siri:ServiceDelivery>
+    </OJPResponse>
+</OJP>
