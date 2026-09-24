@@ -236,3 +236,15 @@ uv run pytest -v
   client caches identical requests for `AVIATIONSTACK_CACHE_SECONDS`
   (default 60s) to conserve it, but sustained heavy use requires a paid
   plan.
+- **Confirmed via live testing:** Aviationstack's free-tier key rejects
+  the `flight_date` query parameter (`HTTP 403
+  function_access_restricted`); only `flight_iata`/`dep_iata`/`arr_iata`/
+  `airline_iata`/`limit` filters are permitted. `find_flight_by_number`
+  and `search_airport_flights` therefore never send `flight_date` to the
+  API — they fetch the provider's small rolling window of recent/current
+  flights for the given flight number or route and filter by date
+  client-side. If a requested date falls outside that window (in
+  practice, roughly yesterday through the very near future on the free
+  tier), the tool returns `insufficient_evidence` and says so, rather
+  than a false negative. A paid Aviationstack plan may return a wider
+  window; this design works unchanged on any plan tier.

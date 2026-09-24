@@ -41,7 +41,14 @@ def search_airport_flights(
         )
 
     clamped_limit = max(1, min(100, limit))
-    params: dict[str, str | int] = {"flight_date": flight_date, "limit": clamped_limit}
+    # Note: the `flight_date` query parameter is a restricted function on
+    # Aviationstack's free tier (confirmed live: HTTP 403
+    # function_access_restricted). To keep this tool working on any plan
+    # tier, we never send flight_date to the API; instead we fetch a wider
+    # page of matching flights (across the provider's rolling window) and
+    # filter by the requested date ourselves before truncating to `limit`.
+    fetch_limit = max(clamped_limit, 100)
+    params: dict[str, str | int] = {"limit": fetch_limit}
     if direction == "departure":
         params["dep_iata"] = _ZRH_IATA
         if airport_iata:
@@ -62,12 +69,20 @@ def search_airport_flights(
     except AviationstackSourceError as exc:
         return FlightSearchResult(status="source_unavailable", message=str(exc))
 
-    flights = parse_flights(body)
-    if not flights:
+    matching_raw = [
+        item for item in body.get("data", []) if item.get("flight_date") == flight_date
+    ]
+    if not matching_raw:
         return FlightSearchResult(
             status="insufficient_evidence",
-            message=f"No {direction} flights found matching the given filters on {flight_date}.",
+            message=(
+                f"No {direction} flights found matching the given filters on "
+                f"{flight_date}. This may also mean the requested date falls "
+                "outside the aviation data provider's currently available window."
+            ),
         )
+
+    flights = parse_flights({"data": matching_raw})[:clamped_limit]
 
     return FlightSearchResult(
         status="answered",

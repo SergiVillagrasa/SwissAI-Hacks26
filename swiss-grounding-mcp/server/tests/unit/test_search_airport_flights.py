@@ -138,6 +138,39 @@ def test_no_matching_flights_returns_insufficient_evidence():
     assert result.flights == []
 
 
+def test_flight_date_is_not_sent_to_the_provider():
+    # Aviationstack's free tier rejects the flight_date query parameter
+    # (HTTP 403 function_access_restricted, confirmed via live testing);
+    # date filtering must happen client-side instead.
+    client = StubAviationstackClient(body=_TWO_FLIGHTS_BODY)
+
+    search_airport_flights(
+        "departure", "2026-09-25", "JFK", None, None, 10, client=client, settings=_settings()
+    )
+
+    assert "flight_date" not in client.calls[0]
+
+
+def test_date_filtering_is_applied_client_side_and_other_dates_are_excluded():
+    mixed_dates_body = {
+        "pagination": {"limit": 100, "offset": 0, "count": 3, "total": 3},
+        "data": [
+            {**_TWO_FLIGHTS_BODY["data"][0], "flight_date": "2026-09-24"},
+            {**_TWO_FLIGHTS_BODY["data"][0], "flight_date": "2026-09-25"},
+            {**_TWO_FLIGHTS_BODY["data"][1], "flight_date": "2026-09-25"},
+        ],
+    }
+    client = StubAviationstackClient(body=mixed_dates_body)
+
+    result = search_airport_flights(
+        "departure", "2026-09-25", "JFK", None, None, 10, client=client, settings=_settings()
+    )
+
+    assert result.status == "answered"
+    assert len(result.flights) == 2
+    assert all(flight.flight_date == "2026-09-25" for flight in result.flights)
+
+
 def test_source_failure_returns_source_unavailable():
     client = StubAviationstackClient(raise_error=AviationstackSourceError("network down"))
 
@@ -151,12 +184,14 @@ def test_source_failure_returns_source_unavailable():
 def test_limit_is_clamped_to_valid_range():
     client = StubAviationstackClient(body=_TWO_FLIGHTS_BODY)
 
-    search_airport_flights(
+    result_low = search_airport_flights(
         "departure", "2026-09-25", "JFK", None, None, 0, client=client, settings=_settings()
     )
-    assert client.calls[0]["limit"] == 1
+    assert len(result_low.flights) == 1
 
-    search_airport_flights(
+    result_high = search_airport_flights(
         "departure", "2026-09-25", "JFK", None, None, 1000, client=client, settings=_settings()
     )
+    assert len(result_high.flights) == 2
+    assert client.calls[0]["limit"] == 100
     assert client.calls[1]["limit"] == 100

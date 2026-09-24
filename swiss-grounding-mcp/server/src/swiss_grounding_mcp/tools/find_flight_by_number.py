@@ -34,7 +34,13 @@ def find_flight_by_number(
         )
 
     normalized_number = _normalize_flight_number(flight_number)
-    params: dict[str, str] = {"flight_iata": normalized_number, "flight_date": flight_date}
+    # Note: the `flight_date` query parameter is a restricted function on
+    # Aviationstack's free tier (confirmed live: HTTP 403
+    # function_access_restricted). To keep this tool working on any plan
+    # tier, we never send flight_date to the API; instead we fetch the
+    # flight_iata's small rolling window of recent/current occurrences and
+    # filter by the requested date ourselves.
+    params: dict[str, str] = {"flight_iata": normalized_number}
     if direction == "arrival":
         params["arr_iata"] = "ZRH"
     elif direction == "departure":
@@ -45,14 +51,20 @@ def find_flight_by_number(
     except AviationstackSourceError as exc:
         return FlightLookupResult(status="source_unavailable", message=str(exc))
 
-    raw_flights = body.get("data", [])
+    raw_flights = [
+        item for item in body.get("data", []) if item.get("flight_date") == flight_date
+    ]
     if not raw_flights:
         return FlightLookupResult(
             status="insufficient_evidence",
-            message=f"No flight found for '{flight_number}' on {flight_date}.",
+            message=(
+                f"No flight found for '{flight_number}' on {flight_date}. This may "
+                "also mean the requested date falls outside the aviation data "
+                "provider's currently available window."
+            ),
         )
 
-    flights = parse_flights(body)
+    flights = parse_flights({"data": raw_flights})
     fields_present, fields_missing = flight_field_presence(raw_flights[0])
 
     return FlightLookupResult(

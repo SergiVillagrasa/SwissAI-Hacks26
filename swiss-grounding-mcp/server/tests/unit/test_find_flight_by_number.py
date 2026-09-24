@@ -78,7 +78,43 @@ def test_found_flight_returns_answered_with_provenance_and_field_lists():
     assert result.provenance.applicable_date == "2026-09-25"
     assert result.provenance.timezone == "Europe/Zurich"
     assert client.calls[0]["flight_iata"] == "LX14"
-    assert client.calls[0]["flight_date"] == "2026-09-25"
+
+
+def test_flight_date_is_not_sent_to_the_provider():
+    # Aviationstack's free tier rejects the flight_date query parameter
+    # (HTTP 403 function_access_restricted, confirmed via live testing);
+    # date filtering must happen client-side instead.
+    client = StubAviationstackClient(body=_LX14_BODY)
+
+    find_flight_by_number("LX14", "2026-09-25", None, client=client, settings=_settings())
+
+    assert "flight_date" not in client.calls[0]
+
+
+def test_date_filtering_is_applied_client_side_across_a_rolling_window():
+    multi_date_body = {
+        "pagination": {"limit": 100, "offset": 0, "count": 2, "total": 2},
+        "data": [
+            {**_LX14_BODY["data"][0], "flight_date": "2026-09-24", "flight_status": "landed"},
+            {**_LX14_BODY["data"][0], "flight_date": "2026-09-25", "flight_status": "scheduled"},
+        ],
+    }
+    client = StubAviationstackClient(body=multi_date_body)
+
+    result = find_flight_by_number("LX14", "2026-09-25", None, client=client, settings=_settings())
+
+    assert result.status == "answered"
+    assert result.flight.flight_date == "2026-09-25"
+    assert result.flight.flight_status == "scheduled"
+
+
+def test_date_outside_provider_window_returns_insufficient_evidence():
+    client = StubAviationstackClient(body=_LX14_BODY)  # only has 2026-09-25
+
+    result = find_flight_by_number("LX14", "2099-01-01", None, client=client, settings=_settings())
+
+    assert result.status == "insufficient_evidence"
+    assert result.flight is None
 
 
 def test_flight_number_is_normalized_before_query():
