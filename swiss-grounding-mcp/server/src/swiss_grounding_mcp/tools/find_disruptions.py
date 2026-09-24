@@ -6,8 +6,7 @@ from swiss_grounding_mcp.domain.models import (
 )
 from swiss_grounding_mcp.evidence.provenance import build_provenance
 from swiss_grounding_mcp.sources.ojp.client import OjpSourceError
-
-from swiss_grounding_mcp.tools.find_connections import _resolve_station
+from swiss_grounding_mcp.tools.resolution import resolve_station
 
 
 def find_station_disruptions(
@@ -32,7 +31,7 @@ def find_station_disruptions(
             message=str(exc),
         )
 
-    resolved_stop, failure = _resolve_station(
+    resolved_stop, failure = resolve_station(
         stop,
         candidates,
         "stop",
