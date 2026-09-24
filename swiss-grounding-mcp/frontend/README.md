@@ -11,15 +11,17 @@ prose; every non-success tool status renders an honest status banner.
 cd swiss-grounding-mcp/frontend
 npm install
 cp .env.example .env.local
-# edit .env.local: VITE_AGENT_BACKEND_URL (defaults to http://127.0.0.1:8080)
+# edit .env.local: VITE_AGENT_BACKEND_URL (defaults to http://127.0.0.1:3001)
 # and VITE_MAPBOX_TOKEN (get a free token at https://account.mapbox.com/)
 ```
 
 ## Running
 
 ```bash
-npm run dev
+npm run dev -- --port 3000
 ```
+
+Or, from the repository root: `make dev-web` / `npm run dev:web`.
 
 Requires the agent backend (`swiss-grounding-mcp/agent-backend`) running
 at `VITE_AGENT_BACKEND_URL`.

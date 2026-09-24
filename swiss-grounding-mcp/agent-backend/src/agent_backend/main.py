@@ -7,7 +7,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from agent_backend.agent_loop import run_chat
-from agent_backend.clients import build_aviation_client, build_ojp_client
+from agent_backend.clients import build_aviation_client, build_flight_fares_client, build_ojp_client
 from agent_backend.settings import LOCAL_DEV_ORIGIN_REGEX, AgentSettings
 from agent_backend.sse import format_sse
 
@@ -18,7 +18,7 @@ app.add_middleware(
     allow_origins=settings.cors_allowed_origins,
     # Beyond the explicit allowlist, accept any localhost/127.0.0.1 port so a
     # dev tool that serves the frontend through a proxy on an unpredictable
-    # port (or Vite falling back off a busy 5173) isn't a fresh CORS
+    # port (or Vite falling back off a busy 3000) isn't a fresh CORS
     # rejection every time. Toggle off with CORS_ALLOW_ANY_LOCAL_PORT=false.
     allow_origin_regex=LOCAL_DEV_ORIGIN_REGEX if settings.cors_allow_any_local_port else None,
     allow_methods=["POST", "GET"],
@@ -28,6 +28,7 @@ app.add_middleware(
 _openai_client = OpenAI(api_key=settings.openai_api_key)
 _ojp_client = build_ojp_client(settings)
 _aviation_client = build_aviation_client(settings)
+_flight_fares_client = build_flight_fares_client(settings)
 
 
 class ChatMessage(BaseModel):
@@ -53,6 +54,7 @@ def chat(request: ChatRequest) -> StreamingResponse:
             openai_client=_openai_client,
             ojp_client=_ojp_client,
             aviation_client=_aviation_client,
+            flight_fares_client=_flight_fares_client,
             settings=settings.mcp_settings,
             model=settings.openai_model,
         ):

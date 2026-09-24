@@ -89,6 +89,29 @@ TOOL_SCHEMAS: list[dict] = [
     {
         "type": "function",
         "function": {
+            "name": "get_flight_fares",
+            "description": (
+                "Find current commercial flight fares between supported Swiss "
+                "airports via SerpApi Google Flights. Scope: domestic Swiss "
+                "routes only (Zurich, Geneva, Basel/Mulhouse, Lugano, "
+                "St. Gallen/Altenrhein, Sion). Foreign routes are refused "
+                "rather than queried."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "origin_city": {"type": "string", "description": "Origin city or airport name."},
+                    "destination_city": {"type": "string", "description": "Destination city or airport name."},
+                    "outbound_date": {"type": "string", "description": "YYYY-MM-DD; defaults to tomorrow."},
+                    "currency": {"type": "string", "description": "Three-letter currency code.", "default": "CHF"},
+                },
+                "required": ["origin_city", "destination_city"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "find_flight_by_number",
             "description": (
                 "Look up a flight at Zurich Airport (ZRH) by flight number and "

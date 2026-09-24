@@ -8,6 +8,7 @@ from swiss_grounding_mcp.tools.fares import check_public_transport_fares
 from swiss_grounding_mcp.tools.find_connections import find_train_connections
 from swiss_grounding_mcp.tools.find_disruptions import find_station_disruptions
 from swiss_grounding_mcp.tools.find_flight_by_number import find_flight_by_number
+from swiss_grounding_mcp.tools.flight_fares import get_flight_fares
 from swiss_grounding_mcp.tools.get_airport_guidance import get_airport_guidance
 from swiss_grounding_mcp.tools.search_airport_flights import search_airport_flights
 from swiss_grounding_mcp.tools.station_timetable import get_station_board
@@ -26,6 +27,7 @@ def dispatch(
     ojp_client,
     aviation_client,
     settings: Settings,
+    flight_fares_client=None,
 ):
     if tool_name == "find_connections":
         return find_train_connections(
@@ -58,6 +60,15 @@ def dispatch(
             travel_class=arguments.get("travel_class", "2"),
             discount_card=arguments.get("discount_card"),
             client=ojp_client,
+            settings=settings,
+        )
+    if tool_name == "get_flight_fares":
+        return get_flight_fares(
+            arguments["origin_city"],
+            arguments["destination_city"],
+            arguments.get("outbound_date"),
+            arguments.get("currency", "CHF"),
+            client=flight_fares_client,
             settings=settings,
         )
     if tool_name == "find_flight_by_number":

@@ -2,6 +2,7 @@ import pytest
 from swiss_grounding_mcp.domain.models import (
     ConnectionSearchResult,
     FareSearchResult,
+    FlightFareSearchResult,
     FlightLookupResult,
     StopCandidate,
 )
@@ -10,12 +11,13 @@ from agent_backend.widget_mapper import WIDGET_TYPES, map_result
 from agent_backend.dispatch import UnknownToolError
 
 
-def test_widget_types_cover_all_eight_tools():
+def test_widget_types_cover_all_nine_tools():
     assert set(WIDGET_TYPES) == {
         "find_connections",
         "find_disruptions",
         "get_station_board",
         "check_public_transport_fares",
+        "get_flight_fares",
         "find_flight_by_number",
         "search_airport_flights",
         "get_airport_guidance",
@@ -23,6 +25,7 @@ def test_widget_types_cover_all_eight_tools():
     }
     assert WIDGET_TYPES["find_connections"] == "train_connections"
     assert WIDGET_TYPES["check_public_transport_fares"] == "fares"
+    assert WIDGET_TYPES["get_flight_fares"] == "flight_fares"
     assert WIDGET_TYPES["find_flight_by_number"] == "flight"
     assert WIDGET_TYPES["connect_flight_to_train"] == "flight_to_train"
 
@@ -55,6 +58,15 @@ def test_map_result_fares_fallback_link():
     assert mapped["widget_type"] == "fares"
     assert mapped["status"] == "fallback_link"
     assert mapped["data"]["booking_url"] == "https://sbb.ch/x"
+
+
+def test_map_result_flight_fares_ok():
+    result = FlightFareSearchResult(status="ok", flights=[])
+    mapped = map_result("get_flight_fares", result)
+
+    assert mapped["widget_type"] == "flight_fares"
+    assert mapped["status"] == "ok"
+    assert mapped["data"]["flights"] == []
 
 
 def test_map_result_flight_source_unavailable():

@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import { TrainConnectionsCard } from "../components/widgets/TrainConnectionsCard";
 import { StationBoardCard } from "../components/widgets/StationBoardCard";
 import { FaresCard } from "../components/widgets/FaresCard";
+import { FlightFareCard } from "../components/widgets/FlightFareCard";
 import { DisruptionsCard } from "../components/widgets/DisruptionsCard";
 import { FlightCard } from "../components/widgets/FlightCard";
 import { AirportGuidanceCard } from "../components/widgets/AirportGuidanceCard";
@@ -11,6 +12,7 @@ export const WIDGET_COMPONENTS: Record<string, ComponentType<any>> = {
   train_connections: TrainConnectionsCard,
   station_board: StationBoardCard,
   fares: FaresCard,
+  flight_fares: FlightFareCard,
   disruptions: DisruptionsCard,
   flight: FlightCard,
   flight_search: FlightCard,
@@ -22,6 +24,7 @@ export const DISPLAYABLE_STATUSES: Record<string, string[]> = {
   train_connections: ["ok"],
   station_board: ["ok"],
   fares: ["success", "fallback_link"],
+  flight_fares: ["ok"],
   disruptions: ["ok"],
   flight: ["answered"],
   flight_search: ["answered"],
@@ -34,6 +37,7 @@ export const WIDGET_TYPE_BY_TOOL: Record<string, string> = {
   find_disruptions: "disruptions",
   get_station_board: "station_board",
   check_public_transport_fares: "fares",
+  get_flight_fares: "flight_fares",
   find_flight_by_number: "flight",
   search_airport_flights: "flight_search",
   get_airport_guidance: "airport_guidance",
@@ -48,6 +52,7 @@ export const WIDGET_GRID_SPAN: Record<string, "wide" | "narrow"> = {
   train_connections: "wide",
   station_board: "wide",
   fares: "narrow",
+  flight_fares: "wide",
   disruptions: "narrow",
   flight: "narrow",
   flight_search: "wide",

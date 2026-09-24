@@ -169,6 +169,24 @@ class FlightSearchResult(BaseModel):
     provenance: AviationProvenance | None = None
 
 
+class FlightFare(BaseModel):
+    airline: str
+    flight_number: str
+    departure_time: str
+    arrival_time: str
+    price: float
+    currency: str
+    duration_minutes: int | None = None
+    carbon_emissions_grams: int | None = None
+
+
+class FlightFareSearchResult(BaseModel):
+    status: Status
+    message: str | None = None
+    flights: list[FlightFare] = Field(default_factory=list)
+    provenance: Provenance | None = None
+
+
 class AirportGuidanceResult(BaseModel):
     status: AviationStatus
     topic: str

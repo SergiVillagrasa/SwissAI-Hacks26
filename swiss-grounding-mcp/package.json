@@ -1,0 +1,8 @@
+{
+  "name": "swiss-grounding-mcp",
+  "private": true,
+  "scripts": {
+    "dev:web": "npm --prefix frontend run dev -- --port 3000",
+    "dev:api": "cd agent-backend && uv run uvicorn agent_backend.main:app --reload --port 3001"
+  }
+}

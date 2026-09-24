@@ -9,6 +9,7 @@ WIDGET_TYPES: dict[str, str] = {
     "find_disruptions": "disruptions",
     "get_station_board": "station_board",
     "check_public_transport_fares": "fares",
+    "get_flight_fares": "flight_fares",
     "find_flight_by_number": "flight",
     "search_airport_flights": "flight_search",
     "get_airport_guidance": "airport_guidance",

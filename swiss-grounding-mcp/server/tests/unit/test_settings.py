@@ -74,3 +74,21 @@ def test_aerodatabox_env_overrides_defaults():
     assert settings.aerodatabox_timeout_seconds == 5.0
     assert settings.aerodatabox_enable is False
     assert settings.aerodatabox_cache_seconds == 30.0
+
+
+def test_serpapi_defaults_and_env_overrides():
+    defaults = Settings.from_env({})
+    configured = Settings.from_env(
+        {
+            "SERPAPI_API_KEY": "test-key",
+            "SERPAPI_BASE_URL": "https://example.test/search.json",
+            "SERPAPI_TIMEOUT_SECONDS": "4",
+        }
+    )
+
+    assert defaults.serpapi_api_key == ""
+    assert defaults.serpapi_base_url == "https://serpapi.com/search.json"
+    assert defaults.serpapi_timeout_seconds == 10.0
+    assert configured.serpapi_api_key == "test-key"
+    assert configured.serpapi_base_url == "https://example.test/search.json"
+    assert configured.serpapi_timeout_seconds == 4.0

@@ -52,9 +52,22 @@ Zurich Airport (`flughafen-zuerich.ch`) pages.
   Static airport guidance is sourced directly from official
   `flughafen-zuerich.ch` pages, not scraped live.
 
-**Out of scope (both modules):** fares, departure boards beyond what's
+**Domestic flight fares:**
+
+- **Topics:** current commercial flight-fare searches between supported Swiss
+  airports, with airline, flight number, departure/arrival time, duration,
+  requested-currency price, and carbon emissions when supplied.
+- **Geography:** domestic routes between Zurich (ZRH), Geneva (GVA),
+  Basel/Mulhouse (BSL/EAP/MLH), Lugano (LUG), St. Gallen/Altenrhein (ACH),
+  and Sion (SIR). Routes with a foreign endpoint are refused.
+- **Reference period:** live Google Flights search results retrieved through
+  SerpApi for today or a future date; an omitted date defaults to tomorrow.
+- **Data quality note:** SerpApi is a third-party search API. Sparse or absent
+  domestic services return `not_found`; the server never invents a fare.
+
+**Out of scope (all modules):** departure boards beyond what's
 described above, visas/immigration rules, airline-specific policies,
-non-Swiss/non-ZRH topics, and every other challenge topic area (taxes,
+foreign domestic-flight fares, and every other challenge topic area (taxes,
 health insurance, waste collection, etc). Out-of-scope questions get an
 honest response, never a guess.
 
@@ -67,7 +80,7 @@ cd swiss-grounding-mcp/server
 uv venv
 uv pip install -e ".[dev]" --group dev
 cp .env.example .env
-# edit .env and set OJP_API_TOKEN (see "Required credentials" below)
+# edit .env and set the credentials for the tools you plan to use
 ```
 
 ## Required credentials
@@ -91,6 +104,9 @@ cp .env.example .env
   or any use beyond personal development/testing, upgrade to a paid
   plan (from ~$7.50–8/month), which lifts the commercial-use
   restriction and makes attribution optional.
+- `SERPAPI_API_KEY`: a SerpApi key used by `get_flight_fares` to query Google
+  Flights results. Without this key, that tool returns `source_error`; all
+  train, AeroDataBox, and static-guidance tools continue to work.
 
 No other credentials or API keys are required. The server makes no LLM
 calls itself.
@@ -159,6 +175,18 @@ Output: same status set as `find_connections`; on `ok`, a list of
 to surface cancellations, delays, and boarding/alighting restrictions
 affecting services at the requested station.
 
+## The `get_flight_fares` tool
+
+Input: `origin_city`, `destination_city`, optional `outbound_date`
+(`YYYY-MM-DD`, defaults to tomorrow), and `currency` (defaults to `CHF`).
+City names and IATA aliases are accepted for ZRH, GVA, BSL/EAP/MLH, LUG,
+ACH, and SIR.
+
+Output: `status` of `ok`, `needs_clarification`, `not_found`, `out_of_scope`,
+or `source_error`; up to five concise flight itineraries for `ok`; and
+SerpApi provenance with a UTC retrieval timestamp. Foreign routes are refused
+before an API call, and routes without commercial service return `not_found`.
+
 ## The aviation tools
 
 All four tools return a structured object with a `status` of `answered`,
@@ -205,9 +233,10 @@ guessing.
 ## Configuration
 
 See `.env.example`. `RESPECT_ROBOTS_TXT` (default `true`) is reserved for
-future non-API sources this server may add later — the OJP adapter used
-today is a licensed, keyed API, not scraped HTML, so this setting has no
-effect on it yet.
+future non-API sources this server may add later — the OJP, AeroDataBox, and
+SerpApi adapters used today are keyed APIs, not scraped HTML, so this setting
+has no effect on them yet. `SERPAPI_BASE_URL` defaults to
+`https://serpapi.com/search.json`, and `SERPAPI_TIMEOUT_SECONDS` defaults to 10.
 
 ## Running the checks
 

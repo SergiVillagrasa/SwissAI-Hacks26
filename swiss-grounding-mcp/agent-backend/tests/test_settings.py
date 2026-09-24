@@ -61,8 +61,8 @@ def test_from_env_defaults_cors_origins_to_common_local_dev_hosts(monkeypatch, t
     settings = AgentSettings.from_env()
 
     assert settings.cors_allowed_origins == [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
     ]
 
 

@@ -56,6 +56,26 @@ def test_find_connections_tool_is_registered_and_callable(monkeypatch):
     asyncio.run(run())
 
 
+class StubSerpApiClient:
+    def search_flights(self, departure_id, arrival_id, outbound_date, currency):
+        return {
+            "best_flights": [
+                {
+                    "flights": [
+                        {
+                            "departure_airport": {"id": departure_id, "time": f"{outbound_date} 08:00"},
+                            "arrival_airport": {"id": arrival_id, "time": f"{outbound_date} 08:50"},
+                            "airline": "SWISS",
+                            "flight_number": "LX 2802",
+                        }
+                    ],
+                    "total_duration": 50,
+                    "price": 149,
+                }
+            ]
+        }
+
+
 class StubAerodataboxClient:
     def get_flight_by_number(self, flight_number, date_local):
         return [
@@ -86,6 +106,7 @@ class StubAerodataboxClient:
 def test_aviation_tools_are_registered_and_callable(monkeypatch):
     monkeypatch.setattr(server_module, "get_client", lambda: StubClient())
     monkeypatch.setattr(server_module, "get_aviation_client", lambda: StubAerodataboxClient())
+    monkeypatch.setattr(server_module, "get_flight_fares_client", lambda: StubSerpApiClient())
 
     async def run():
         async with Client(mcp) as client:
@@ -96,6 +117,7 @@ def test_aviation_tools_are_registered_and_callable(monkeypatch):
                 "search_airport_flights",
                 "get_airport_guidance",
                 "connect_flight_to_train",
+                "get_flight_fares",
             ]:
                 assert expected in names
 
@@ -108,6 +130,16 @@ def test_aviation_tools_are_registered_and_callable(monkeypatch):
                 "get_airport_guidance", {"topic": "transfers"}
             )
             assert guidance_result.structured_content["status"] == "answered"
+
+            fare_result = await client.call_tool(
+                "get_flight_fares",
+                {
+                    "origin_city": "Zurich",
+                    "destination_city": "Geneva",
+                    "outbound_date": "2026-09-25",
+                },
+            )
+            assert fare_result.structured_content["status"] == "ok"
 
             connect_result = await client.call_tool(
                 "connect_flight_to_train",

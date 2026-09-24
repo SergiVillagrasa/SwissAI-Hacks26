@@ -1,0 +1,8 @@
+{
+  "name": "swiss-hacks26",
+  "private": true,
+  "scripts": {
+    "dev:web": "npm --prefix swiss-grounding-mcp/frontend run dev -- --port 3000",
+    "dev:api": "cd swiss-grounding-mcp/agent-backend && uv run uvicorn agent_backend.main:app --reload --port 3001"
+  }
+}
