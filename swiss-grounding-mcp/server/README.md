@@ -12,19 +12,20 @@ Zurich Airport (`flughafen-zuerich.ch`) pages.
 **Train connections:**
 
 - **Topics:** Swiss passenger-train connection lookups between two named
-  stations, and departure/arrival boards at a named stop, for a given
-  (optional) date/time.
+  stations, departure/arrival boards at a named stop, and fare lookups for
+  Swiss domestic routes, all for a given (optional) date/time.
 - **Geography:** all stations reachable via the OJP 2.0 network (all of
   Switzerland), plus cross-border journeys where at least one end of the
   route is a Swiss station (e.g. Paris→Genève or Zürich→Milan). Purely
   foreign routes with no Swiss end are refused.
 - **Reference period:** live/current OJP timetable data at query time; no
   historical timetable queries.
-- **Out of scope:** fares, non-public-transit topics, and every other
-  challenge topic area (taxes, health insurance, waste collection, etc).
-  Out-of-scope questions get an honest "not covered" response, never a
-  guess. Current disruptions affecting a station *are* covered — see
-  `find_disruptions` below.
+- **Out of scope:** non-public-transit topics, and every other challenge
+  topic area (taxes, health insurance, waste collection, etc).
+  International fare lookups are refused with an SBB booking deep link
+  instead of a guessed price. Out-of-scope questions get an honest "not
+  covered" response, never a guess. Current disruptions affecting a
+  station *are* covered — see `find_disruptions` below.
 - **Scope enforcement:** OJP 2.0 also indexes non-Swiss stops, which keeps
   legitimate cross-border journeys working. Both ends are resolved first;
   only when *neither* stop reference carries the Swiss `ch:` DiDok/SLOID
@@ -133,6 +134,20 @@ Output: same status set as `find_connections`; on `ok`, a `station_name`,
 `provenance` block. Foreign stations are refused as `out_of_scope`;
 departure boards exist only for the Swiss network.
 
+## The `check_public_transport_fares` tool
+
+Input: `origin` (str), `destination` (str), `departure_time` (ISO 8601,
+optional — defaults to "now"), `travel_class` (str, default `"2"`),
+`discount_card` (str, optional — e.g. `"Halbtax"`).
+
+Output: `status` of `success`, `fallback_link`, `out_of_scope`,
+`needs_clarification`, or `source_error`; a human-readable `message`;
+`fares` (only for `success`) as a list of `FareProduct` objects with
+`product`, `price_chf`, `class_of_travel`, and `discount`; and a
+`booking_url` with an SBB timetable deep link for the requested journey
+whenever a price cannot be returned. International routes are refused as
+`out_of_scope` and return the SBB deep link without a guessed fare.
+
 ## The `find_disruptions` tool
 
 Input: `stop` (str).
@@ -236,8 +251,11 @@ uv run pytest -v
 
 ## Limitations
 
-- Milestone 1 (train) covers connection search, station boards, and
-  disruption feeds; no fares or non-rail modes.
+- Milestone 1 (train) covers connection search, station boards,
+  disruption feeds, and fare lookups; no other non-rail modes.
+- Fare lookups use the OJP Fare Beta endpoint when available; when that
+  endpoint fails, the response falls back to an SBB booking deep link with
+  no guessed price.
 - Station name resolution uses OJP's own fuzzy matching; extremely
   ambiguous or misspelled names may require a follow-up clarification.
 - The aviation module covers ZRH only, is backed by a third-party

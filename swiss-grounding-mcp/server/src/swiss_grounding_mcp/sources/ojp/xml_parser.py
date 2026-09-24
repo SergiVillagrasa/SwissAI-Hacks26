@@ -8,6 +8,7 @@ from defusedxml import ElementTree as SafeET
 from swiss_grounding_mcp.domain.models import (
     Connection,
     Disruption,
+    FareProduct,
     Leg,
     StopCandidate,
     StopEvent,
@@ -68,6 +69,32 @@ def has_service_delivery_error(xml_bytes: bytes) -> str | None:
         ".//siri:ServiceDelivery/siri:ErrorCondition//siri:ErrorText", NS
     )
     return error_text.text if error_text is not None else None
+
+
+def parse_fare_response(xml_bytes: bytes) -> list[FareProduct]:
+    root = SafeET.fromstring(xml_bytes)
+    products: list[FareProduct] = []
+
+    for fare_product in root.findall(".//ojp:fareProduct", NS):
+        name = _text_of(fare_product, "ojp:Name/ojp:Text") or "Unknown"
+        price_text = _text_of(fare_product, "ojp:Price") or "0"
+        try:
+            price = float(price_text)
+        except ValueError:
+            price = 0.0
+        travel_class = _text_of(fare_product, "ojp:TravelClass") or "2"
+        discount = _text_of(fare_product, "ojp:DiscountCard")
+
+        products.append(
+            FareProduct(
+                product=name,
+                price_chf=price,
+                class_of_travel=travel_class,
+                discount=discount,
+            )
+        )
+
+    return products
 
 
 def _parse_leg(leg_element) -> Leg | None:

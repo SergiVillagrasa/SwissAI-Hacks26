@@ -10,6 +10,7 @@ from swiss_grounding_mcp.domain.models import (
     AirportGuidanceResult,
     ConnectionSearchResult,
     DisruptionSearchResult,
+    FareSearchResult,
     FlightLookupResult,
     FlightSearchResult,
     FlightToTrainResult,
@@ -19,6 +20,9 @@ from swiss_grounding_mcp.sources.aerodatabox.client import AerodataboxClient
 from swiss_grounding_mcp.sources.ojp.client import OjpClient
 from swiss_grounding_mcp.tools.connect_flight_to_train import (
     connect_flight_to_train as _connect_flight_to_train,
+)
+from swiss_grounding_mcp.tools.fares import (
+    check_public_transport_fares as _check_public_transport_fares,
 )
 from swiss_grounding_mcp.tools.find_connections import find_train_connections
 from swiss_grounding_mcp.tools.find_disruptions import find_station_disruptions
@@ -123,6 +127,34 @@ def get_station_board(
         mode,
         when,
         results,
+        client=get_client(),
+        settings=settings,
+    )
+
+
+@mcp.tool()
+def check_public_transport_fares(
+    origin: str,
+    destination: str,
+    departure_time: str | None = None,
+    travel_class: str = "2",
+    discount_card: str | None = None,
+) -> FareSearchResult:
+    """Check public-transport fares between two Swiss stations.
+
+    Scope: Swiss domestic public-transport fares only, via the OJP Fare
+    Beta endpoint (opentransportdata.swiss). `travel_class` defaults to
+    second class; `discount_card` may be set to a supported card such as
+    "Halbtax". If live fare data is unavailable, the response includes a
+    pre-populated SBB booking deep link for official pricing. International
+    routes and ambiguous station names are refused rather than guessed.
+    """
+    return _check_public_transport_fares(
+        origin,
+        destination,
+        departure_time=departure_time,
+        travel_class=travel_class,
+        discount_card=discount_card,
         client=get_client(),
         settings=settings,
     )

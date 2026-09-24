@@ -21,6 +21,7 @@ def _parse_bool(value: str, default: bool) -> bool:
 class Settings:
     ojp_api_token: str = ""
     ojp_base_url: str = "https://api.opentransportdata.swiss/ojp20"
+    ojp_fare_url: str = "https://api.opentransportdata.swiss/ojpfare/"
     ojp_requestor_ref: str = "swiss-grounding-mcp"
     ojp_timeout_seconds: float = 10.0
     respect_robots_txt: bool = True
@@ -40,6 +41,7 @@ class Settings:
         return cls(
             ojp_api_token=source.get("OJP_API_TOKEN", defaults.ojp_api_token),
             ojp_base_url=source.get("OJP_BASE_URL", defaults.ojp_base_url),
+            ojp_fare_url=source.get("OJP_FARE_URL", defaults.ojp_fare_url),
             ojp_requestor_ref=source.get("OJP_REQUESTOR_REF", defaults.ojp_requestor_ref),
             ojp_timeout_seconds=float(
                 source.get("OJP_TIMEOUT_SECONDS", defaults.ojp_timeout_seconds)

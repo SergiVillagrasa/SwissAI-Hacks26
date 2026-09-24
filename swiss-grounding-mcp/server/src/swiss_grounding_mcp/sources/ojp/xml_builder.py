@@ -114,6 +114,53 @@ def build_trip_request(
     return _serialize(root)
 
 
+def build_fare_request(
+    origin_ref: str,
+    destination_ref: str,
+    requestor_ref: str,
+    *,
+    origin_name: str = "",
+    destination_name: str = "",
+    departure_time: str | None = None,
+    travel_class: str = "2",
+    discount_card: str | None = None,
+    message_identifier: str | None = None,
+    timestamp: str | None = None,
+) -> bytes:
+    timestamp = timestamp or _now_iso()
+    root, service_request = _service_request_root(requestor_ref, timestamp)
+
+    fare_request = ET.SubElement(service_request, _ojp("OJPFareRequest"))
+    ET.SubElement(fare_request, _siri("RequestTimestamp")).text = timestamp
+    ET.SubElement(fare_request, _siri("MessageIdentifier")).text = (
+        message_identifier or _new_message_identifier("FR")
+    )
+
+    origin = ET.SubElement(fare_request, _ojp("Origin"))
+    origin_place_ref = ET.SubElement(origin, _ojp("PlaceRef"))
+    ET.SubElement(origin_place_ref, _siri("StopPointRef")).text = origin_ref
+    ET.SubElement(ET.SubElement(origin_place_ref, _ojp("Name")), _ojp("Text")).text = (
+        origin_name or origin_ref
+    )
+    if departure_time is not None:
+        ET.SubElement(origin, _ojp("DepArrTime")).text = departure_time
+
+    destination = ET.SubElement(fare_request, _ojp("Destination"))
+    destination_place_ref = ET.SubElement(destination, _ojp("PlaceRef"))
+    ET.SubElement(destination_place_ref, _siri("StopPointRef")).text = destination_ref
+    ET.SubElement(
+        ET.SubElement(destination_place_ref, _ojp("Name")), _ojp("Text")
+    ).text = (destination_name or destination_ref)
+
+    params = ET.SubElement(fare_request, _ojp("Params"))
+    ET.SubElement(params, _ojp("TravelClass")).text = travel_class
+    if discount_card:
+        ET.SubElement(params, _ojp("DiscountCard")).text = discount_card
+    ET.SubElement(params, _ojp("Extension"))
+
+    return _serialize(root)
+
+
 def build_stop_event_request(
     stop_ref: str,
     requestor_ref: str,
