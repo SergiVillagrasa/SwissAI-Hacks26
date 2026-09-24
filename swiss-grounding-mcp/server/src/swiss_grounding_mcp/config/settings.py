@@ -26,6 +26,11 @@ class Settings:
     respect_robots_txt: bool = True
     mcp_http_host: str = "127.0.0.1"
     mcp_http_port: int = 8000
+    aviationstack_api_key: str = ""
+    aviationstack_base_url: str = "https://api.aviationstack.com/v1"
+    aviationstack_timeout_seconds: float = 10.0
+    aviationstack_enable: bool = True
+    aviationstack_cache_seconds: float = 60.0
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "Settings":
@@ -44,4 +49,24 @@ class Settings:
             ),
             mcp_http_host=source.get("MCP_HTTP_HOST", defaults.mcp_http_host),
             mcp_http_port=int(source.get("MCP_HTTP_PORT", defaults.mcp_http_port)),
+            aviationstack_api_key=source.get(
+                "AVIATIONSTACK_API_KEY", defaults.aviationstack_api_key
+            ),
+            aviationstack_base_url=source.get(
+                "AVIATIONSTACK_BASE_URL", defaults.aviationstack_base_url
+            ),
+            aviationstack_timeout_seconds=float(
+                source.get(
+                    "AVIATIONSTACK_TIMEOUT_SECONDS", defaults.aviationstack_timeout_seconds
+                )
+            ),
+            aviationstack_enable=_parse_bool(
+                source.get("AVIATIONSTACK_ENABLE", str(defaults.aviationstack_enable)),
+                defaults.aviationstack_enable,
+            ),
+            aviationstack_cache_seconds=float(
+                source.get(
+                    "AVIATIONSTACK_CACHE_SECONDS", defaults.aviationstack_cache_seconds
+                )
+            ),
         )
