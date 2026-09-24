@@ -39,3 +39,26 @@ def test_find_connections_tool_is_registered_and_callable(monkeypatch):
             assert len(result.structured_content["connections"]) == 1
 
     asyncio.run(run())
+
+
+def test_check_fares_tool_is_registered_and_callable(monkeypatch):
+    monkeypatch.setattr(server_module, "get_client", lambda: StubClient())
+
+    async def run():
+        async with Client(mcp) as client:
+            tools = await client.list_tools()
+            names = [tool.name for tool in tools.tools]
+            assert "check_fares" in names
+
+            result = await client.call_tool(
+                "check_fares",
+                {"origin": "Bern", "destination": "Zürich HB", "discount": "halbtax"},
+            )
+            assert result.structured_content["status"] == "ok"
+            assert result.structured_content["currency"] == "CHF"
+            assert any(
+                p["discount"] == "half-fare" and p["price_chf"] == 25.5
+                for p in result.structured_content["products"]
+            )
+
+    asyncio.run(run())

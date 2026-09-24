@@ -42,3 +42,21 @@ class ConnectionSearchResult(BaseModel):
     connections: list[Connection] = Field(default_factory=list)
     candidates: list[StopCandidate] = Field(default_factory=list)
     provenance: Provenance | None = None
+
+
+class FareProduct(BaseModel):
+    product: str
+    price_chf: float
+    class_of_travel: int = Field(default=2, ge=1, le=2)
+    discount: str = "none"
+
+
+class FareResult(BaseModel):
+    status: Status
+    message: str | None = None
+    origin: str | None = None
+    destination: str | None = None
+    currency: str = "CHF"
+    products: list[FareProduct] = Field(default_factory=list)
+    candidates: list[StopCandidate] = Field(default_factory=list)
+    provenance: Provenance | None = None

@@ -6,8 +6,9 @@ from dotenv import load_dotenv
 from mcp.server.mcpserver import MCPServer
 
 from swiss_grounding_mcp.config.settings import Settings
-from swiss_grounding_mcp.domain.models import ConnectionSearchResult
+from swiss_grounding_mcp.domain.models import ConnectionSearchResult, FareResult
 from swiss_grounding_mcp.sources.ojp.client import OjpClient
+from swiss_grounding_mcp.tools.check_fares import check_public_transport_fares
 from swiss_grounding_mcp.tools.find_connections import find_train_connections
 
 load_dotenv()
@@ -49,6 +50,34 @@ def find_connections(
         departure_time,
         arrival_time,
         results,
+        client=get_client(),
+        settings=settings,
+    )
+
+
+@mcp.tool()
+def check_fares(
+    origin: str,
+    destination: str,
+    travel_class: int = 2,
+    discount: str | None = None,
+    travel_date: str | None = None,
+) -> FareResult:
+    """Check indicative public-transport fares and tickets for Swiss routes.
+
+    Scope: selected popular point-to-point routes within Switzerland.
+    Covers full-fare and common discount prices (Half Fare / Halbtax,
+    first/second class, saver day passes) based on SBB/CFF/FFS tariff
+    information. Does not cover municipal zone fares, season tickets,
+    international travel, or real-time dynamic prices. If the route is
+    outside the curated fare table, this tool will say so rather than guess.
+    """
+    return check_public_transport_fares(
+        origin,
+        destination,
+        travel_class,
+        discount,
+        travel_date,
         client=get_client(),
         settings=settings,
     )

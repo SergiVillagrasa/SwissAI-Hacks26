@@ -7,15 +7,22 @@ mandate).
 
 ## Declared scope
 
-- **Topics:** Swiss passenger-train connection lookups between two named
-  stations, for a given (optional) date/time.
+- **Topics:**
+  - Swiss passenger-train connection lookups between two named stations,
+    for a given (optional) date/time.
+  - Indicative point-to-point fares and discount prices for selected popular
+    Swiss routes (full fare, Half Fare / Halbtax, first/second class, and
+    the Saver Day Pass).
 - **Geography:** all stations reachable via the OJP 2.0 network (all of
   Switzerland), plus cross-border journeys where at least one end of the
   route is a Swiss station (e.g. Paris→Genève or Zürich→Milan). Purely
-  foreign routes with no Swiss end are refused.
+  foreign routes with no Swiss end are refused. Fare coverage is limited
+  to the curated route table.
 - **Reference period:** live/current OJP timetable data at query time; no
-  historical timetable queries.
-- **Out of scope:** fares, departure boards (single-stop next departures),
+  historical timetable queries. Fare prices are valid for the 2026 tariff
+  period and are indicative only.
+- **Out of scope:** municipal zone fares, season tickets, real-time dynamic
+  pricing, departure boards (single-stop next departures),
   disruption/incident feeds, non-rail modes, and every other challenge
   topic area (taxes, health insurance, waste collection, etc). Out-of-scope
   questions get an honest "not covered" response, never a guess.
@@ -74,6 +81,21 @@ Output: a structured object with a `status` of `ok`, `needs_clarification`,
 and a `provenance` block with source name, URL, and retrieval timestamp
 (only for `ok`).
 
+## The `check_fares` tool
+
+Input: `origin` (str), `destination` (str), `travel_class` (int, 1 or 2,
+default 2), `discount` (optional — e.g. `halbtax`, `half-fare`, `GA`),
+`travel_date` (ISO 8601 date `YYYY-MM-DD`, optional).
+
+Output: a structured object with `status`, `message`, `origin`,
+`destination`, `currency` (`CHF`), `products` (one or more fares with
+`product`, `price_chf`, `class_of_travel`, and `discount`), and a
+`provenance` block citing SBB/CFF/FFS tariff information.
+
+The fare table covers selected popular routes (e.g. Bern–Zürich, Genève–Zürich,
+Basel–Zürich, Lausanne–Bern, Luzern–Zürich). Routes outside the table return
+`not_found` rather than a guess.
+
 ## Configuration
 
 See `.env.example`. `RESPECT_ROBOTS_TXT` (default `true`) is reserved for
@@ -100,13 +122,18 @@ uv run pytest -v
 4. Temporarily set `OJP_API_TOKEN` to an invalid value (or point
    `OJP_BASE_URL` at an unreachable host) and confirm a `source_error`
    response, not a guessed answer.
-5. Ask a question unrelated to travel (e.g. about health insurance premiums)
+5. In MCP Inspector, call `check_fares` with `origin="Bern"`,
+   `destination="Zürich HB"`, `discount="halbtax"` and confirm a cited
+   `ok` response with a reduced Half Fare price.
+6. Ask a question unrelated to travel (e.g. about health insurance premiums)
    and confirm the tool is either not invoked or responds honestly that
    it's out of scope.
 
 ## Limitations
 
-- Milestone 1 only; no fares, departure boards, disruption feeds, or
-  non-rail modes.
+- Fare coverage is limited to the curated route table; municipal zone fares,
+  season tickets, real-time dynamic prices and unlisted routes are not covered.
+- Fare prices are indicative for the 2026 tariff period; always confirm the
+  current price on sbb.ch before purchase.
 - Station name resolution uses OJP's own fuzzy matching; extremely
   ambiguous or misspelled names may require a follow-up clarification.
