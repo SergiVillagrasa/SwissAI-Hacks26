@@ -148,6 +148,128 @@ def test_accented_and_alternate_names_resolve_without_clarification():
     assert client.trip_calls[0]["origin_ref"] == "ch:1:sloid:9000"
 
 
+def test_purely_foreign_route_returns_out_of_scope_without_trip_request():
+    client = StubOjpClient(
+        candidates_by_name={
+            "Paris Gare de Lyon": [
+                StopCandidate(
+                    name="Paris Gare de Lyon", stop_ref="fr:1:sloid:1", probability=1.0
+                )
+            ],
+            "Marseille": [
+                StopCandidate(name="Marseille", stop_ref="fr:1:sloid:2", probability=1.0)
+            ],
+        },
+        connections=[_connection()],
+    )
+
+    result = find_train_connections(
+        "Paris Gare de Lyon",
+        "Marseille",
+        None,
+        None,
+        3,
+        client=client,
+        settings=_settings(),
+    )
+
+    assert result.status == "out_of_scope"
+    assert result.connections == []
+    assert "foreign" in result.message.lower()
+    assert client.trip_calls == []
+
+
+def test_inbound_cross_border_route_returns_ok():
+    client = StubOjpClient(
+        candidates_by_name={
+            "Paris Gare de Lyon": [
+                StopCandidate(
+                    name="Paris Gare de Lyon", stop_ref="fr:1:sloid:1", probability=1.0
+                )
+            ],
+            "Zürich HB": [
+                StopCandidate(name="Zürich HB", stop_ref="ch:1:sloid:8503000", probability=1.0)
+            ],
+        },
+        connections=[_connection()],
+    )
+
+    result = find_train_connections(
+        "Paris Gare de Lyon",
+        "Zürich HB",
+        None,
+        None,
+        3,
+        client=client,
+        settings=_settings(),
+    )
+
+    assert result.status == "ok"
+    assert len(result.connections) == 1
+    assert client.trip_calls[0]["origin_ref"] == "fr:1:sloid:1"
+    assert client.trip_calls[0]["destination_ref"] == "ch:1:sloid:8503000"
+
+
+def test_outbound_cross_border_route_returns_ok():
+    client = StubOjpClient(
+        candidates_by_name={
+            "Bern": [StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=1.0)],
+            "Milano Centrale": [
+                StopCandidate(
+                    name="Milano Centrale", stop_ref="it:1:sloid:3", probability=1.0
+                )
+            ],
+        },
+        connections=[_connection()],
+    )
+
+    result = find_train_connections(
+        "Bern", "Milano Centrale", None, None, 3, client=client, settings=_settings()
+    )
+
+    assert result.status == "ok"
+    assert len(result.connections) == 1
+    assert client.trip_calls[0]["destination_ref"] == "it:1:sloid:3"
+
+
+def test_connections_are_truncated_to_requested_results():
+    client = StubOjpClient(
+        candidates_by_name={
+            "Bern": [StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=1.0)],
+            "Zürich HB": [
+                StopCandidate(name="Zürich HB", stop_ref="ch:1:sloid:8503000", probability=1.0)
+            ],
+        },
+        connections=[_connection(), _connection(), _connection()],
+    )
+
+    result = find_train_connections(
+        "Bern", "Zürich HB", None, None, 2, client=client, settings=_settings()
+    )
+
+    assert result.status == "ok"
+    assert len(result.connections) == 2
+
+
+def test_bare_numeric_swiss_uic_stop_ref_is_accepted():
+    client = StubOjpClient(
+        candidates_by_name={
+            "Bern": [StopCandidate(name="Bern", stop_ref="8507000", probability=1.0)],
+            "Zürich HB": [
+                StopCandidate(name="Zürich HB", stop_ref="ch:1:sloid:8503000", probability=1.0)
+            ],
+        },
+        connections=[_connection()],
+    )
+
+    result = find_train_connections(
+        "Bern", "Zürich HB", None, None, 3, client=client, settings=_settings()
+    )
+
+    assert result.status == "ok"
+    assert client.trip_calls[0]["origin_ref"] == "8507000"
+
+
 def test_source_error_from_trip_request_returns_source_error_status():
     client = StubOjpClient(
         candidates_by_name={
