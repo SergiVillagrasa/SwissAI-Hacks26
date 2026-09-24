@@ -15,5 +15,10 @@ def build_aviation_provenance(
         source_url="https://aerodatabox.com",
         retrieved_at=timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
         applicable_date=applicable_date,
-        timezone="Europe/Zurich",
+        # All flight times returned by this server come from AeroDataBox's
+        # `.utc` time fields (see sources/aerodatabox/parser.py), never the
+        # `.local` fields, so the correct label is UTC, not the airport's
+        # local zone. This keeps the timezone consistent with the train
+        # tools, which also always report UTC (`Provenance.timezone`).
+        timezone="UTC",
     )

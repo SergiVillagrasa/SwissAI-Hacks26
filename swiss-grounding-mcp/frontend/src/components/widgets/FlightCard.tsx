@@ -41,12 +41,12 @@ function FlightSummary({ flight, nested = false }: { flight: Flight; nested?: bo
     <div className={nested ? `p-3.5 ${glassRowInteractive}` : "space-y-1"}>
       <div className="flex items-center justify-between text-sm font-semibold text-neutral-800">
         <span>{flight.flight_number}</span>
-        <span className="text-accent">{fieldOrNotReported(flight.airline.name)}</span>
+        <span className="text-accent-ink">{fieldOrNotReported(flight.airline.name)}</span>
       </div>
       <div className="mt-1 text-xs font-medium tracking-wide text-neutral-600">
         {fieldOrNotReported(flight.departure.airport.iata)} → {fieldOrNotReported(flight.arrival.airport.iata)}
       </div>
-      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-600">
         <span>Gate: {fieldOrNotReported(flight.departure.gate)}</span>
         <span>Terminal: {fieldOrNotReported(flight.departure.terminal)}</span>
         <span>Arrival gate: {fieldOrNotReported(flight.arrival.gate)}</span>

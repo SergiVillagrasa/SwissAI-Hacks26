@@ -82,7 +82,7 @@ def test_found_flight_returns_answered_with_provenance_and_field_lists():
     assert "departure.actual" in result.fields_missing
     assert result.provenance.source == "AeroDataBox (aerodatabox.com)"
     assert result.provenance.applicable_date == "2026-09-25"
-    assert result.provenance.timezone == "Europe/Zurich"
+    assert result.provenance.timezone == "UTC"
     assert client.calls[0]["flight_number"] == "LX14"
     assert client.calls[0]["date_local"] == "2026-09-25"
 

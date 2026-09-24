@@ -91,6 +91,19 @@ One authored moment: tiles and the composer glow softly settle in
 appearance; nothing re-animates on every render. Hover states move at a
 quick, quiet ease.
 
+## Voice glow (intentional exception)
+
+While voice mode is active — listening, processing, or speaking — an
+ambient, colorful glow animates around the viewport's edges, masked clear
+in the center so the conversation underneath stays fully visible. Its
+five-color rainbow palette (`#7c6bff` purple-blue, `#ff5f7e` rose,
+`#ff8a3d` orange, `#ffd23f` yellow, `#ff4fa3` pink) is a deliberate
+departure from the rest of the app's blue-gradient, desaturated-semantic
+color system, scoped only to this one voice-mode indicator — it signals a
+live, energetic listening state the way a system blue accent could not.
+Do not fold it into the blue palette during a consistency pass; it is a
+one-off by design.
+
 ## Browser surfaces
 
 Selection, focus ring, and scrollbar are themed from the blue accent, not

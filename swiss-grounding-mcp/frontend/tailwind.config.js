@@ -6,6 +6,7 @@ export default {
       colors: {
         accent: "#0A84FF",
         "accent-dim": "#3d9bff",
+        "accent-ink": "#0A5FC2",
       },
       fontFamily: {
         sans: ["-apple-system", "BlinkMacSystemFont", "Inter", "Segoe UI", "sans-serif"],

@@ -26,7 +26,7 @@ export function StationBoardCard({ data }: { data: StationBoardData }) {
             key={index}
             className={`flex items-center justify-between gap-3 p-3 text-sm ${glassRow}`}
           >
-            <span className="font-semibold text-accent">{event.line ?? "—"}</span>
+            <span className="font-semibold text-accent-ink">{event.line ?? "—"}</span>
             <span className="flex-1 truncate text-neutral-600">
               to {event.direction_name ?? "not reported by source"}
             </span>
@@ -35,7 +35,7 @@ export function StationBoardCard({ data }: { data: StationBoardData }) {
                 ? new Date(event.planned_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                 : "not reported by source"}
             </span>
-            <span className="text-xs text-neutral-500">
+            <span className="text-xs text-neutral-600">
               {event.platform ? `Platform ${event.platform}` : "not reported by source"}
             </span>
           </li>
