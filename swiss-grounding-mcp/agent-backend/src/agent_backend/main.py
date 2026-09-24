@@ -27,7 +27,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_openai_client = OpenAI(api_key=settings.openai_api_key)
+def _build_openai_client(api_key: str) -> OpenAI | None:
+    """Create the OpenAI client, or None when the key is missing/invalid.
+
+    The app must import and serve /api/health even without a key so that
+    misconfiguration surfaces as a clean status instead of a crash.
+    """
+    if not api_key:
+        return None
+    try:
+        return OpenAI(api_key=api_key)
+    except Exception:  # noqa: BLE001 - any SDK init failure degrades cleanly
+        return None
+
+
+_OPENAI_MISSING_MESSAGE = (
+    "The assistant service is unavailable: OPENAI_API_KEY is missing or "
+    "invalid. Configure it in server/.env or agent-backend/.env."
+)
+
+_openai_client = _build_openai_client(settings.openai_api_key)
 _ojp_client = build_ojp_client(settings)
 _aviation_client = build_aviation_client(settings)
 _flight_fares_client = build_flight_fares_client(settings)
@@ -48,12 +67,21 @@ class SpeakRequest(BaseModel):
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"status": "ok"}
+    return {"status": "ok", "openai_configured": _openai_client is not None}
 
 
 @app.post("/api/chat")
 def chat(request: ChatRequest) -> StreamingResponse:
     def event_stream():
+        if _openai_client is None:
+            yield format_sse({
+                "type": "widget",
+                "tool": None,
+                "status": "source_error",
+                "data": {"message": _OPENAI_MISSING_MESSAGE},
+            })
+            yield format_sse({"type": "done"})
+            return
         messages = [message.model_dump() for message in request.messages]
         for event in run_chat(
             messages,

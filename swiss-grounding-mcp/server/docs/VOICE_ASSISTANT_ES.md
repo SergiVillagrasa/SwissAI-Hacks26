@@ -148,7 +148,8 @@ Plataforma: platform.galtea.ai.
   altavoz, detección de despedida.
 - Bucle real 45 s sin intervención: saludo → escucha → timeout de silencio →
   re-escucha, sin crashes.
-- Suite completa: **131 tests unitarios, 0 fallos**.
+- Suite completa: **168 tests unitarios, 0 fallos** (más 6 escenarios de
+  compliance en vivo, gated por `SWISSCOM_LIVE_EVAL=1`).
 
 ## Comandos
 

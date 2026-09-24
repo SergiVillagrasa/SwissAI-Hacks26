@@ -1327,6 +1327,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = ">=8.0" }]
+eval = [{ name = "galtea", specifier = ">=5.4,<6" }]
 voice = [
     { name = "elevenlabs", specifier = ">=2.69" },
     { name = "numpy", specifier = ">=2.0" },

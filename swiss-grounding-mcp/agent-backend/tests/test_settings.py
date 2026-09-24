@@ -11,6 +11,7 @@ def test_from_env_reads_agent_specific_vars(monkeypatch, tmp_path):
     empty_env = tmp_path / "server.env"
     empty_env.write_text("")
     monkeypatch.setattr("agent_backend.settings._SERVER_ENV_PATH", empty_env)
+    monkeypatch.setattr("agent_backend.settings._SERVER_LOCAL_ENV_PATH", empty_env)
     monkeypatch.delenv("OJP_API_TOKEN", raising=False)
 
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
@@ -33,6 +34,7 @@ def test_from_env_splits_comma_separated_cors_origins(monkeypatch, tmp_path):
     empty_env = tmp_path / "server.env"
     empty_env.write_text("")
     monkeypatch.setattr("agent_backend.settings._SERVER_ENV_PATH", empty_env)
+    monkeypatch.setattr("agent_backend.settings._SERVER_LOCAL_ENV_PATH", empty_env)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     monkeypatch.setenv(
         "CORS_ALLOWED_ORIGIN",
@@ -52,6 +54,7 @@ def test_from_env_defaults_cors_origins_to_common_local_dev_hosts(monkeypatch, t
     empty_env = tmp_path / "server.env"
     empty_env.write_text("")
     monkeypatch.setattr("agent_backend.settings._SERVER_ENV_PATH", empty_env)
+    monkeypatch.setattr("agent_backend.settings._SERVER_LOCAL_ENV_PATH", empty_env)
     empty_local_env = tmp_path / "local.env"
     empty_local_env.write_text("")
     monkeypatch.setattr("agent_backend.settings._LOCAL_ENV_PATH", empty_local_env)
@@ -70,6 +73,7 @@ def test_from_env_defaults_cors_allow_any_local_port_to_true(monkeypatch, tmp_pa
     empty_env = tmp_path / "server.env"
     empty_env.write_text("")
     monkeypatch.setattr("agent_backend.settings._SERVER_ENV_PATH", empty_env)
+    monkeypatch.setattr("agent_backend.settings._SERVER_LOCAL_ENV_PATH", empty_env)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     monkeypatch.delenv("CORS_ALLOW_ANY_LOCAL_PORT", raising=False)
 
@@ -82,6 +86,7 @@ def test_from_env_can_disable_cors_allow_any_local_port(monkeypatch, tmp_path):
     empty_env = tmp_path / "server.env"
     empty_env.write_text("")
     monkeypatch.setattr("agent_backend.settings._SERVER_ENV_PATH", empty_env)
+    monkeypatch.setattr("agent_backend.settings._SERVER_LOCAL_ENV_PATH", empty_env)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     monkeypatch.setenv("CORS_ALLOW_ANY_LOCAL_PORT", "false")
 
@@ -94,6 +99,7 @@ def test_from_env_defaults_model_when_unset(monkeypatch, tmp_path):
     empty_env = tmp_path / "server.env"
     empty_env.write_text("")
     monkeypatch.setattr("agent_backend.settings._SERVER_ENV_PATH", empty_env)
+    monkeypatch.setattr("agent_backend.settings._SERVER_LOCAL_ENV_PATH", empty_env)
     monkeypatch.delenv("OPENAI_MODEL", raising=False)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
 

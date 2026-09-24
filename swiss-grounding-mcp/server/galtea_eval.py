@@ -28,7 +28,7 @@ load_dotenv(BASE_DIR / ".env.local", override=True)
 from galtea import Galtea
 
 from swiss_grounding_mcp.config.settings import Settings
-from voice_assistant import ToolBox, _say, route_intent
+from voice_assistant import ToolBox, route_intent
 
 VERSION_ID = "version_defum1qn271mzz4gggjbw6ug"
 PRODUCT_ID = "product_wcky92rnoaxozh51twl2jja5"
@@ -62,14 +62,20 @@ def main() -> int:
     print(f"Running evaluations for version {VERSION_ID} ...", flush=True)
     run = galtea.evaluations.run(version_id=VERSION_ID, agent=agent)
     print(f"run returned: {run}", flush=True)
-    run_id = run.get("id") or run.get("run_id") if isinstance(run, dict) else None
+    run_id = (run.get("id") or run.get("run_id")) if isinstance(run, dict) else None
 
     # Poll until every evaluation reaches a terminal state.
     terminal = {"SUCCESS", "FAILED", "SKIPPED"}
     deadline = time.time() + 15 * 60
+    items = []
     while time.time() < deadline:
-        evals = galtea.evaluations.list(version_id=VERSION_ID)
-        items = getattr(evals, "items", None) or getattr(evals, "data", None) or list(evals)
+        try:
+            evals = galtea.evaluations.list(version_id=VERSION_ID)
+            items = getattr(evals, "items", None) or getattr(evals, "data", None) or list(evals)
+        except Exception as exc:  # noqa: BLE001 - transient API errors must not kill the poll
+            print(f"[poll] list failed: {exc}", flush=True)
+            time.sleep(20)
+            continue
         states = {getattr(e, "status", "?") for e in items}
         print(f"[poll] {len(items)} evaluations, statuses: {states}", flush=True)
         if items and states <= terminal:

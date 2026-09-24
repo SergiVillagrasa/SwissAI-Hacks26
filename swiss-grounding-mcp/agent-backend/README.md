@@ -29,7 +29,9 @@ Or, from the repository root: `make dev-api` / `npm run dev:api`.
 
 ## Endpoints
 
-- `GET /api/health` — liveness check.
+- `GET /api/health` — liveness check. Reports `openai_configured` so a
+  missing or invalid `OPENAI_API_KEY` degrades cleanly instead of
+  crashing the service at startup.
 - `POST /api/chat` — `{"messages": [{"role": "user", "content": "..."}]}`,
   returns a `text/event-stream` of `{"type": "token"|"widget"|"done", ...}`
   events. See the design spec at

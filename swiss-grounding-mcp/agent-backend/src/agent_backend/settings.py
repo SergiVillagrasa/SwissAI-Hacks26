@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from swiss_grounding_mcp.config.settings import Settings as MCPSettings
 
 _SERVER_ENV_PATH = Path(__file__).resolve().parents[3] / "server" / ".env"
+_SERVER_LOCAL_ENV_PATH = Path(__file__).resolve().parents[3] / "server" / ".env.local"
 _LOCAL_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 
 _DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
@@ -45,12 +46,15 @@ class AgentSettings:
     def from_env(cls) -> "AgentSettings":
         # Load the MCP server's own .env first so OJP_API_TOKEN and
         # AERODATABOX_API_KEY are available without duplicating them here.
+        # server/.env.local only fills gaps; this package's own .env wins
+        # so a backend-local OPENAI_API_KEY can override the shared one.
         load_dotenv(_SERVER_ENV_PATH)
-        load_dotenv(_LOCAL_ENV_PATH)  # this package's own .env, if present
+        load_dotenv(_SERVER_LOCAL_ENV_PATH)
+        load_dotenv(_LOCAL_ENV_PATH, override=True)
         raw_cors_origins = os.environ.get("CORS_ALLOWED_ORIGIN", _DEFAULT_CORS_ORIGINS)
         cors_origins = [origin.strip() for origin in raw_cors_origins.split(",") if origin.strip()]
         return cls(
-            openai_api_key=os.environ.get("OPENAI_API_KEY", ""),
+            openai_api_key=os.environ.get("OPENAI_API_KEY", "").strip(),
             openai_model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
             openai_transcribe_model=os.environ.get("OPENAI_TRANSCRIBE_MODEL", "whisper-1"),
             openai_tts_model=os.environ.get("OPENAI_TTS_MODEL", "tts-1"),

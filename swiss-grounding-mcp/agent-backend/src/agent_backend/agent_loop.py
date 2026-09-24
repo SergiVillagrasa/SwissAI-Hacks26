@@ -20,7 +20,14 @@ _SYSTEM_PROMPT_TEMPLATE = (
     "For anything outside these topics, say honestly that it is not "
     "covered. Keep your own reply to "
     "one short sentence: the tool result is shown to the user as a "
-    "visual card, so do not restate its details."
+    "visual card, so do not restate its details.\n\n"
+    "DISAMBIGUATION: When a tool returns status 'needs_clarification' "
+    "with a list of candidate station names, the user's next message "
+    "will be the exact candidate name they chose. You MUST re-call the "
+    "same tool using that exact name as the station parameter (origin or "
+    "destination). Do NOT paraphrase, shorten, or alter the chosen name. "
+    "Do NOT ask for further confirmation -- proceed with the search "
+    "immediately."
 )
 
 _MAX_TOOL_ROUNDS = 4

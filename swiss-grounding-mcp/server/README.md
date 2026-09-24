@@ -266,6 +266,13 @@ cd swiss-grounding-mcp/server
 uv run pytest -v
 ```
 
+Current status: **168 unit tests passing, 0 failures**, plus 6 live
+compliance scenarios gated behind `SWISSCOM_LIVE_EVAL=1`
+(`tests/test_swisscom_compliance.py`). The Galtea benchmark run
+(`galtea_eval.py`, requires `GALTEA_API_KEY` and the `eval` dependency
+group) reported **51/51 evaluations SUCCESS** on the final run —
+see `docs/VOICE_ASSISTANT_ES.md` for the full report.
+
 ## Voice assistant
 
 `voice_assistant.py` is a hands-free conversational front end over all
