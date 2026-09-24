@@ -2,19 +2,24 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
+from datetime import datetime, timezone
 
 from agent_backend.dispatch import UnknownToolError, dispatch
 from agent_backend.tools_registry import TOOL_SCHEMAS
 from agent_backend.widget_mapper import map_result
 
-_SYSTEM_PROMPT = (
-    "You are the Swiss Grounding travel assistant. Use the provided tools "
-    "for any question about Swiss train connections, station boards, "
-    "fares, disruptions, or Zurich Airport (ZRH) flights. Never answer a "
-    "travel question from memory; always call the matching tool. For "
-    "anything outside these topics, say honestly that it is not covered. "
-    "Keep your own reply to one short sentence: the tool result is shown "
-    "to the user as a visual card, so do not restate its details."
+_SYSTEM_PROMPT_TEMPLATE = (
+    "You are the Swiss Grounding travel assistant. The current date and "
+    "time is {now} (UTC). Use this as the anchor for any relative time "
+    "expression the user gives (e.g. 'tomorrow', 'this weekend', 'next "
+    "Friday') and pass an absolute ISO 8601 date/time to tools -- never "
+    "guess a date from memory. Use the provided tools for any question "
+    "about Swiss train connections, station boards, fares, disruptions, "
+    "or Zurich Airport (ZRH) flights. Never answer a travel question from "
+    "memory; always call the matching tool. For anything outside these "
+    "topics, say honestly that it is not covered. Keep your own reply to "
+    "one short sentence: the tool result is shown to the user as a "
+    "visual card, so do not restate its details."
 )
 
 _MAX_TOOL_ROUNDS = 4
@@ -28,8 +33,11 @@ def run_chat(
     aviation_client,
     settings,
     model: str,
+    now: datetime | None = None,
 ) -> Iterator[dict]:
-    chat_messages = [{"role": "system", "content": _SYSTEM_PROMPT}, *messages]
+    current_time = now or datetime.now(timezone.utc)
+    system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(now=current_time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+    chat_messages = [{"role": "system", "content": system_prompt}, *messages]
 
     for _ in range(_MAX_TOOL_ROUNDS):
         try:

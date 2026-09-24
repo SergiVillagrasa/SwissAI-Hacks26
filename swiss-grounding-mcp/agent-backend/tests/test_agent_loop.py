@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 from swiss_grounding_mcp.domain.models import ConnectionSearchResult
@@ -38,6 +39,25 @@ def _tool_call_response(tool_calls):
     return SimpleNamespace(
         choices=[SimpleNamespace(message=SimpleNamespace(content=None, tool_calls=tool_calls))]
     )
+
+
+def test_system_prompt_includes_the_real_current_date_for_relative_time_words():
+    # Regression: without a real "today" anchor, the model has no way to
+    # correctly resolve "tomorrow"/"this weekend" and silently computes the
+    # wrong absolute date, which OJP/AeroDataBox then answer for as if it
+    # were valid (empty results), not as an error the user could act on.
+    fake_openai = _FakeOpenAI([_text_response("ok")])
+    fixed_now = datetime(2026, 9, 24, 18, 0, tzinfo=timezone.utc)
+
+    list(run_chat(
+        [{"role": "user", "content": "hi"}],
+        openai_client=fake_openai, ojp_client=None, aviation_client=None,
+        settings=None, model="gpt-4o-mini", now=fixed_now,
+    ))
+
+    system_message = fake_openai.calls[0]["messages"][0]
+    assert system_message["role"] == "system"
+    assert "2026-09-24" in system_message["content"]
 
 
 def test_plain_text_reply_emits_token_then_done():
