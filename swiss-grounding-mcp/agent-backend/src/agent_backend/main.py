@@ -15,7 +15,7 @@ settings = AgentSettings.from_env()
 app = FastAPI(title="Swiss Grounding MCP Agent Backend")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.cors_allowed_origin],
+    allow_origins=settings.cors_allowed_origins,
     allow_methods=["POST", "GET"],
     allow_headers=["*"],
 )

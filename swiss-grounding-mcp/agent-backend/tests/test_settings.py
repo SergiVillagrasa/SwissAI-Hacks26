@@ -29,6 +29,43 @@ def test_from_env_reads_agent_specific_vars(monkeypatch, tmp_path):
     assert settings.mcp_settings.ojp_api_token == ""
 
 
+def test_from_env_splits_comma_separated_cors_origins(monkeypatch, tmp_path):
+    empty_env = tmp_path / "server.env"
+    empty_env.write_text("")
+    monkeypatch.setattr("agent_backend.settings._SERVER_ENV_PATH", empty_env)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv(
+        "CORS_ALLOWED_ORIGIN",
+        "http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:45321",
+    )
+
+    settings = AgentSettings.from_env()
+
+    assert settings.cors_allowed_origins == [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:45321",
+    ]
+
+
+def test_from_env_defaults_cors_origins_to_common_local_dev_hosts(monkeypatch, tmp_path):
+    empty_env = tmp_path / "server.env"
+    empty_env.write_text("")
+    monkeypatch.setattr("agent_backend.settings._SERVER_ENV_PATH", empty_env)
+    empty_local_env = tmp_path / "local.env"
+    empty_local_env.write_text("")
+    monkeypatch.setattr("agent_backend.settings._LOCAL_ENV_PATH", empty_local_env)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.delenv("CORS_ALLOWED_ORIGIN", raising=False)
+
+    settings = AgentSettings.from_env()
+
+    assert settings.cors_allowed_origins == [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
+
 def test_from_env_defaults_model_when_unset(monkeypatch, tmp_path):
     empty_env = tmp_path / "server.env"
     empty_env.write_text("")
