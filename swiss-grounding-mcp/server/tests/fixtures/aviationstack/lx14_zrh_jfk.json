@@ -1,0 +1,37 @@
+{
+  "pagination": {"limit": 1, "offset": 0, "count": 1, "total": 1},
+  "data": [
+    {
+      "flight_date": "2026-09-25",
+      "flight_status": "scheduled",
+      "departure": {
+        "airport": "Zurich",
+        "timezone": "Europe/Zurich",
+        "iata": "ZRH",
+        "icao": "LSZH",
+        "terminal": "1",
+        "gate": "A12",
+        "delay": 5,
+        "scheduled": "2026-09-25T10:20:00+00:00",
+        "estimated": "2026-09-25T10:25:00+00:00",
+        "actual": null
+      },
+      "arrival": {
+        "airport": "John F Kennedy International",
+        "timezone": "America/New_York",
+        "iata": "JFK",
+        "icao": "KJFK",
+        "terminal": "4",
+        "gate": "B22",
+        "delay": null,
+        "scheduled": "2026-09-25T13:10:00+00:00",
+        "estimated": "2026-09-25T13:05:00+00:00",
+        "actual": null
+      },
+      "airline": {"name": "Swiss International Air Lines", "iata": "LX", "icao": "SWR"},
+      "flight": {"number": "14", "iata": "LX14", "icao": "SWR14", "codeshared": null},
+      "aircraft": null,
+      "live": null
+    }
+  ]
+}
