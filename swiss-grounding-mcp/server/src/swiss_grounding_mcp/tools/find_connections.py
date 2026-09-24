@@ -9,6 +9,21 @@ from swiss_grounding_mcp.sources.ojp.client import OjpSourceError
 
 _DOMINANT_MATCH_MARGIN = 0.3
 
+_OUT_OF_SCOPE_MESSAGE = (
+    "This service covers Swiss public transport and cross-border journeys "
+    "connecting to Switzerland. Purely foreign transit outside Switzerland "
+    "is outside the declared scope."
+)
+
+
+def _is_swiss_stop(stop_ref: str) -> bool:
+    ref = stop_ref.strip().lower()
+    if ref.startswith("ch:"):
+        return True
+    if ":" not in ref and ref.isdigit():
+        return ref.startswith("85")
+    return False
+
 
 def _normalize(value: str) -> str:
     decomposed = unicodedata.normalize("NFKD", value)
@@ -86,6 +101,13 @@ def find_train_connections(
     if failure is not None:
         return failure
 
+    if not _is_swiss_stop(resolved_origin.stop_ref) and not _is_swiss_stop(
+        resolved_destination.stop_ref
+    ):
+        return ConnectionSearchResult(
+            status="out_of_scope", message=_OUT_OF_SCOPE_MESSAGE
+        )
+
     effective_departure_time = departure_time
     effective_arrival_time = arrival_time if departure_time is None else None
     time_note = ""
@@ -118,6 +140,6 @@ def find_train_connections(
     return ConnectionSearchResult(
         status="ok",
         message=("Connections found." + time_note) if time_note else None,
-        connections=connections,
+        connections=connections[:clamped_results],
         provenance=build_provenance(settings),
     )

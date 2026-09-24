@@ -10,13 +10,21 @@ mandate).
 - **Topics:** Swiss passenger-train connection lookups between two named
   stations, for a given (optional) date/time.
 - **Geography:** all stations reachable via the OJP 2.0 network (all of
-  Switzerland).
+  Switzerland), plus cross-border journeys where at least one end of the
+  route is a Swiss station (e.g. Paris→Genève or Zürich→Milan). Purely
+  foreign routes with no Swiss end are refused.
 - **Reference period:** live/current OJP timetable data at query time; no
   historical timetable queries.
 - **Out of scope:** fares, departure boards (single-stop next departures),
   disruption/incident feeds, non-rail modes, and every other challenge
   topic area (taxes, health insurance, waste collection, etc). Out-of-scope
   questions get an honest "not covered" response, never a guess.
+- **Scope enforcement:** OJP 2.0 also indexes non-Swiss stops, which keeps
+  legitimate cross-border journeys working. Both ends are resolved first;
+  only when *neither* stop reference carries the Swiss `ch:` DiDok/SLOID
+  prefix (or a Swiss `85xxxxx` UIC number) is the route refused with
+  status `out_of_scope` before any trip request — purely foreign routes
+  (e.g. Paris→Marseille, Berlin→Hamburg) are never answered.
 
 ## Setup
 
