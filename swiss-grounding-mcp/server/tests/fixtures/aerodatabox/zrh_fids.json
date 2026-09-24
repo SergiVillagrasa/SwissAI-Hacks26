@@ -1,0 +1,61 @@
+{
+  "departures": [
+    {
+      "number": "LX 14",
+      "status": "Scheduled",
+      "codeshareStatus": "IsOperator",
+      "isCargo": false,
+      "aircraft": {"model": "Airbus A220-300"},
+      "airline": {"name": "Swiss", "iata": "LX", "icao": "SWR"},
+      "departure": {
+        "airport": {"iata": "ZRH", "icao": "LSZH", "name": "Zurich"},
+        "scheduledTime": {"utc": "2026-09-25 10:20Z", "local": "2026-09-25 12:20+02:00"},
+        "revisedTime": {"utc": "2026-09-25 10:25Z", "local": "2026-09-25 12:25+02:00"},
+        "runwayTime": null,
+        "terminal": "1",
+        "checkInDesk": "12-18",
+        "gate": "A12",
+        "quality": ["Basic", "Live"]
+      },
+      "arrival": {
+        "airport": {"iata": "JFK", "icao": "KJFK", "name": "John F Kennedy Intl"},
+        "scheduledTime": {"utc": "2026-09-25 13:10Z", "local": "2026-09-25 09:10-04:00"},
+        "revisedTime": null,
+        "runwayTime": null,
+        "terminal": "4",
+        "gate": null,
+        "baggageBelt": null,
+        "quality": ["Basic"]
+      }
+    },
+    {
+      "number": "LX 16",
+      "status": "Scheduled",
+      "codeshareStatus": "IsOperator",
+      "isCargo": false,
+      "aircraft": {"model": "Airbus A320"},
+      "airline": {"name": "Swiss", "iata": "LX", "icao": "SWR"},
+      "departure": {
+        "airport": {"iata": "ZRH", "icao": "LSZH", "name": "Zurich"},
+        "scheduledTime": {"utc": "2026-09-25 18:00Z", "local": "2026-09-25 20:00+02:00"},
+        "revisedTime": null,
+        "runwayTime": null,
+        "terminal": "1",
+        "checkInDesk": null,
+        "gate": "A14",
+        "quality": ["Basic"]
+      },
+      "arrival": {
+        "airport": {"iata": "LHR", "icao": "EGLL", "name": "London Heathrow"},
+        "scheduledTime": {"utc": "2026-09-25 19:15Z", "local": "2026-09-25 20:15+01:00"},
+        "revisedTime": null,
+        "runwayTime": null,
+        "terminal": "2",
+        "gate": null,
+        "baggageBelt": null,
+        "quality": ["Basic"]
+      }
+    }
+  ],
+  "arrivals": []
+}

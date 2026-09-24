@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
+
 from swiss_grounding_mcp.config.settings import Settings
 from swiss_grounding_mcp.domain.models import ConnectionSearchResult
 from swiss_grounding_mcp.evidence.provenance import build_provenance
 from swiss_grounding_mcp.sources.ojp.client import OjpSourceError
 from swiss_grounding_mcp.tools.resolution import is_swiss_stop, resolve_station
+
+_LIR_POOL = ThreadPoolExecutor(max_workers=2, thread_name_prefix="ojp-lir")
 
 _OUT_OF_SCOPE_MESSAGE = (
     "This service covers Swiss public transport and cross-border journeys "
@@ -34,8 +38,11 @@ def find_train_connections(
 
     clamped_results = max(1, min(5, results))
 
+    origin_future = _LIR_POOL.submit(client.location_information, origin)
+    destination_future = _LIR_POOL.submit(client.location_information, destination)
+
     try:
-        origin_candidates = client.location_information(origin)
+        origin_candidates = origin_future.result()
     except OjpSourceError as exc:
         return ConnectionSearchResult(status="source_error", message=str(exc))
 
@@ -44,7 +51,7 @@ def find_train_connections(
         return failure
 
     try:
-        destination_candidates = client.location_information(destination)
+        destination_candidates = destination_future.result()
     except OjpSourceError as exc:
         return ConnectionSearchResult(status="source_error", message=str(exc))
 

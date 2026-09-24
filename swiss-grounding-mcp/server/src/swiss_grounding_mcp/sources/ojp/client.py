@@ -3,8 +3,15 @@ from __future__ import annotations
 import httpx
 
 from swiss_grounding_mcp.config.settings import Settings
-from swiss_grounding_mcp.domain.models import Connection, FareProduct, StopCandidate, StopEvent
+from swiss_grounding_mcp.domain.models import (
+    Connection,
+    Disruption,
+    FareProduct,
+    StopCandidate,
+    StopEvent,
+)
 from swiss_grounding_mcp.sources.ojp.xml_builder import (
+    build_disruption_stop_event_request,
     build_fare_request,
     build_location_information_request,
     build_stop_event_request,
@@ -12,6 +19,7 @@ from swiss_grounding_mcp.sources.ojp.xml_builder import (
 )
 from swiss_grounding_mcp.sources.ojp.xml_parser import (
     has_service_delivery_error,
+    parse_disruption_stop_event_response,
     parse_fare_response,
     parse_location_information_response,
     parse_stop_event_response,
@@ -135,3 +143,21 @@ class OjpClient:
         )
         response_body = self._post(request_body)
         return parse_stop_event_response(response_body, event_type)
+
+    def stop_events(
+        self,
+        stop_ref: str,
+        *,
+        stop_name: str = "",
+        number_of_results: int = 10,
+    ) -> list[Disruption]:
+        request_body = build_disruption_stop_event_request(
+            stop_ref,
+            self._settings.ojp_requestor_ref,
+            stop_name=stop_name,
+            number_of_results=number_of_results,
+        )
+
+        response_body = self._post(request_body)
+
+        return parse_disruption_stop_event_response(response_body)

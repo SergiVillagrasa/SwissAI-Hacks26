@@ -43,3 +43,34 @@ def test_respect_robots_txt_accepts_common_truthy_strings():
     assert Settings.from_env({"RESPECT_ROBOTS_TXT": "1"}).respect_robots_txt is True
     assert Settings.from_env({"RESPECT_ROBOTS_TXT": "false"}).respect_robots_txt is False
     assert Settings.from_env({"RESPECT_ROBOTS_TXT": "0"}).respect_robots_txt is False
+
+
+def test_aerodatabox_defaults_when_env_empty():
+    settings = Settings.from_env({})
+
+    assert settings.aerodatabox_api_key == ""
+    assert settings.aerodatabox_host == "aerodatabox.p.rapidapi.com"
+    assert settings.aerodatabox_base_url == "https://aerodatabox.p.rapidapi.com"
+    assert settings.aerodatabox_timeout_seconds == 10.0
+    assert settings.aerodatabox_enable is True
+    assert settings.aerodatabox_cache_seconds == 60.0
+
+
+def test_aerodatabox_env_overrides_defaults():
+    env = {
+        "AERODATABOX_API_KEY": "test-key",
+        "AERODATABOX_HOST": "example.rapidapi.com",
+        "AERODATABOX_BASE_URL": "https://example.test",
+        "AERODATABOX_TIMEOUT_SECONDS": "5",
+        "AERODATABOX_ENABLE": "false",
+        "AERODATABOX_CACHE_SECONDS": "30",
+    }
+
+    settings = Settings.from_env(env)
+
+    assert settings.aerodatabox_api_key == "test-key"
+    assert settings.aerodatabox_host == "example.rapidapi.com"
+    assert settings.aerodatabox_base_url == "https://example.test"
+    assert settings.aerodatabox_timeout_seconds == 5.0
+    assert settings.aerodatabox_enable is False
+    assert settings.aerodatabox_cache_seconds == 30.0

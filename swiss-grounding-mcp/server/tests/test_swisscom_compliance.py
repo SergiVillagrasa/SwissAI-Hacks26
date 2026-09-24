@@ -182,7 +182,7 @@ def scenario_e() -> ScenarioResult:
         f"<{LATENCY_WARN_MS} ms, <{SIZE_WARN_CHARS} chars",
         f"{ms:.0f} ms, {size} chars (~{size // 4} tokens)",
         verdict,
-        "3 sequential OJP calls per tool invocation" + ("; oversized payload" if size >= SIZE_WARN_CHARS else ""),
+        "2 parallel LIR + 1 trip call per invocation" + ("; oversized payload" if size >= SIZE_WARN_CHARS else ""),
     )
 
 
