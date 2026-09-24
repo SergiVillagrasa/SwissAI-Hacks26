@@ -15,7 +15,7 @@ from swiss_grounding_mcp.domain.models import (
     FlightToTrainResult,
     StationBoardResult,
 )
-from swiss_grounding_mcp.sources.aviationstack.client import AviationstackClient
+from swiss_grounding_mcp.sources.aerodatabox.client import AerodataboxClient
 from swiss_grounding_mcp.sources.ojp.client import OjpClient
 from swiss_grounding_mcp.tools.connect_flight_to_train import (
     connect_flight_to_train as _connect_flight_to_train,
@@ -41,7 +41,7 @@ settings = Settings.from_env()
 mcp = MCPServer("Swiss Grounding MCP")
 
 _client: OjpClient | None = None
-_aviation_client: AviationstackClient | None = None
+_aviation_client: AerodataboxClient | None = None
 
 
 def get_client() -> OjpClient:
@@ -51,10 +51,10 @@ def get_client() -> OjpClient:
     return _client
 
 
-def get_aviation_client() -> AviationstackClient:
+def get_aviation_client() -> AerodataboxClient:
     global _aviation_client
     if _aviation_client is None:
-        _aviation_client = AviationstackClient(settings)
+        _aviation_client = AerodataboxClient(settings)
     return _aviation_client
 
 
@@ -137,8 +137,9 @@ def find_flight_by_number(
     """Look up a flight at Zurich Airport (ZRH) by flight number and date.
 
     Scope: scheduled/estimated/actual times, terminal, gate, and delay as
-    reported by aviationstack.com, a third-party aggregator (not the
-    airport operator). Only fields present in the response are returned.
+    reported by AeroDataBox (aerodatabox.com), a third-party aggregator
+    (not the airport operator). Supports scheduled future dates, not just
+    the current day. Only fields present in the response are returned.
     direction, if given, is 'arrival' or 'departure' at ZRH. Does not
     cover fares, visas, or airline-specific rules.
     """
@@ -161,7 +162,7 @@ def search_airport_flights(
     direction is 'arrival' or 'departure'. Filter by the exact IATA/ICAO
     code of the other airport (a city or country name is not accepted;
     the tool will ask for the precise airport code) and/or an airline
-    IATA code. Data via aviationstack.com.
+    IATA code. Data via AeroDataBox (aerodatabox.com).
     """
     return _search_airport_flights(
         direction,
@@ -199,7 +200,7 @@ def connect_flight_to_train(
     """Connect a ZRH arrival to onward Swiss train travel.
 
     Provide either flight_number + flight_date (looked up via
-    aviationstack.com) or a confirmed_arrival_time. transfer_buffer_minutes
+    aerodatabox.com) or a confirmed_arrival_time. transfer_buffer_minutes
     (minimum 15) is added to the arrival time before searching trains via
     OJP 2.0 from Zürich Flughafen. Never assumes a train is reachable
     without this explicit buffer.

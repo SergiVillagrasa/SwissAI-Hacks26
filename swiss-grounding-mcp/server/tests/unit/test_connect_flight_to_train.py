@@ -1,41 +1,42 @@
 from swiss_grounding_mcp.config.settings import Settings
 from swiss_grounding_mcp.domain.models import Connection, StopCandidate
-from swiss_grounding_mcp.sources.aviationstack.client import AviationstackSourceError
+from swiss_grounding_mcp.sources.aerodatabox.client import AerodataboxSourceError
 from swiss_grounding_mcp.tools.connect_flight_to_train import connect_flight_to_train
 
-_LX14_ARRIVAL_BODY = {
-    "pagination": {"limit": 1, "offset": 0, "count": 1, "total": 1},
-    "data": [
-        {
-            "flight_date": "2026-09-25", "flight_status": "scheduled",
-            "departure": {
-                "airport": "JFK", "timezone": "America/New_York", "iata": "JFK", "icao": "KJFK",
-                "terminal": None, "gate": None, "delay": None,
-                "scheduled": "2026-09-25T09:00:00+00:00", "estimated": None, "actual": None,
-            },
-            "arrival": {
-                "airport": "Zurich", "timezone": "Europe/Zurich", "iata": "ZRH", "icao": "LSZH",
-                "terminal": "2", "gate": None, "delay": None,
-                "scheduled": "2026-09-25T22:00:00+00:00", "estimated": "2026-09-25T22:10:00+00:00",
-                "actual": None,
-            },
-            "airline": {"name": "SWISS", "iata": "LX", "icao": "SWR"},
-            "flight": {"number": "15", "iata": "LX15", "icao": "SWR15", "codeshared": None},
-            "aircraft": None, "live": None,
-        }
-    ],
-}
+_LX15_ARRIVAL_ITEMS = [
+    {
+        "number": "LX 15",
+        "status": "Scheduled",
+        "airline": {"name": "Swiss", "iata": "LX", "icao": "SWR"},
+        "departure": {
+            "airport": {"iata": "JFK", "icao": "KJFK", "name": "JFK"},
+            "scheduledTime": {"utc": "2026-09-25 09:00Z"},
+            "revisedTime": None,
+            "runwayTime": None,
+            "terminal": None,
+            "gate": None,
+        },
+        "arrival": {
+            "airport": {"iata": "ZRH", "icao": "LSZH", "name": "Zurich"},
+            "scheduledTime": {"utc": "2026-09-25 22:00Z"},
+            "revisedTime": {"utc": "2026-09-25 22:10Z"},
+            "runwayTime": None,
+            "terminal": "2",
+            "gate": None,
+        },
+    }
+]
 
 
-class StubAviationstackClient:
-    def __init__(self, body=None, raise_error=None):
-        self.body = body
+class StubAerodataboxClient:
+    def __init__(self, items=None, raise_error=None):
+        self.items = items if items is not None else []
         self.raise_error = raise_error
 
-    def get_flights(self, params):
+    def get_flight_by_number(self, flight_number, date_local):
         if self.raise_error is not None:
             raise self.raise_error
-        return self.body
+        return self.items
 
 
 class StubOjpClient:
@@ -59,13 +60,13 @@ class StubOjpClient:
 
 
 def _settings() -> Settings:
-    return Settings.from_env({"AVIATIONSTACK_BASE_URL": "https://example.test/v1"})
+    return Settings.from_env({"AERODATABOX_BASE_URL": "https://example.test"})
 
 
 def test_missing_destination_returns_needs_context():
     result = connect_flight_to_train(
         "LX15", "2026-09-25", None, "", 60, 3,
-        aviation_client=StubAviationstackClient(body=_LX14_ARRIVAL_BODY),
+        aviation_client=StubAerodataboxClient(items=_LX15_ARRIVAL_ITEMS),
         ojp_client=StubOjpClient(),
         settings=_settings(),
     )
@@ -76,7 +77,7 @@ def test_missing_destination_returns_needs_context():
 def test_buffer_below_minimum_returns_needs_context():
     result = connect_flight_to_train(
         "LX15", "2026-09-25", None, "Bern", 5, 3,
-        aviation_client=StubAviationstackClient(body=_LX14_ARRIVAL_BODY),
+        aviation_client=StubAerodataboxClient(items=_LX15_ARRIVAL_ITEMS),
         ojp_client=StubOjpClient(),
         settings=_settings(),
     )
@@ -88,7 +89,7 @@ def test_buffer_below_minimum_returns_needs_context():
 def test_missing_flight_and_confirmed_time_returns_needs_context():
     result = connect_flight_to_train(
         None, None, None, "Bern", 60, 3,
-        aviation_client=StubAviationstackClient(body=_LX14_ARRIVAL_BODY),
+        aviation_client=StubAerodataboxClient(items=_LX15_ARRIVAL_ITEMS),
         ojp_client=StubOjpClient(),
         settings=_settings(),
     )
@@ -100,7 +101,7 @@ def test_flight_lookup_success_computes_buffered_departure_and_calls_ojp():
     ojp_client = StubOjpClient()
     result = connect_flight_to_train(
         "LX15", "2026-09-25", None, "Bern", 60, 3,
-        aviation_client=StubAviationstackClient(body=_LX14_ARRIVAL_BODY),
+        aviation_client=StubAerodataboxClient(items=_LX15_ARRIVAL_ITEMS),
         ojp_client=ojp_client,
         settings=_settings(),
     )
@@ -108,7 +109,7 @@ def test_flight_lookup_success_computes_buffered_departure_and_calls_ojp():
     assert result.status == "answered"
     assert result.flight.flight_number == "LX15"
     assert len(result.train_connections) == 1
-    assert result.flight_provenance.source == "aviationstack.com"
+    assert result.flight_provenance.source == "AeroDataBox (aerodatabox.com)"
     assert result.rail_provenance is not None
     assert result.rail_provenance is not result.flight_provenance
     assert ojp_client.trip_calls[0]["departure_time"] == "2026-09-25T23:10:00+00:00"
@@ -118,7 +119,7 @@ def test_confirmed_arrival_time_skips_flight_lookup():
     ojp_client = StubOjpClient()
     result = connect_flight_to_train(
         None, None, "2026-09-25T22:00:00+00:00", "Bern", 30, 3,
-        aviation_client=StubAviationstackClient(raise_error=AviationstackSourceError("should not be called")),
+        aviation_client=StubAerodataboxClient(raise_error=AerodataboxSourceError("should not be called")),
         ojp_client=ojp_client,
         settings=_settings(),
     )
@@ -131,7 +132,7 @@ def test_confirmed_arrival_time_skips_flight_lookup():
 def test_flight_lookup_source_unavailable_asks_for_confirmed_time():
     result = connect_flight_to_train(
         "LX15", "2026-09-25", None, "Bern", 60, 3,
-        aviation_client=StubAviationstackClient(raise_error=AviationstackSourceError("quota exceeded")),
+        aviation_client=StubAerodataboxClient(raise_error=AerodataboxSourceError("quota exceeded")),
         ojp_client=StubOjpClient(),
         settings=_settings(),
     )
@@ -141,11 +142,9 @@ def test_flight_lookup_source_unavailable_asks_for_confirmed_time():
 
 
 def test_flight_not_found_returns_insufficient_evidence():
-    empty_body = {"pagination": {"limit": 1, "offset": 0, "count": 0, "total": 0}, "data": []}
-
     result = connect_flight_to_train(
         "XX999", "2026-09-25", None, "Bern", 60, 3,
-        aviation_client=StubAviationstackClient(body=empty_body),
+        aviation_client=StubAerodataboxClient(items=[]),
         ojp_client=StubOjpClient(),
         settings=_settings(),
     )

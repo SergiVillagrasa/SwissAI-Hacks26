@@ -45,36 +45,36 @@ def test_find_connections_tool_is_registered_and_callable(monkeypatch):
     asyncio.run(run())
 
 
-class StubAviationstackClient:
-    def get_flights(self, params):
-        return {
-            "pagination": {"limit": 1, "offset": 0, "count": 1, "total": 1},
-            "data": [
-                {
-                    "flight_date": params.get("flight_date", "2026-09-25"),
-                    "flight_status": "scheduled",
-                    "departure": {
-                        "airport": "Zurich", "timezone": "Europe/Zurich", "iata": "ZRH",
-                        "icao": "LSZH", "terminal": "1", "gate": "A12", "delay": None,
-                        "scheduled": "2026-09-25T10:20:00+00:00", "estimated": None, "actual": None,
-                    },
-                    "arrival": {
-                        "airport": "JFK", "timezone": "America/New_York", "iata": "JFK",
-                        "icao": "KJFK", "terminal": "4", "gate": None, "delay": None,
-                        "scheduled": "2026-09-25T13:10:00+00:00", "estimated": None, "actual": None,
-                    },
-                    "airline": {"name": "SWISS", "iata": "LX", "icao": "SWR"},
-                    "flight": {"number": "14", "iata": "LX14", "icao": "SWR14", "codeshared": None},
-                    "aircraft": None,
-                    "live": None,
-                }
-            ],
-        }
+class StubAerodataboxClient:
+    def get_flight_by_number(self, flight_number, date_local):
+        return [
+            {
+                "number": "LX 14",
+                "status": "Scheduled",
+                "airline": {"name": "Swiss", "iata": "LX", "icao": "SWR"},
+                "departure": {
+                    "airport": {"iata": "ZRH", "icao": "LSZH", "name": "Zurich"},
+                    "scheduledTime": {"utc": f"{date_local} 10:20Z"},
+                    "revisedTime": None,
+                    "runwayTime": None,
+                    "terminal": "1",
+                    "gate": "A12",
+                },
+                "arrival": {
+                    "airport": {"iata": "JFK", "icao": "KJFK", "name": "JFK"},
+                    "scheduledTime": {"utc": f"{date_local} 13:10Z"},
+                    "revisedTime": None,
+                    "runwayTime": None,
+                    "terminal": "4",
+                    "gate": None,
+                },
+            }
+        ]
 
 
 def test_aviation_tools_are_registered_and_callable(monkeypatch):
     monkeypatch.setattr(server_module, "get_client", lambda: StubClient())
-    monkeypatch.setattr(server_module, "get_aviation_client", lambda: StubAviationstackClient())
+    monkeypatch.setattr(server_module, "get_aviation_client", lambda: StubAerodataboxClient())
 
     async def run():
         async with Client(mcp) as client:

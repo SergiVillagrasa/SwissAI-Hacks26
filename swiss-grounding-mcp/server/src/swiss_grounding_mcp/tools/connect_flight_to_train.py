@@ -13,7 +13,10 @@ _MIN_BUFFER_MINUTES = 15
 
 
 def _add_minutes(iso_timestamp: str, minutes: int) -> str:
-    dt = datetime.fromisoformat(iso_timestamp)
+    # datetime.fromisoformat only accepts a bare "Z" suffix from Python
+    # 3.11+; normalize to "+00:00" so this works on the declared 3.10 floor.
+    normalized = iso_timestamp[:-1] + "+00:00" if iso_timestamp.endswith("Z") else iso_timestamp
+    dt = datetime.fromisoformat(normalized)
     return (dt + timedelta(minutes=minutes)).isoformat()
 
 
