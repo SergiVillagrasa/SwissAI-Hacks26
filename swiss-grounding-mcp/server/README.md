@@ -12,19 +12,20 @@ Zurich Airport (`flughafen-zuerich.ch`) pages.
 **Train connections:**
 
 - **Topics:** Swiss passenger-train connection lookups between two named
-  stations, and departure/arrival boards at a named stop, for a given
-  (optional) date/time.
+  stations, departure/arrival boards at a named stop, and fare lookups for
+  Swiss domestic routes, all for a given (optional) date/time.
 - **Geography:** all stations reachable via the OJP 2.0 network (all of
   Switzerland), plus cross-border journeys where at least one end of the
   route is a Swiss station (e.g. Paris→Genève or Zürich→Milan). Purely
   foreign routes with no Swiss end are refused.
 - **Reference period:** live/current OJP timetable data at query time; no
   historical timetable queries.
-- **Out of scope:** fares, non-public-transit topics, and every other
-  challenge topic area (taxes, health insurance, waste collection, etc).
-  Out-of-scope questions get an honest "not covered" response, never a
-  guess. Current disruptions affecting a station *are* covered — see
-  `find_disruptions` below.
+- **Out of scope:** non-public-transit topics, and every other challenge
+  topic area (taxes, health insurance, waste collection, etc).
+  International fare lookups are refused with an SBB booking deep link
+  instead of a guessed price. Out-of-scope questions get an honest "not
+  covered" response, never a guess. Current disruptions affecting a
+  station *are* covered — see `find_disruptions` below.
 - **Scope enforcement:** OJP 2.0 also indexes non-Swiss stops, which keeps
   legitimate cross-border journeys working. Both ends are resolved first;
   only when *neither* stop reference carries the Swiss `ch:` DiDok/SLOID
@@ -51,9 +52,22 @@ Zurich Airport (`flughafen-zuerich.ch`) pages.
   Static airport guidance is sourced directly from official
   `flughafen-zuerich.ch` pages, not scraped live.
 
-**Out of scope (both modules):** fares, departure boards beyond what's
+**Domestic flight fares:**
+
+- **Topics:** current commercial flight-fare searches between supported Swiss
+  airports, with airline, flight number, departure/arrival time, duration,
+  requested-currency price, and carbon emissions when supplied.
+- **Geography:** domestic routes between Zurich (ZRH), Geneva (GVA),
+  Basel/Mulhouse (BSL/EAP/MLH), Lugano (LUG), St. Gallen/Altenrhein (ACH),
+  and Sion (SIR). Routes with a foreign endpoint are refused.
+- **Reference period:** live Google Flights search results retrieved through
+  SerpApi for today or a future date; an omitted date defaults to tomorrow.
+- **Data quality note:** SerpApi is a third-party search API. Sparse or absent
+  domestic services return `not_found`; the server never invents a fare.
+
+**Out of scope (all modules):** departure boards beyond what's
 described above, visas/immigration rules, airline-specific policies,
-non-Swiss/non-ZRH topics, and every other challenge topic area (taxes,
+foreign domestic-flight fares, and every other challenge topic area (taxes,
 health insurance, waste collection, etc). Out-of-scope questions get an
 honest response, never a guess.
 
@@ -66,7 +80,7 @@ cd swiss-grounding-mcp/server
 uv venv
 uv pip install -e ".[dev]" --group dev
 cp .env.example .env
-# edit .env and set OJP_API_TOKEN (see "Required credentials" below)
+# edit .env and set the credentials for the tools you plan to use
 ```
 
 ## Required credentials
@@ -90,6 +104,9 @@ cp .env.example .env
   or any use beyond personal development/testing, upgrade to a paid
   plan (from ~$7.50–8/month), which lifts the commercial-use
   restriction and makes attribution optional.
+- `SERPAPI_API_KEY`: a SerpApi key used by `get_flight_fares` to query Google
+  Flights results. Without this key, that tool returns `source_error`; all
+  train, AeroDataBox, and static-guidance tools continue to work.
 
 No other credentials or API keys are required. The server makes no LLM
 calls itself.
@@ -133,6 +150,20 @@ Output: same status set as `find_connections`; on `ok`, a `station_name`,
 `provenance` block. Foreign stations are refused as `out_of_scope`;
 departure boards exist only for the Swiss network.
 
+## The `check_public_transport_fares` tool
+
+Input: `origin` (str), `destination` (str), `departure_time` (ISO 8601,
+optional — defaults to "now"), `travel_class` (str, default `"2"`),
+`discount_card` (str, optional — e.g. `"Halbtax"`).
+
+Output: `status` of `success`, `fallback_link`, `out_of_scope`,
+`needs_clarification`, or `source_error`; a human-readable `message`;
+`fares` (only for `success`) as a list of `FareProduct` objects with
+`product`, `price_chf`, `class_of_travel`, and `discount`; and a
+`booking_url` with an SBB timetable deep link for the requested journey
+whenever a price cannot be returned. International routes are refused as
+`out_of_scope` and return the SBB deep link without a guessed fare.
+
 ## The `find_disruptions` tool
 
 Input: `stop` (str).
@@ -143,6 +174,18 @@ Output: same status set as `find_connections`; on `ok`, a list of
 `provenance` block. Uses current real-time OJP 2.0 stop-event information
 to surface cancellations, delays, and boarding/alighting restrictions
 affecting services at the requested station.
+
+## The `get_flight_fares` tool
+
+Input: `origin_city`, `destination_city`, optional `outbound_date`
+(`YYYY-MM-DD`, defaults to tomorrow), and `currency` (defaults to `CHF`).
+City names and IATA aliases are accepted for ZRH, GVA, BSL/EAP/MLH, LUG,
+ACH, and SIR.
+
+Output: `status` of `ok`, `needs_clarification`, `not_found`, `out_of_scope`,
+or `source_error`; up to five concise flight itineraries for `ok`; and
+SerpApi provenance with a UTC retrieval timestamp. Foreign routes are refused
+before an API call, and routes without commercial service return `not_found`.
 
 ## The aviation tools
 
@@ -190,9 +233,10 @@ guessing.
 ## Configuration
 
 See `.env.example`. `RESPECT_ROBOTS_TXT` (default `true`) is reserved for
-future non-API sources this server may add later — the OJP adapter used
-today is a licensed, keyed API, not scraped HTML, so this setting has no
-effect on it yet.
+future non-API sources this server may add later — the OJP, AeroDataBox, and
+SerpApi adapters used today are keyed APIs, not scraped HTML, so this setting
+has no effect on them yet. `SERPAPI_BASE_URL` defaults to
+`https://serpapi.com/search.json`, and `SERPAPI_TIMEOUT_SECONDS` defaults to 10.
 
 ## Running the checks
 
@@ -276,8 +320,11 @@ Add any one to `.env`; the active brain is printed at startup.
 
 ## Limitations
 
-- Milestone 1 (train) covers connection search, station boards, and
-  disruption feeds; no fares or non-rail modes.
+- Milestone 1 (train) covers connection search, station boards,
+  disruption feeds, and fare lookups; no other non-rail modes.
+- Fare lookups use the OJP Fare Beta endpoint when available; when that
+  endpoint fails, the response falls back to an SBB booking deep link with
+  no guessed price.
 - Station name resolution uses OJP's own fuzzy matching; extremely
   ambiguous or misspelled names may require a follow-up clarification.
 - The aviation module covers ZRH only, is backed by a third-party

@@ -25,6 +25,9 @@ class StubClient:
     def get_stop_events(self, *args, **kwargs):
         return []
 
+    def fare_request(self, *args, **kwargs):
+        return []
+
 
 def test_find_connections_tool_is_registered_and_callable(monkeypatch):
     monkeypatch.setattr(server_module, "get_client", lambda: StubClient())
@@ -35,6 +38,7 @@ def test_find_connections_tool_is_registered_and_callable(monkeypatch):
             names = [tool.name for tool in tools.tools]
             assert "find_connections" in names
             assert "get_station_board" in names
+            assert "check_public_transport_fares" in names
 
             result = await client.call_tool(
                 "find_connections", {"origin": "Bern", "destination": "Zürich HB"}
@@ -42,7 +46,34 @@ def test_find_connections_tool_is_registered_and_callable(monkeypatch):
             assert result.structured_content["status"] == "ok"
             assert len(result.structured_content["connections"]) == 1
 
+            fares_result = await client.call_tool(
+                "check_public_transport_fares",
+                {"origin": "Bern", "destination": "Zürich HB"},
+            )
+            assert fares_result.structured_content["status"] == "fallback_link"
+            assert "sbb.ch" in fares_result.structured_content["booking_url"]
+
     asyncio.run(run())
+
+
+class StubSerpApiClient:
+    def search_flights(self, departure_id, arrival_id, outbound_date, currency):
+        return {
+            "best_flights": [
+                {
+                    "flights": [
+                        {
+                            "departure_airport": {"id": departure_id, "time": f"{outbound_date} 08:00"},
+                            "arrival_airport": {"id": arrival_id, "time": f"{outbound_date} 08:50"},
+                            "airline": "SWISS",
+                            "flight_number": "LX 2802",
+                        }
+                    ],
+                    "total_duration": 50,
+                    "price": 149,
+                }
+            ]
+        }
 
 
 class StubAerodataboxClient:
@@ -75,6 +106,7 @@ class StubAerodataboxClient:
 def test_aviation_tools_are_registered_and_callable(monkeypatch):
     monkeypatch.setattr(server_module, "get_client", lambda: StubClient())
     monkeypatch.setattr(server_module, "get_aviation_client", lambda: StubAerodataboxClient())
+    monkeypatch.setattr(server_module, "get_flight_fares_client", lambda: StubSerpApiClient())
 
     async def run():
         async with Client(mcp) as client:
@@ -85,6 +117,7 @@ def test_aviation_tools_are_registered_and_callable(monkeypatch):
                 "search_airport_flights",
                 "get_airport_guidance",
                 "connect_flight_to_train",
+                "get_flight_fares",
             ]:
                 assert expected in names
 
@@ -97,6 +130,16 @@ def test_aviation_tools_are_registered_and_callable(monkeypatch):
                 "get_airport_guidance", {"topic": "transfers"}
             )
             assert guidance_result.structured_content["status"] == "answered"
+
+            fare_result = await client.call_tool(
+                "get_flight_fares",
+                {
+                    "origin_city": "Zurich",
+                    "destination_city": "Geneva",
+                    "outbound_date": "2026-09-25",
+                },
+            )
+            assert fare_result.structured_content["status"] == "ok"
 
             connect_result = await client.call_tool(
                 "connect_flight_to_train",
