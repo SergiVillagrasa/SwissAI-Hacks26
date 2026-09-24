@@ -3,10 +3,15 @@ from agent_backend.settings import AgentSettings
 
 def test_from_env_reads_agent_specific_vars(monkeypatch, tmp_path):
     # Point at an empty server .env so the test never depends on real
-    # OJP/AeroDataBox credentials being present on the machine.
+    # OJP/AeroDataBox credentials being present on the machine. Also
+    # explicitly delenv them: another test module (e.g. test_main.py)
+    # may have already loaded the real server/.env into os.environ
+    # earlier in this pytest session, and an empty dotenv file does not
+    # clear an already-set process environment variable.
     empty_env = tmp_path / "server.env"
     empty_env.write_text("")
     monkeypatch.setattr("agent_backend.settings._SERVER_ENV_PATH", empty_env)
+    monkeypatch.delenv("OJP_API_TOKEN", raising=False)
 
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     monkeypatch.setenv("OPENAI_MODEL", "gpt-4o-mini")
