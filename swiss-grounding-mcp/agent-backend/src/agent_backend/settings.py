@@ -12,6 +12,20 @@ _LOCAL_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 
 _DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://127.0.0.1:5173"
 
+# Matches http(s)://localhost:<port> and http(s)://127.0.0.1:<port> for any
+# port. Dev tools (Vite's own port fallback when 5173 is busy, browser
+# preview proxies, etc.) routinely serve the frontend from a port nobody
+# configured ahead of time; without this, every new port is a fresh CORS
+# rejection that has to be whitelisted by hand (see CORS_ALLOWED_ORIGIN and
+# the regression test in test_main.py). Explicit CORS_ALLOWED_ORIGIN entries
+# still apply on top of this and are what a non-local deployment should rely
+# on; this regex only ever matches loopback origins.
+LOCAL_DEV_ORIGIN_REGEX = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
+
+
+def _parse_bool(value: str) -> bool:
+    return value.strip().lower() not in {"0", "false", "no", "off", ""}
+
 
 @dataclass(frozen=True)
 class AgentSettings:
@@ -21,6 +35,7 @@ class AgentSettings:
     port: int
     cors_allowed_origin: str
     cors_allowed_origins: list[str]
+    cors_allow_any_local_port: bool
     mcp_settings: MCPSettings
 
     @classmethod
@@ -38,5 +53,6 @@ class AgentSettings:
             port=int(os.environ.get("AGENT_BACKEND_PORT", "8080")),
             cors_allowed_origin=cors_origins[0],
             cors_allowed_origins=cors_origins,
+            cors_allow_any_local_port=_parse_bool(os.environ.get("CORS_ALLOW_ANY_LOCAL_PORT", "true")),
             mcp_settings=MCPSettings.from_env(),
         )

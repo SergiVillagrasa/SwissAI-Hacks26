@@ -37,8 +37,8 @@ export function RouteMap({ origin, destination }: { origin: string; destination:
   }, [origin, destination]);
 
   if (unavailable) {
-    return <p className="text-xs text-neutral-400">Map unavailable for this location.</p>;
+    return <p className="p-4 text-xs text-neutral-500">Map unavailable for this location.</p>;
   }
 
-  return <div ref={containerRef} data-testid="route-map" className="h-64 w-full rounded-xl" />;
+  return <div ref={containerRef} data-testid="route-map" className="h-64 w-full" />;
 }

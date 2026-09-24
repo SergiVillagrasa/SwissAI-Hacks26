@@ -11,6 +11,7 @@ def _agent_settings() -> AgentSettings:
         port=8080,
         cors_allowed_origin="http://localhost:5173",
         cors_allowed_origins=["http://localhost:5173"],
+        cors_allow_any_local_port=True,
         mcp_settings=MCPSettings(),
     )
 

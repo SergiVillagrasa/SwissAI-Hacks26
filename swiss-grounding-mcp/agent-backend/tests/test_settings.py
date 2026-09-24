@@ -66,6 +66,30 @@ def test_from_env_defaults_cors_origins_to_common_local_dev_hosts(monkeypatch, t
     ]
 
 
+def test_from_env_defaults_cors_allow_any_local_port_to_true(monkeypatch, tmp_path):
+    empty_env = tmp_path / "server.env"
+    empty_env.write_text("")
+    monkeypatch.setattr("agent_backend.settings._SERVER_ENV_PATH", empty_env)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.delenv("CORS_ALLOW_ANY_LOCAL_PORT", raising=False)
+
+    settings = AgentSettings.from_env()
+
+    assert settings.cors_allow_any_local_port is True
+
+
+def test_from_env_can_disable_cors_allow_any_local_port(monkeypatch, tmp_path):
+    empty_env = tmp_path / "server.env"
+    empty_env.write_text("")
+    monkeypatch.setattr("agent_backend.settings._SERVER_ENV_PATH", empty_env)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv("CORS_ALLOW_ANY_LOCAL_PORT", "false")
+
+    settings = AgentSettings.from_env()
+
+    assert settings.cors_allow_any_local_port is False
+
+
 def test_from_env_defaults_model_when_unset(monkeypatch, tmp_path):
     empty_env = tmp_path / "server.env"
     empty_env.write_text("")
