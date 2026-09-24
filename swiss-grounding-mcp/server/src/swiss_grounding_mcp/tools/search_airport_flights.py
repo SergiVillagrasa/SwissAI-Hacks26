@@ -1,12 +1,38 @@
 from __future__ import annotations
 
+from datetime import date, timedelta
+
 from swiss_grounding_mcp.config.settings import Settings
 from swiss_grounding_mcp.domain.models import FlightSearchResult
 from swiss_grounding_mcp.evidence.aviation_provenance import build_aviation_provenance
-from swiss_grounding_mcp.sources.aviationstack.client import AviationstackSourceError
-from swiss_grounding_mcp.sources.aviationstack.parser import parse_flights
+from swiss_grounding_mcp.sources.aerodatabox.client import AerodataboxSourceError
+from swiss_grounding_mcp.sources.aerodatabox.parser import parse_airport_flights
 
 _ZRH_IATA = "ZRH"
+_DIRECTION_PARAM = {"arrival": "Arrival", "departure": "Departure"}
+
+
+def _day_windows(flight_date: str) -> list[tuple[str, str]]:
+    # AeroDataBox's FIDS endpoint caps each call's range at 12 hours, so a
+    # full day requires two calls.
+    day = date.fromisoformat(flight_date)
+    next_day = day + timedelta(days=1)
+    midday = f"{flight_date}T12:00"
+    return [
+        (f"{flight_date}T00:00", midday),
+        (midday, f"{next_day.isoformat()}T00:00"),
+    ]
+
+
+def _counterpart_matches(flight, direction: str, airport_iata: str | None, airport_icao: str | None) -> bool:
+    if not airport_iata and not airport_icao:
+        return True
+    counterpart = flight.arrival if direction == "departure" else flight.departure
+    if airport_iata and counterpart.airport.iata == airport_iata:
+        return True
+    if airport_icao and counterpart.airport.icao == airport_icao:
+        return True
+    return False
 
 
 def search_airport_flights(
@@ -41,51 +67,36 @@ def search_airport_flights(
         )
 
     clamped_limit = max(1, min(100, limit))
-    # Note: the `flight_date` query parameter is a restricted function on
-    # Aviationstack's free tier (confirmed live: HTTP 403
-    # function_access_restricted). To keep this tool working on any plan
-    # tier, we never send flight_date to the API; instead we fetch a wider
-    # page of matching flights (across the provider's rolling window) and
-    # filter by the requested date ourselves before truncating to `limit`.
-    fetch_limit = max(clamped_limit, 100)
-    params: dict[str, str | int] = {"limit": fetch_limit}
-    if direction == "departure":
-        params["dep_iata"] = _ZRH_IATA
-        if airport_iata:
-            params["arr_iata"] = airport_iata
-        if airport_icao:
-            params["arr_icao"] = airport_icao
-    else:
-        params["arr_iata"] = _ZRH_IATA
-        if airport_iata:
-            params["dep_iata"] = airport_iata
-        if airport_icao:
-            params["dep_icao"] = airport_icao
-    if airline_iata:
-        params["airline_iata"] = airline_iata
+    adb_direction = _DIRECTION_PARAM[direction]
 
+    all_flights = []
     try:
-        body = client.get_flights(params)
-    except AviationstackSourceError as exc:
+        for from_local, to_local in _day_windows(flight_date):
+            body = client.get_airport_flights(
+                "iata", _ZRH_IATA, from_local, to_local, direction=adb_direction
+            )
+            all_flights.extend(parse_airport_flights(body))
+    except AerodataboxSourceError as exc:
         return FlightSearchResult(status="source_unavailable", message=str(exc))
 
-    matching_raw = [
-        item for item in body.get("data", []) if item.get("flight_date") == flight_date
+    matching = [
+        flight
+        for flight in all_flights
+        if _counterpart_matches(flight, direction, airport_iata, airport_icao)
+        and (not airline_iata or flight.airline.iata == airline_iata)
     ]
-    if not matching_raw:
+
+    if not matching:
         return FlightSearchResult(
             status="insufficient_evidence",
             message=(
                 f"No {direction} flights found matching the given filters on "
-                f"{flight_date}. This may also mean the requested date falls "
-                "outside the aviation data provider's currently available window."
+                f"{flight_date}."
             ),
         )
 
-    flights = parse_flights({"data": matching_raw})[:clamped_limit]
-
     return FlightSearchResult(
         status="answered",
-        flights=flights,
+        flights=matching[:clamped_limit],
         provenance=build_aviation_provenance(settings, applicable_date=flight_date),
     )

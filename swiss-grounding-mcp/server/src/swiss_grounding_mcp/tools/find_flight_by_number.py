@@ -3,15 +3,25 @@ from __future__ import annotations
 from swiss_grounding_mcp.config.settings import Settings
 from swiss_grounding_mcp.domain.models import FlightLookupResult
 from swiss_grounding_mcp.evidence.aviation_provenance import build_aviation_provenance
-from swiss_grounding_mcp.sources.aviationstack.client import AviationstackSourceError
-from swiss_grounding_mcp.sources.aviationstack.parser import (
+from swiss_grounding_mcp.sources.aerodatabox.client import AerodataboxSourceError
+from swiss_grounding_mcp.sources.aerodatabox.parser import (
     flight_field_presence,
-    parse_flights,
+    parse_flight_items,
 )
+
+_ZRH_IATA = "ZRH"
 
 
 def _normalize_flight_number(value: str) -> str:
     return value.strip().upper().replace(" ", "")
+
+
+def _matches_direction(item: dict, direction: str | None) -> bool:
+    if direction is None:
+        return True
+    side = "departure" if direction == "departure" else "arrival"
+    airport = (item.get(side) or {}).get("airport") or {}
+    return airport.get("iata") == _ZRH_IATA
 
 
 def find_flight_by_number(
@@ -34,38 +44,21 @@ def find_flight_by_number(
         )
 
     normalized_number = _normalize_flight_number(flight_number)
-    # Note: the `flight_date` query parameter is a restricted function on
-    # Aviationstack's free tier (confirmed live: HTTP 403
-    # function_access_restricted). To keep this tool working on any plan
-    # tier, we never send flight_date to the API; instead we fetch the
-    # flight_iata's small rolling window of recent/current occurrences and
-    # filter by the requested date ourselves.
-    params: dict[str, str] = {"flight_iata": normalized_number}
-    if direction == "arrival":
-        params["arr_iata"] = "ZRH"
-    elif direction == "departure":
-        params["dep_iata"] = "ZRH"
 
     try:
-        body = client.get_flights(params)
-    except AviationstackSourceError as exc:
+        items = client.get_flight_by_number(normalized_number, flight_date)
+    except AerodataboxSourceError as exc:
         return FlightLookupResult(status="source_unavailable", message=str(exc))
 
-    raw_flights = [
-        item for item in body.get("data", []) if item.get("flight_date") == flight_date
-    ]
-    if not raw_flights:
+    matching_items = [item for item in items if _matches_direction(item, direction)]
+    if not matching_items:
         return FlightLookupResult(
             status="insufficient_evidence",
-            message=(
-                f"No flight found for '{flight_number}' on {flight_date}. This may "
-                "also mean the requested date falls outside the aviation data "
-                "provider's currently available window."
-            ),
+            message=f"No flight found for '{flight_number}' on {flight_date}.",
         )
 
-    flights = parse_flights({"data": raw_flights})
-    fields_present, fields_missing = flight_field_presence(raw_flights[0])
+    flights = parse_flight_items(matching_items)
+    fields_present, fields_missing = flight_field_presence(matching_items[0])
 
     return FlightLookupResult(
         status="answered",

@@ -11,8 +11,8 @@ def build_aviation_provenance(
 ) -> AviationProvenance:
     timestamp = retrieved_at or datetime.now(timezone.utc)
     return AviationProvenance(
-        source="aviationstack.com",
-        source_url=f"{settings.aviationstack_base_url}/flights",
+        source="AeroDataBox (aerodatabox.com)",
+        source_url="https://aerodatabox.com",
         retrieved_at=timestamp.strftime("%Y-%m-%dT%H:%M:%SZ"),
         applicable_date=applicable_date,
         timezone="Europe/Zurich",

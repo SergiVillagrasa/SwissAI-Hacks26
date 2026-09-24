@@ -1,77 +1,76 @@
 from swiss_grounding_mcp.config.settings import Settings
-from swiss_grounding_mcp.sources.aviationstack.client import AviationstackSourceError
+from swiss_grounding_mcp.sources.aerodatabox.client import AerodataboxSourceError
 from swiss_grounding_mcp.tools.search_airport_flights import search_airport_flights
 
-_TWO_FLIGHTS_BODY = {
-    "pagination": {"limit": 10, "offset": 0, "count": 2, "total": 2},
-    "data": [
-        {
-            "flight_date": "2026-09-25", "flight_status": "scheduled",
-            "departure": {
-                "airport": "Zurich", "timezone": "Europe/Zurich", "iata": "ZRH", "icao": "LSZH",
-                "terminal": "1", "gate": "A12", "delay": None,
-                "scheduled": "2026-09-25T10:20:00+00:00", "estimated": None, "actual": None,
-            },
-            "arrival": {
-                "airport": "JFK", "timezone": "America/New_York", "iata": "JFK", "icao": "KJFK",
-                "terminal": "4", "gate": None, "delay": None,
-                "scheduled": "2026-09-25T13:10:00+00:00", "estimated": None, "actual": None,
-            },
-            "airline": {"name": "SWISS", "iata": "LX", "icao": "SWR"},
-            "flight": {"number": "14", "iata": "LX14", "icao": "SWR14", "codeshared": None},
-            "aircraft": None, "live": None,
+
+def _departure_item(number, arr_iata, arr_icao="XXXX", airline_iata="LX"):
+    return {
+        "number": number,
+        "status": "Scheduled",
+        "airline": {"name": "Swiss", "iata": airline_iata, "icao": "SWR"},
+        "departure": {
+            "airport": {"iata": "ZRH", "icao": "LSZH", "name": "Zurich"},
+            "scheduledTime": {"utc": "2026-09-25 10:20Z"},
+            "revisedTime": None,
+            "runwayTime": None,
+            "terminal": "1",
+            "gate": "A12",
         },
-        {
-            "flight_date": "2026-09-25", "flight_status": "scheduled",
-            "departure": {
-                "airport": "Zurich", "timezone": "Europe/Zurich", "iata": "ZRH", "icao": "LSZH",
-                "terminal": "1", "gate": "A14", "delay": None,
-                "scheduled": "2026-09-25T18:00:00+00:00", "estimated": None, "actual": None,
-            },
-            "arrival": {
-                "airport": "JFK", "timezone": "America/New_York", "iata": "JFK", "icao": "KJFK",
-                "terminal": "4", "gate": None, "delay": None,
-                "scheduled": "2026-09-25T21:00:00+00:00", "estimated": None, "actual": None,
-            },
-            "airline": {"name": "SWISS", "iata": "LX", "icao": "SWR"},
-            "flight": {"number": "16", "iata": "LX16", "icao": "SWR16", "codeshared": None},
-            "aircraft": None, "live": None,
+        "arrival": {
+            "airport": {"iata": arr_iata, "icao": arr_icao, "name": arr_iata},
+            "scheduledTime": {"utc": "2026-09-25 13:10Z"},
+            "revisedTime": None,
+            "runwayTime": None,
+            "terminal": None,
+            "gate": None,
         },
-    ],
-}
-
-_EMPTY_BODY = {"pagination": {"limit": 10, "offset": 0, "count": 0, "total": 0}, "data": []}
+    }
 
 
-class StubAviationstackClient:
-    def __init__(self, body=None, raise_error=None):
-        self.body = body
+_TWO_FLIGHTS_WINDOW_1 = {"departures": [_departure_item("LX14", "JFK")], "arrivals": []}
+_TWO_FLIGHTS_WINDOW_2 = {"departures": [_departure_item("LX16", "LHR")], "arrivals": []}
+_EMPTY_WINDOW = {"departures": [], "arrivals": []}
+
+
+class StubAerodataboxClient:
+    def __init__(self, windows=None, raise_error=None):
+        # windows: list of dicts to return in sequence, one per call
+        self.windows = list(windows) if windows is not None else []
         self.raise_error = raise_error
         self.calls = []
 
-    def get_flights(self, params):
-        self.calls.append(params)
+    def get_airport_flights(self, code_type, code, from_local, to_local, *, direction="Both"):
+        self.calls.append(
+            {
+                "code_type": code_type,
+                "code": code,
+                "from_local": from_local,
+                "to_local": to_local,
+                "direction": direction,
+            }
+        )
         if self.raise_error is not None:
             raise self.raise_error
-        return self.body
+        return self.windows[len(self.calls) - 1]
 
 
 def _settings() -> Settings:
-    return Settings.from_env({"AVIATIONSTACK_BASE_URL": "https://example.test/v1"})
+    return Settings.from_env({"AERODATABOX_BASE_URL": "https://example.test"})
 
 
 def test_missing_direction_returns_needs_context():
-    client = StubAviationstackClient(body=_TWO_FLIGHTS_BODY)
+    client = StubAerodataboxClient(windows=[_TWO_FLIGHTS_WINDOW_1, _TWO_FLIGHTS_WINDOW_2])
 
     result = search_airport_flights(
         "", "2026-09-25", None, None, None, 10, client=client, settings=_settings()
     )
 
     assert result.status == "needs_context"
+    assert client.calls == []
 
 
 def test_missing_flight_date_returns_needs_context():
-    client = StubAviationstackClient(body=_TWO_FLIGHTS_BODY)
+    client = StubAerodataboxClient(windows=[_TWO_FLIGHTS_WINDOW_1, _TWO_FLIGHTS_WINDOW_2])
 
     result = search_airport_flights(
         "departure", "", None, None, None, 10, client=client, settings=_settings()
@@ -80,32 +79,8 @@ def test_missing_flight_date_returns_needs_context():
     assert result.status == "needs_context"
 
 
-def test_departure_search_filters_by_zrh_and_destination_airport():
-    client = StubAviationstackClient(body=_TWO_FLIGHTS_BODY)
-
-    result = search_airport_flights(
-        "departure", "2026-09-25", "JFK", None, None, 10, client=client, settings=_settings()
-    )
-
-    assert result.status == "answered"
-    assert len(result.flights) == 2
-    assert client.calls[0]["dep_iata"] == "ZRH"
-    assert client.calls[0]["arr_iata"] == "JFK"
-
-
-def test_arrival_search_filters_by_zrh_and_origin_airport():
-    client = StubAviationstackClient(body=_TWO_FLIGHTS_BODY)
-
-    search_airport_flights(
-        "arrival", "2026-09-25", "JFK", None, None, 10, client=client, settings=_settings()
-    )
-
-    assert client.calls[0]["arr_iata"] == "ZRH"
-    assert client.calls[0]["dep_iata"] == "JFK"
-
-
 def test_no_airport_code_and_no_airline_returns_needs_context():
-    client = StubAviationstackClient(body=_TWO_FLIGHTS_BODY)
+    client = StubAerodataboxClient(windows=[_TWO_FLIGHTS_WINDOW_1, _TWO_FLIGHTS_WINDOW_2])
 
     result = search_airport_flights(
         "departure", "2026-09-25", None, None, None, 10, client=client, settings=_settings()
@@ -116,19 +91,48 @@ def test_no_airport_code_and_no_airline_returns_needs_context():
     assert client.calls == []
 
 
-def test_airline_only_filter_is_accepted_without_airport_code():
-    client = StubAviationstackClient(body=_TWO_FLIGHTS_BODY)
+def test_departure_search_covers_full_day_with_two_windows():
+    client = StubAerodataboxClient(windows=[_TWO_FLIGHTS_WINDOW_1, _TWO_FLIGHTS_WINDOW_2])
 
     result = search_airport_flights(
         "departure", "2026-09-25", None, None, "LX", 10, client=client, settings=_settings()
     )
 
     assert result.status == "answered"
-    assert client.calls[0]["airline_iata"] == "LX"
+    assert len(result.flights) == 2
+    assert client.calls[0]["code_type"] == "iata"
+    assert client.calls[0]["code"] == "ZRH"
+    assert client.calls[0]["from_local"] == "2026-09-25T00:00"
+    assert client.calls[0]["to_local"] == "2026-09-25T12:00"
+    assert client.calls[0]["direction"] == "Departure"
+    assert client.calls[1]["from_local"] == "2026-09-25T12:00"
+    assert client.calls[1]["to_local"] == "2026-09-26T00:00"
+
+
+def test_arrival_direction_maps_to_capitalized_arrival():
+    client = StubAerodataboxClient(windows=[_EMPTY_WINDOW, _EMPTY_WINDOW])
+
+    search_airport_flights(
+        "arrival", "2026-09-25", None, None, "LX", 10, client=client, settings=_settings()
+    )
+
+    assert client.calls[0]["direction"] == "Arrival"
+
+
+def test_destination_airport_filter_excludes_non_matching_flights():
+    client = StubAerodataboxClient(windows=[_TWO_FLIGHTS_WINDOW_1, _TWO_FLIGHTS_WINDOW_2])
+
+    result = search_airport_flights(
+        "departure", "2026-09-25", "JFK", None, None, 10, client=client, settings=_settings()
+    )
+
+    assert result.status == "answered"
+    assert len(result.flights) == 1
+    assert result.flights[0].arrival.airport.iata == "JFK"
 
 
 def test_no_matching_flights_returns_insufficient_evidence():
-    client = StubAviationstackClient(body=_EMPTY_BODY)
+    client = StubAerodataboxClient(windows=[_EMPTY_WINDOW, _EMPTY_WINDOW])
 
     result = search_airport_flights(
         "departure", "2026-09-25", "XXX", None, None, 10, client=client, settings=_settings()
@@ -138,41 +142,8 @@ def test_no_matching_flights_returns_insufficient_evidence():
     assert result.flights == []
 
 
-def test_flight_date_is_not_sent_to_the_provider():
-    # Aviationstack's free tier rejects the flight_date query parameter
-    # (HTTP 403 function_access_restricted, confirmed via live testing);
-    # date filtering must happen client-side instead.
-    client = StubAviationstackClient(body=_TWO_FLIGHTS_BODY)
-
-    search_airport_flights(
-        "departure", "2026-09-25", "JFK", None, None, 10, client=client, settings=_settings()
-    )
-
-    assert "flight_date" not in client.calls[0]
-
-
-def test_date_filtering_is_applied_client_side_and_other_dates_are_excluded():
-    mixed_dates_body = {
-        "pagination": {"limit": 100, "offset": 0, "count": 3, "total": 3},
-        "data": [
-            {**_TWO_FLIGHTS_BODY["data"][0], "flight_date": "2026-09-24"},
-            {**_TWO_FLIGHTS_BODY["data"][0], "flight_date": "2026-09-25"},
-            {**_TWO_FLIGHTS_BODY["data"][1], "flight_date": "2026-09-25"},
-        ],
-    }
-    client = StubAviationstackClient(body=mixed_dates_body)
-
-    result = search_airport_flights(
-        "departure", "2026-09-25", "JFK", None, None, 10, client=client, settings=_settings()
-    )
-
-    assert result.status == "answered"
-    assert len(result.flights) == 2
-    assert all(flight.flight_date == "2026-09-25" for flight in result.flights)
-
-
 def test_source_failure_returns_source_unavailable():
-    client = StubAviationstackClient(raise_error=AviationstackSourceError("network down"))
+    client = StubAerodataboxClient(raise_error=AerodataboxSourceError("network down"))
 
     result = search_airport_flights(
         "departure", "2026-09-25", "JFK", None, None, 10, client=client, settings=_settings()
@@ -182,16 +153,10 @@ def test_source_failure_returns_source_unavailable():
 
 
 def test_limit_is_clamped_to_valid_range():
-    client = StubAviationstackClient(body=_TWO_FLIGHTS_BODY)
+    client = StubAerodataboxClient(windows=[_TWO_FLIGHTS_WINDOW_1, _TWO_FLIGHTS_WINDOW_2])
 
-    result_low = search_airport_flights(
-        "departure", "2026-09-25", "JFK", None, None, 0, client=client, settings=_settings()
+    result = search_airport_flights(
+        "departure", "2026-09-25", None, None, "LX", 1, client=client, settings=_settings()
     )
-    assert len(result_low.flights) == 1
 
-    result_high = search_airport_flights(
-        "departure", "2026-09-25", "JFK", None, None, 1000, client=client, settings=_settings()
-    )
-    assert len(result_high.flights) == 2
-    assert client.calls[0]["limit"] == 100
-    assert client.calls[1]["limit"] == 100
+    assert len(result.flights) == 1
