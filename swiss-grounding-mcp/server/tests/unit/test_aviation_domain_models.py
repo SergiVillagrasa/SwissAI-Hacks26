@@ -44,8 +44,8 @@ def test_flight_lookup_result_answered_carries_flight_and_field_lists():
         fields_present=["departure.scheduled"],
         fields_missing=["departure.actual"],
         provenance=AviationProvenance(
-            source="aviationstack.com",
-            source_url="https://api.aviationstack.com/v1/flights",
+            source="AeroDataBox (aerodatabox.com)",
+            source_url="https://aerodatabox.com",
             retrieved_at="2026-09-24T22:15:00Z",
             applicable_date="2026-09-25",
             timezone="Europe/Zurich",
@@ -86,8 +86,8 @@ def test_flight_to_train_result_keeps_separate_provenance_fields():
         flight=_flight(),
         train_connections=[],
         flight_provenance=AviationProvenance(
-            source="aviationstack.com",
-            source_url="https://api.aviationstack.com/v1/flights",
+            source="AeroDataBox (aerodatabox.com)",
+            source_url="https://aerodatabox.com",
             retrieved_at="2026-09-24T22:15:00Z",
             applicable_date="2026-09-25",
             timezone="Europe/Zurich",
@@ -96,5 +96,5 @@ def test_flight_to_train_result_keeps_separate_provenance_fields():
     )
 
     dumped = result.model_dump()
-    assert dumped["flight_provenance"]["source"] == "aviationstack.com"
+    assert dumped["flight_provenance"]["source"] == "AeroDataBox (aerodatabox.com)"
     assert dumped["rail_provenance"] is None

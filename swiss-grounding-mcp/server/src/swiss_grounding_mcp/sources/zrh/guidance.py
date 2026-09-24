@@ -86,9 +86,9 @@ GUIDANCE_TOPICS: dict[str, GuidanceRecord] = {
         source_url="https://www.flughafen-zuerich.ch/en/passengers/fly/flightinformation/arrivals",
         limitations=(
             "This server's own flight-lookup tool is sourced from "
-            "aviationstack.com, a third-party aggregator, not from Zurich "
-            "Airport's operational systems; always treat times as estimates "
-            "until confirmed by the airline or airport display."
+            "AeroDataBox (aerodatabox.com), a third-party aggregator, not "
+            "from Zurich Airport's operational systems; always treat times "
+            "as estimates until confirmed by the airline or airport display."
         ),
     ),
 }
