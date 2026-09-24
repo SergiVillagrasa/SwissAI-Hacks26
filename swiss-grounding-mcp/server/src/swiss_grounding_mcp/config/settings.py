@@ -36,6 +36,7 @@ class Settings:
     serpapi_api_key: str = ""
     serpapi_base_url: str = "https://serpapi.com/search.json"
     serpapi_timeout_seconds: float = 10.0
+    trip_time_margin_minutes: float = 10.0
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "Settings":
@@ -80,5 +81,10 @@ class Settings:
             serpapi_base_url=source.get("SERPAPI_BASE_URL", defaults.serpapi_base_url),
             serpapi_timeout_seconds=float(
                 source.get("SERPAPI_TIMEOUT_SECONDS", defaults.serpapi_timeout_seconds)
+            ),
+            trip_time_margin_minutes=float(
+                source.get(
+                    "TRIP_TIME_MARGIN_MINUTES", defaults.trip_time_margin_minutes
+                )
             ),
         )

@@ -339,6 +339,103 @@ def test_results_parameter_is_clamped_to_valid_range():
     assert client.trip_calls[1]["number_of_results"] == 5
 
 
+class _MarginStubOjpClient(StubOjpClient):
+    """Stub whose trip_request only succeeds once a margin has been applied."""
+
+    def __init__(self, *, candidates_by_name, connections):
+        super().__init__(candidates_by_name=candidates_by_name)
+        self._connections = connections
+
+    def trip_request(self, origin_ref, destination_ref, **kwargs):
+        self.trip_calls.append({"origin_ref": origin_ref, "destination_ref": destination_ref, **kwargs})
+        # Only the retried (margin-adjusted) call returns results; the
+        # exact-time call it replaces returns nothing, mimicking a train
+        # that departs/arrives a minute or two off the requested instant.
+        if len(self.trip_calls) == 1:
+            return []
+        return self._connections
+
+
+def test_exact_departure_time_miss_retries_with_margin_and_succeeds():
+    client = _MarginStubOjpClient(
+        candidates_by_name={
+            "Bern": [StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=1.0)],
+            "Zürich HB": [
+                StopCandidate(name="Zürich HB", stop_ref="ch:1:sloid:8503000", probability=1.0)
+            ],
+        },
+        connections=[_connection()],
+    )
+
+    result = find_train_connections(
+        "Bern",
+        "Zürich HB",
+        "2026-09-24T18:00:00Z",
+        None,
+        3,
+        client=client,
+        settings=_settings(),
+    )
+
+    assert result.status == "ok"
+    assert len(result.connections) == 1
+    assert len(client.trip_calls) == 2
+    # The retry shifts the departure floor earlier so a train departing
+    # shortly after the requested time is still included.
+    assert client.trip_calls[0]["departure_time"] == "2026-09-24T18:00:00Z"
+    assert client.trip_calls[1]["departure_time"] == "2026-09-24T17:50:00Z"
+    assert "margin" in result.message.lower()
+
+
+def test_exact_arrival_time_miss_retries_with_margin_and_succeeds():
+    client = _MarginStubOjpClient(
+        candidates_by_name={
+            "Bern": [StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=1.0)],
+            "Zürich HB": [
+                StopCandidate(name="Zürich HB", stop_ref="ch:1:sloid:8503000", probability=1.0)
+            ],
+        },
+        connections=[_connection()],
+    )
+
+    result = find_train_connections(
+        "Bern",
+        "Zürich HB",
+        None,
+        "2026-09-24T18:00:00Z",
+        3,
+        client=client,
+        settings=_settings(),
+    )
+
+    assert result.status == "ok"
+    assert len(client.trip_calls) == 2
+    assert client.trip_calls[0]["arrival_time"] == "2026-09-24T18:00:00Z"
+    assert client.trip_calls[1]["arrival_time"] == "2026-09-24T18:10:00Z"
+    assert "margin" in result.message.lower()
+
+
+def test_no_time_given_does_not_retry_on_empty_results():
+    client = _MarginStubOjpClient(
+        candidates_by_name={
+            "Bern": [StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=1.0)],
+            "Zürich HB": [
+                StopCandidate(name="Zürich HB", stop_ref="ch:1:sloid:8503000", probability=1.0)
+            ],
+        },
+        connections=[_connection()],
+    )
+
+    result = find_train_connections(
+        "Bern", "Zürich HB", None, None, 3, client=client, settings=_settings()
+    )
+
+    # No departure/arrival time was given, so there is nothing to widen;
+    # the first (and only) empty result must be reported as not_found.
+    assert result.status == "not_found"
+    assert len(client.trip_calls) == 1
+
+
 def test_source_error_from_location_information_returns_source_error_status():
     client = StubOjpClient(
         raise_on_location=OjpSourceError("OJP returned HTTP 403"),

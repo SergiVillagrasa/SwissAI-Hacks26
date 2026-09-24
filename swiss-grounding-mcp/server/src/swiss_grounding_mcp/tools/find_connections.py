@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta
 
 from swiss_grounding_mcp.config.settings import Settings
 from swiss_grounding_mcp.domain.models import ConnectionSearchResult
@@ -15,6 +16,25 @@ _OUT_OF_SCOPE_MESSAGE = (
     "connecting to Switzerland. Purely foreign transit outside Switzerland "
     "is outside the declared scope."
 )
+
+_MARGIN_NOTE = (
+    " No connection matched the exact requested time, so nearby "
+    "connections within a small margin are shown instead."
+)
+
+
+def _shift_iso_time(value: str, minutes: float) -> str | None:
+    """Shift an ISO 8601 timestamp by *minutes* (may be negative).
+
+    Returns None if *value* cannot be parsed, so callers can fall back to
+    the original not-found behaviour instead of guessing.
+    """
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    shifted = dt + timedelta(minutes=minutes)
+    return shifted.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def find_train_connections(
@@ -75,18 +95,47 @@ def find_train_connections(
         effective_arrival_time = None
         time_note = " Both departure_time and arrival_time were given; departure_time was used."
 
-    try:
-        connections = client.trip_request(
+    def _search(dep_time: str | None, arr_time: str | None):
+        return client.trip_request(
             resolved_origin.stop_ref,
             resolved_destination.stop_ref,
             origin_name=resolved_origin.name,
             destination_name=resolved_destination.name,
-            departure_time=effective_departure_time,
-            arrival_time=effective_arrival_time,
+            departure_time=dep_time,
+            arrival_time=arr_time,
             number_of_results=clamped_results,
         )
+
+    try:
+        connections = _search(effective_departure_time, effective_arrival_time)
     except OjpSourceError as exc:
         return ConnectionSearchResult(status="source_error", message=str(exc))
+
+    # A precise departure/arrival time that misses the actual timetable by
+    # a minute or two (e.g. "18:00" when the train leaves at 18:01) should
+    # not be reported as "not found". Retry once with a small margin before
+    # giving up, widening the search in the direction that still satisfies
+    # the user's request (earlier for a departure floor, later for an
+    # arrival deadline).
+    used_margin = False
+    if not connections:
+        margin = settings.trip_time_margin_minutes
+        if effective_departure_time is not None:
+            shifted = _shift_iso_time(effective_departure_time, -margin)
+            if shifted is not None:
+                try:
+                    connections = _search(shifted, None)
+                    used_margin = bool(connections)
+                except OjpSourceError as exc:
+                    return ConnectionSearchResult(status="source_error", message=str(exc))
+        elif effective_arrival_time is not None:
+            shifted = _shift_iso_time(effective_arrival_time, margin)
+            if shifted is not None:
+                try:
+                    connections = _search(None, shifted)
+                    used_margin = bool(connections)
+                except OjpSourceError as exc:
+                    return ConnectionSearchResult(status="source_error", message=str(exc))
 
     if not connections:
         return ConnectionSearchResult(
@@ -96,6 +145,9 @@ def find_train_connections(
                 f"'{resolved_destination.name}' for the requested time."
             ),
         )
+
+    if used_margin:
+        time_note += _MARGIN_NOTE
 
     return ConnectionSearchResult(
         status="ok",

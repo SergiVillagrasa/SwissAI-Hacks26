@@ -130,12 +130,23 @@ uv run swiss-grounding-mcp --transport streamable-http --host 0.0.0.0 --port 800
 Input: `origin` (str), `destination` (str), `departure_time` (ISO 8601,
 optional — defaults to "now"), `arrival_time` (ISO 8601, optional; ignored
 if `departure_time` is also given), `results` (int, default 3, max 5).
+`departure_time`/`arrival_time` should be left unset for "now" rather than
+computed by the calling model/LLM, since the current date is filled in
+here and not something the LLM reliably knows; a relative day such as
+"tomorrow" should still be resolved by the caller against the real
+current date. All times, in requests and in responses, are UTC.
+
+If the exact requested departure/arrival minute does not match the
+timetable (e.g. asking for a 18:00 departure when the next train leaves
+at 18:01), the tool retries once with a small margin
+(`TRIP_TIME_MARGIN_MINUTES`, default 10 minutes, configurable) before
+reporting `not_found`, and says so in `message` when the margin was used.
 
 Output: a structured object with a `status` of `ok`, `needs_clarification`,
 `not_found`, `out_of_scope`, or `source_error`; a human-readable `message`;
 `connections` (only for `ok`); `candidates` (only for `needs_clarification`);
-and a `provenance` block with source name, URL, and retrieval timestamp
-(only for `ok`).
+and a `provenance` block with source name, URL, retrieval timestamp, and
+`timezone` (always `"UTC"`) (only for `ok`).
 
 ## The `get_station_board` tool
 
@@ -166,7 +177,10 @@ whenever a price cannot be returned. International routes are refused as
 
 ## The `find_disruptions` tool
 
-Input: `stop` (str).
+Input: `stop` (str). Unlike `find_connections` and `get_station_board`,
+this tool is **not** restricted to Swiss stations — OJP 2.0 also indexes
+stops just across the border, and a disruption question about one of
+those is answered rather than refused as out of scope.
 
 Output: same status set as `find_connections`; on `ok`, a list of
 `disruptions` with `id`, `title`, `description`, `severity`, `start_time`,
@@ -201,7 +215,11 @@ Input: `flight_number` (str, e.g. `LX14`), `flight_date` (str,
 Output includes `flight` (only for `answered`), `fields_present` /
 `fields_missing` (which time/gate/terminal fields the provider actually
 supplied), and `provenance` (source, source_url, retrieved_at,
-applicable_date, timezone).
+applicable_date, timezone). `timezone` is always `"UTC"`: this server
+only ever reads AeroDataBox's `.utc` time fields, never `.local`, so
+every flight time it returns (and the train tools' times) is UTC —
+consistently, across all tools, not the departure or arrival airport's
+local zone.
 
 ### `search_airport_flights`
 
@@ -237,6 +255,9 @@ future non-API sources this server may add later — the OJP, AeroDataBox, and
 SerpApi adapters used today are keyed APIs, not scraped HTML, so this setting
 has no effect on them yet. `SERPAPI_BASE_URL` defaults to
 `https://serpapi.com/search.json`, and `SERPAPI_TIMEOUT_SECONDS` defaults to 10.
+`TRIP_TIME_MARGIN_MINUTES` (default `10`) controls how far `find_connections`
+widens an exact departure/arrival time before giving up and reporting
+`not_found`.
 
 ## Running the checks
 
