@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OJP version="2.0" xmlns:siri="http://www.siri.org.uk/siri" xmlns="http://www.vdv.de/ojp">
+    <OJPResponse>
+        <siri:ServiceDelivery>
+            <siri:ResponseTimestamp>2026-09-24T17:03:09Z</siri:ResponseTimestamp>
+            <siri:ProducerRef>MENTZ</siri:ProducerRef>
+            <OJPLocationInformationDelivery>
+                <siri:ResponseTimestamp>2026-09-24T17:03:09Z</siri:ResponseTimestamp>
+                <siri:RequestMessageRef>LIR-2</siri:RequestMessageRef>
+                <CalcTime>3</CalcTime>
+                <PlaceResult>
+                    <Place>
+                        <StopPlace>
+                            <StopPlaceRef>ch:1:sloid:7100</StopPlaceRef>
+                            <StopPlaceName>
+                                <Text xml:lang="fr">Fribourg/Freiburg</Text>
+                            </StopPlaceName>
+                        </StopPlace>
+                        <Name>
+                            <Text xml:lang="fr">Fribourg/Freiburg</Text>
+                        </Name>
+                    </Place>
+                    <Complete>true</Complete>
+                    <Probability>0.62</Probability>
+                </PlaceResult>
+                <PlaceResult>
+                    <Place>
+                        <StopPlace>
+                            <StopPlaceRef>de:1:sloid:1</StopPlaceRef>
+                            <StopPlaceName>
+                                <Text xml:lang="de">Freiburg(Breisgau) Hbf</Text>
+                            </StopPlaceName>
+                        </StopPlace>
+                        <Name>
+                            <Text xml:lang="de">Freiburg(Breisgau) Hbf</Text>
+                        </Name>
+                    </Place>
+                    <Complete>true</Complete>
+                    <Probability>0.58</Probability>
+                </PlaceResult>
+            </OJPLocationInformationDelivery>
+        </siri:ServiceDelivery>
+    </OJPResponse>
+</OJP>
