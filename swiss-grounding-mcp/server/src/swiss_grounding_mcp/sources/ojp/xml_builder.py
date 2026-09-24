@@ -150,3 +150,98 @@ def build_stop_event_request(
     ET.SubElement(params, _ojp("IncludeOnwardCalls")).text = "true"
 
     return _serialize(root)
+
+
+def build_disruption_stop_event_request(
+    stop_ref: str,
+    requestor_ref: str,
+    *,
+    stop_name: str = "",
+    number_of_results: int = 10,
+    message_identifier: str | None = None,
+    timestamp: str | None = None,
+) -> bytes:
+    timestamp = timestamp or _now_iso()
+    root, service_request = _service_request_root(requestor_ref, timestamp)
+
+    stop_event_request = ET.SubElement(
+        service_request,
+        _ojp("OJPStopEventRequest"),
+    )
+
+    ET.SubElement(
+        stop_event_request,
+        _siri("RequestTimestamp"),
+    ).text = timestamp
+
+    ET.SubElement(
+        stop_event_request,
+        _siri("MessageIdentifier"),
+    ).text = message_identifier or _new_message_identifier("SER")
+
+    location = ET.SubElement(
+        stop_event_request,
+        _ojp("Location"),
+    )
+
+    place_ref = ET.SubElement(
+        location,
+        _ojp("PlaceRef"),
+    )
+
+    ET.SubElement(
+        place_ref,
+        _siri("StopPointRef"),
+    ).text = stop_ref
+
+    name = ET.SubElement(
+        place_ref,
+        _ojp("Name"),
+    )
+
+    ET.SubElement(
+        name,
+        _ojp("Text"),
+    ).text = stop_name or stop_ref
+
+    params = ET.SubElement(
+        stop_event_request,
+        _ojp("Params"),
+    )
+
+    ET.SubElement(
+        params,
+        _ojp("StopEventType"),
+    ).text = "both"
+
+    ET.SubElement(
+        params,
+        _ojp("NumberOfResults"),
+    ).text = str(number_of_results)
+
+    ET.SubElement(
+        params,
+        _ojp("IncludePreviousCalls"),
+    ).text = "false"
+
+    ET.SubElement(
+        params,
+        _ojp("IncludeOnwardCalls"),
+    ).text = "false"
+
+    ET.SubElement(
+        params,
+        _ojp("UseRealtimeData"),
+    ).text = "full"
+
+    ET.SubElement(
+        stop_event_request,
+        _ojp("IncludePlacesContext"),
+    ).text = "false"
+
+    ET.SubElement(
+        stop_event_request,
+        _ojp("IncludeSituationsContext"),
+    ).text = "true"
+
+    return _serialize(root)

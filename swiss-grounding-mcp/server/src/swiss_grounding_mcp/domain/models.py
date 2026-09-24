@@ -62,3 +62,23 @@ class StationBoardResult(BaseModel):
     events: list[StopEvent] = Field(default_factory=list)
     candidates: list[StopCandidate] = Field(default_factory=list)
     provenance: Provenance | None = None
+
+
+class Disruption(BaseModel):
+    id: str
+    title: str | None = None
+    description: str | None = None
+    severity: str | None = None
+    start_time: str | None = None
+    end_time: str | None = None
+    status: str | None = None
+    affected_lines: list[str] = Field(default_factory=list)
+    affected_stops: list[str] = Field(default_factory=list)
+
+
+class DisruptionSearchResult(BaseModel):
+    status: Status
+    message: str | None = None
+    disruptions: list[Disruption] = Field(default_factory=list)
+    provenance: Provenance | None = None
+    candidates: list[StopCandidate] = Field(default_factory=list)
