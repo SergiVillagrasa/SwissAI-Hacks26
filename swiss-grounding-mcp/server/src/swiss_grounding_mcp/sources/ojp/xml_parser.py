@@ -7,6 +7,7 @@ from defusedxml import ElementTree as SafeET
 
 from swiss_grounding_mcp.domain.models import (
     Connection,
+    Disruption,
     Leg,
     StopCandidate,
     StopEvent,
@@ -225,3 +226,187 @@ def parse_stop_event_response(
         )
 
     return events
+
+
+def _parse_bool(element, path: str) -> bool:
+    value = _text_of(element, path)
+
+    if value is None:
+        return False
+
+    return value.strip().lower() == "true"
+
+
+def parse_disruption_stop_event_response(xml_bytes: bytes) -> list[Disruption]:
+    root = SafeET.fromstring(xml_bytes)
+
+    disruptions: list[Disruption] = []
+
+    for result in root.findall(".//ojp:StopEventResult", NS):
+        stop_event = result.find("ojp:StopEvent", NS)
+
+        if stop_event is None:
+            continue
+
+        this_call = stop_event.find("ojp:ThisCall/ojp:CallAtStop", NS)
+
+        if this_call is None:
+            continue
+
+        service = stop_event.find("ojp:Service", NS)
+
+        if service is None:
+            continue
+
+        line = _text_of(
+            service,
+            "ojp:PublishedLineName/ojp:Text",
+        )
+
+        journey_ref = _text_of(
+            service,
+            "ojp:JourneyRef",
+        )
+
+        stop_name = _text_of(
+            this_call,
+            "ojp:StopPointName/ojp:Text",
+        )
+
+        timetabled_departure = _text_of(
+            this_call,
+            "ojp:ServiceDeparture/ojp:TimetabledTime",
+        )
+
+        estimated_departure = _text_of(
+            this_call,
+            "ojp:ServiceDeparture/ojp:EstimatedTime",
+        )
+
+        timetabled_arrival = _text_of(
+            this_call,
+            "ojp:ServiceArrival/ojp:TimetabledTime",
+        )
+
+        estimated_arrival = _text_of(
+            this_call,
+            "ojp:ServiceArrival/ojp:EstimatedTime",
+        )
+
+        cancelled = _parse_bool(
+            this_call,
+            "ojp:NotServicedStop",
+        )
+
+        no_boarding = _parse_bool(
+            this_call,
+            "ojp:NoBoardingAtStop",
+        )
+
+        no_alighting = _parse_bool(
+            this_call,
+            "ojp:NoAlightingAtStop",
+        )
+
+        delay_minutes: int | None = None
+
+        for scheduled, estimated in [
+            (timetabled_departure, estimated_departure),
+            (timetabled_arrival, estimated_arrival),
+        ]:
+            if scheduled is None or estimated is None:
+                continue
+
+            try:
+                scheduled_dt = datetime.fromisoformat(
+                    scheduled.replace("Z", "+00:00")
+                )
+                estimated_dt = datetime.fromisoformat(
+                    estimated.replace("Z", "+00:00")
+                )
+
+                delay = round(
+                    (estimated_dt - scheduled_dt).total_seconds() / 60
+                )
+
+                if delay != 0:
+                    delay_minutes = delay
+                    break
+
+            except ValueError:
+                continue
+
+        if not (
+            cancelled
+            or no_boarding
+            or no_alighting
+            or delay_minutes is not None
+        ):
+            continue
+
+        if cancelled:
+            status = "cancelled"
+            severity = "high"
+            title = f"Cancelled service{f' {line}' if line else ''}"
+
+        elif no_boarding:
+            status = "no_boarding"
+            severity = "high"
+            title = f"Boarding unavailable{f' on line {line}' if line else ''}"
+
+        elif no_alighting:
+            status = "no_alighting"
+            severity = "high"
+            title = f"Alighting unavailable{f' on line {line}' if line else ''}"
+
+        else:
+            status = "delayed"
+            severity = "medium"
+            title = (
+                f"Service {line} delayed by "
+                f"{delay_minutes} minute(s)"
+                if line
+                else f"Service delayed by {delay_minutes} minute(s)"
+            )
+
+        description_parts = []
+
+        if stop_name:
+            description_parts.append(f"At {stop_name}.")
+
+        if delay_minutes is not None:
+            description_parts.append(
+                f"Estimated delay: {delay_minutes} minute(s)."
+            )
+
+        if cancelled:
+            description_parts.append("The service is not operating at this stop.")
+
+        if no_boarding:
+            description_parts.append(
+                "Boarding is not possible at this stop."
+            )
+
+        if no_alighting:
+            description_parts.append(
+                "Alighting is not possible at this stop."
+            )
+
+        description = " ".join(description_parts)
+
+        disruption_id = journey_ref or line or f"stop-event-{len(disruptions)}"
+
+        disruptions.append(
+            Disruption(
+                id=disruption_id,
+                title=title,
+                description=description,
+                severity=severity,
+                start_time=timetabled_departure or timetabled_arrival,
+                status=status,
+                affected_lines=[line] if line else [],
+                affected_stops=[stop_name] if stop_name else [],
+            )
+        )
+
+    return disruptions

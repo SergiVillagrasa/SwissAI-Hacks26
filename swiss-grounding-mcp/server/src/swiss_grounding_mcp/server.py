@@ -6,9 +6,14 @@ from dotenv import load_dotenv
 from mcp.server.mcpserver import MCPServer
 
 from swiss_grounding_mcp.config.settings import Settings
-from swiss_grounding_mcp.domain.models import ConnectionSearchResult, StationBoardResult
+from swiss_grounding_mcp.domain.models import (
+    ConnectionSearchResult,
+    DisruptionSearchResult,
+    StationBoardResult,
+)
 from swiss_grounding_mcp.sources.ojp.client import OjpClient
 from swiss_grounding_mcp.tools.find_connections import find_train_connections
+from swiss_grounding_mcp.tools.find_disruptions import find_station_disruptions
 from swiss_grounding_mcp.tools.station_timetable import (
     get_station_board as get_station_board_impl,
 )
@@ -52,6 +57,22 @@ def find_connections(
         departure_time,
         arrival_time,
         results,
+        client=get_client(),
+        settings=settings,
+    )
+
+@mcp.tool()
+def find_disruptions(
+    stop: str,
+) -> DisruptionSearchResult:
+    """Find current public-transport disruptions affecting a Swiss station.
+
+    Uses current real-time OJP 2.0 stop-event information.
+    Covers cancellations, delays, and boarding/alighting restrictions
+    affecting services at the requested station.
+    """
+    return find_station_disruptions(
+        stop,
         client=get_client(),
         settings=settings,
     )
