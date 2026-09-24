@@ -2,6 +2,19 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TrainConnectionsCard } from "./TrainConnectionsCard";
 
+vi.mock("mapbox-gl", () => {
+  class FakeMap {
+    on = vi.fn();
+    remove = vi.fn();
+    addControl = vi.fn();
+  }
+  class FakeMarker {
+    setLngLat = vi.fn().mockReturnThis();
+    addTo = vi.fn().mockReturnThis();
+  }
+  return { default: { accessToken: "", Map: FakeMap, Marker: FakeMarker } };
+});
+
 const sampleData = {
   connections: [
     {

@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { RouteMap } from "./RouteMap";
+
 interface Leg {
   mode: string;
   line: string | null;
@@ -36,13 +39,20 @@ function formatTime(iso: string): string {
 }
 
 export function TrainConnectionsCard({ data, onSelect }: TrainConnectionsCardProps) {
+  const [selected, setSelected] = useState<Connection | null>(null);
+
+  function handleSelect(connection: Connection) {
+    setSelected(connection);
+    onSelect(connection);
+  }
+
   return (
     <div className="space-y-2">
       {data.connections.map((connection, index) => (
         <button
           key={index}
           type="button"
-          onClick={() => onSelect(connection)}
+          onClick={() => handleSelect(connection)}
           className="w-full rounded-xl border border-neutral-200 p-3 text-left hover:border-accent"
         >
           <div className="flex items-center justify-between text-sm font-medium">
@@ -54,6 +64,9 @@ export function TrainConnectionsCard({ data, onSelect }: TrainConnectionsCardPro
           </div>
         </button>
       ))}
+      {selected && selected.legs.length > 0 && (
+        <RouteMap origin={selected.legs[0].from_name} destination={selected.legs[selected.legs.length - 1].to_name} />
+      )}
       {data.provenance && (
         <a
           href={data.provenance.source_url}
