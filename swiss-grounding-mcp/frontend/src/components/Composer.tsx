@@ -74,7 +74,7 @@ export function Composer({ disabled, onSubmit, voiceState, onMicClick }: Compose
           aria-label={MIC_LABEL[voiceState]}
           aria-pressed={micListening}
           onClick={onMicClick}
-          className={`quiet-focus flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
+          className={`quiet-focus flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
             micListening
               ? "voice-mic-active bg-rose-500 text-white"
               : "text-accent hover:bg-accent/10"
@@ -83,11 +83,11 @@ export function Composer({ disabled, onSubmit, voiceState, onMicClick }: Compose
           {voiceState === "processing" ? (
             <span className="voice-spinner" aria-hidden />
           ) : micListening ? (
-            <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5" aria-hidden>
+            <svg viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4" aria-hidden>
               <rect x="5" y="5" width="14" height="14" rx="3" />
             </svg>
           ) : (
-            <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden>
+            <svg viewBox="0 0 24 24" fill="none" className="h-[18px] w-[18px]" aria-hidden>
               <path
                 d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"
                 stroke="currentColor"
@@ -109,9 +109,9 @@ export function Composer({ disabled, onSubmit, voiceState, onMicClick }: Compose
           type="submit"
           disabled={disabled || !value.trim()}
           aria-label="Send"
-          className="quiet-focus flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-white shadow-glass-sm transition duration-200 hover:bg-accent-dim disabled:cursor-not-allowed disabled:opacity-40"
+          className="quiet-focus flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-white shadow-glass-sm transition duration-200 hover:bg-accent-dim disabled:cursor-not-allowed disabled:opacity-40"
         >
-          <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden>
+          <svg viewBox="0 0 24 24" fill="none" className="h-[18px] w-[18px]" aria-hidden>
             <path
               d="M4 12h15M13 5l7 7-7 7"
               stroke="currentColor"

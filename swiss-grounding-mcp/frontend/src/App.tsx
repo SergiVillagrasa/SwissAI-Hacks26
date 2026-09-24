@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Composer } from "./components/Composer";
 import { ChatThread } from "./components/ChatThread";
 import { VoiceBorderGlow } from "./components/VoiceBorderGlow";
+import { GlassTile } from "./components/GlassTile";
 import { useVoiceAgent } from "./lib/useVoiceAgent";
 import { streamChat } from "./lib/sse";
 import type { ChatMessage, WidgetEvent } from "./lib/types";
@@ -13,7 +14,7 @@ export interface Turn {
   widgets: WidgetEvent[];
 }
 
-const BACKEND_URL = import.meta.env.VITE_AGENT_BACKEND_URL ?? "http://127.0.0.1:8080";
+const BACKEND_URL = import.meta.env.VITE_AGENT_BACKEND_URL ?? "http://127.0.0.1:3001";
 
 function makeId(): string {
   return Math.random().toString(36).slice(2);
@@ -92,7 +93,7 @@ export default function App() {
       type="button"
       aria-label="Close voice mode"
       onClick={voice.cancel}
-      className="quiet-focus relative z-50 flex h-9 w-9 items-center justify-center rounded-full bg-white/70 text-neutral-600 shadow-glass-sm backdrop-blur-xl transition hover:bg-white/90"
+      className="quiet-focus relative z-50 flex h-11 w-11 items-center justify-center rounded-full bg-white/70 text-neutral-600 shadow-glass-sm backdrop-blur-xl transition hover:bg-white/90"
     >
       <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden>
         <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -100,8 +101,16 @@ export default function App() {
     </button>
   ) : null;
 
+  const voiceErrorBanner =
+    voice.state === "error" && voice.errorMessage ? (
+      <GlassTile className="max-w-2xl p-4 text-sm text-neutral-700">
+        <span className="mr-2 font-medium text-rose-500">Voice error:</span>
+        {voice.errorMessage}
+      </GlassTile>
+    ) : null;
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="flex h-dvh flex-col overflow-hidden">
       {voiceActive && <VoiceBorderGlow state={voice.state} level={voice.level} />}
       {turns.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
@@ -109,6 +118,7 @@ export default function App() {
             Where are you headed?
           </h1>
           {closeVoiceButton}
+          {voiceErrorBanner}
           <Composer
             disabled={pending}
             onSubmit={handleSubmit}
@@ -124,6 +134,7 @@ export default function App() {
           <div className="w-full shrink-0 bg-gradient-to-t from-[#cfe4ff] via-[#cfe4ff]/80 to-transparent px-4 py-6">
             <div className="flex flex-col items-center gap-3">
               {closeVoiceButton}
+              {voiceErrorBanner}
               <Composer
                 disabled={pending}
                 onSubmit={handleSubmit}

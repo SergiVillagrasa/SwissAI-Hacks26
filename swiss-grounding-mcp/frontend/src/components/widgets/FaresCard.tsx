@@ -26,7 +26,7 @@ export function FaresCard({ data }: { data: FareSearchData }) {
                 {fare.product}
                 {fare.discount ? ` (${fare.discount})` : ""}
               </span>
-              <span className="tabular font-semibold text-accent">CHF {fare.price_chf}</span>
+              <span className="tabular font-semibold text-accent-ink">CHF {fare.price_chf}</span>
             </li>
           ))}
         </ul>

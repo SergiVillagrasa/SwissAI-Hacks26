@@ -16,7 +16,7 @@ export function AirportGuidanceCard({ data }: { data: AirportGuidanceData }) {
           href={data.source_url}
           target="_blank"
           rel="noreferrer"
-          className="text-xs text-neutral-500 hover:text-accent hover:underline"
+          className="text-xs text-neutral-600 hover:text-accent-ink hover:underline"
         >
           Source: {data.source}
         </a>

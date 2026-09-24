@@ -7,7 +7,7 @@ html {
 }
 
 body {
-  @apply min-h-screen text-neutral-900 font-sans antialiased;
+  @apply min-h-dvh text-neutral-900 font-sans antialiased;
   background: transparent;
 }
 
@@ -281,5 +281,32 @@ body {
   75% {
     transform: rotate(-70deg);
     animation-timing-function: ease-in;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Hold the voice glow blobs static instead of continuously drifting. */
+  .voice-border-glow__blob {
+    animation: none;
+  }
+
+  /* Keep the "recording" signal, just make it a fixed ring instead of a pulse. */
+  .voice-mic-active {
+    animation: none;
+    box-shadow: 0 0 0 4px rgba(255, 95, 126, 0.35);
+  }
+
+  /* The "Thinking…" label already conveys this state, so the swing can go. */
+  .newtons-cradle__dot:first-child,
+  .newtons-cradle__dot:last-child {
+    animation: none;
+  }
+
+  /* !important needed to override the Tailwind `animate-rise` utility, which
+     has equal specificity and is defined earlier in the cascade. */
+  .animate-rise {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
