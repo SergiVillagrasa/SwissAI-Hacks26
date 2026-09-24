@@ -33,6 +33,9 @@ class Settings:
     aerodatabox_timeout_seconds: float = 10.0
     aerodatabox_enable: bool = True
     aerodatabox_cache_seconds: float = 60.0
+    serpapi_api_key: str = ""
+    serpapi_base_url: str = "https://serpapi.com/search.json"
+    serpapi_timeout_seconds: float = 10.0
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "Settings":
@@ -72,5 +75,10 @@ class Settings:
                 source.get(
                     "AERODATABOX_CACHE_SECONDS", defaults.aerodatabox_cache_seconds
                 )
+            ),
+            serpapi_api_key=source.get("SERPAPI_API_KEY", defaults.serpapi_api_key),
+            serpapi_base_url=source.get("SERPAPI_BASE_URL", defaults.serpapi_base_url),
+            serpapi_timeout_seconds=float(
+                source.get("SERPAPI_TIMEOUT_SECONDS", defaults.serpapi_timeout_seconds)
             ),
         )

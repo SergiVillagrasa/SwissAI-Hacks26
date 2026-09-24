@@ -11,6 +11,7 @@ from swiss_grounding_mcp.domain.models import (
     ConnectionSearchResult,
     DisruptionSearchResult,
     FareSearchResult,
+    FlightFareSearchResult,
     FlightLookupResult,
     FlightSearchResult,
     FlightToTrainResult,
@@ -18,6 +19,7 @@ from swiss_grounding_mcp.domain.models import (
 )
 from swiss_grounding_mcp.sources.aerodatabox.client import AerodataboxClient
 from swiss_grounding_mcp.sources.ojp.client import OjpClient
+from swiss_grounding_mcp.sources.serpapi.flight_client import SerpApiFlightClient
 from swiss_grounding_mcp.tools.connect_flight_to_train import (
     connect_flight_to_train as _connect_flight_to_train,
 )
@@ -26,6 +28,7 @@ from swiss_grounding_mcp.tools.fares import (
 )
 from swiss_grounding_mcp.tools.find_connections import find_train_connections
 from swiss_grounding_mcp.tools.find_disruptions import find_station_disruptions
+from swiss_grounding_mcp.tools.flight_fares import get_flight_fares as _get_flight_fares
 from swiss_grounding_mcp.tools.find_flight_by_number import (
     find_flight_by_number as _find_flight_by_number,
 )
@@ -46,6 +49,7 @@ mcp = MCPServer("Swiss Grounding MCP")
 
 _client: OjpClient | None = None
 _aviation_client: AerodataboxClient | None = None
+_flight_fares_client: SerpApiFlightClient | None = None
 
 
 def get_client() -> OjpClient:
@@ -60,6 +64,13 @@ def get_aviation_client() -> AerodataboxClient:
     if _aviation_client is None:
         _aviation_client = AerodataboxClient(settings)
     return _aviation_client
+
+
+def get_flight_fares_client() -> SerpApiFlightClient:
+    global _flight_fares_client
+    if _flight_fares_client is None:
+        _flight_fares_client = SerpApiFlightClient(settings)
+    return _flight_fares_client
 
 
 @mcp.tool()
@@ -156,6 +167,30 @@ def check_public_transport_fares(
         travel_class=travel_class,
         discount_card=discount_card,
         client=get_client(),
+        settings=settings,
+    )
+
+
+@mcp.tool()
+def get_flight_fares(
+    origin_city: str,
+    destination_city: str,
+    outbound_date: str | None = None,
+    currency: str = "CHF",
+) -> FlightFareSearchResult:
+    """Find current commercial flight fares between supported Swiss airports.
+
+    Scope: domestic Swiss routes only, using SerpApi Google Flights results.
+    Supported locations are Zurich, Geneva, Basel/Mulhouse, Lugano,
+    St. Gallen/Altenrhein, and Sion. The date defaults to tomorrow and the
+    currency defaults to CHF. Foreign routes are refused rather than queried.
+    """
+    return _get_flight_fares(
+        origin_city,
+        destination_city,
+        outbound_date,
+        currency,
+        client=get_flight_fares_client(),
         settings=settings,
     )
 
