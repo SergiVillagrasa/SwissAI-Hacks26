@@ -236,8 +236,8 @@ uv run pytest -v
 
 ## Limitations
 
-- Milestone 1 (train) only covers connection search; no fares, departure
-  boards, disruption feeds, or non-rail modes.
+- Milestone 1 (train) covers connection search, station boards, and
+  disruption feeds; no fares or non-rail modes.
 - Station name resolution uses OJP's own fuzzy matching; extremely
   ambiguous or misspelled names may require a follow-up clarification.
 - The aviation module covers ZRH only, is backed by a third-party
