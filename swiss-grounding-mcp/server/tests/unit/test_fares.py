@@ -54,15 +54,15 @@ class TestBuildSbbDeepLink:
     def test_origin_and_destination_only(self):
         url = build_sbb_deep_link("Zürich HB", "Bern")
 
-        assert url.startswith("https://www.sbb.ch/en/timetable.html?")
-        assert "from=Z%C3%BCrich%20HB" in url
-        assert "to=Bern" in url
+        assert url.startswith("https://sbb.ch/en?")
+        assert "von=Z%C3%BCrich%20HB" in url
+        assert "nach=Bern" in url
         assert "date=" not in url
 
     def test_with_travel_date(self):
         url = build_sbb_deep_link("Bern", "Zürich HB", travel_date="2026-10-15")
 
-        assert "from=Bern" in url
+        assert "von=Bern" in url
         assert "Z%C3%BCrich" in url
         assert "date=2026-10-15" in url
 
@@ -156,7 +156,7 @@ class TestCheckFaresSuccess:
         assert result.provenance is not None
         assert result.provenance.retrieved_at is not None
         assert "T" in result.provenance.retrieved_at
-        assert result.provenance.source_url.startswith("https://www.sbb.ch/")
+        assert result.provenance.source_url.startswith("https://sbb.ch/")
 
 
 # ── Fallback / API failure ──────────────────────────────────────────
