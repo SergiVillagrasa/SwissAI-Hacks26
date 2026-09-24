@@ -41,6 +41,12 @@ class Provenance(BaseModel):
     source: str
     source_url: str
     retrieved_at: str
+    # OJP 2.0 always returns Zulu/UTC timestamps (trailing "Z"), and this
+    # server never converts them to a local zone, so every time field
+    # exposed by the train tools (departure/arrival/planned_time/etc.) is
+    # UTC. Naming it explicitly here keeps it consistent with
+    # AviationProvenance.timezone across all tools.
+    timezone: str = "UTC"
     booking_url: str | None = None
 
 

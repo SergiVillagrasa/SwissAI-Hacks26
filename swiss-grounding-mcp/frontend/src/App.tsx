@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Composer } from "./components/Composer";
 import { ChatThread } from "./components/ChatThread";
+import { VoiceBorderGlow } from "./components/VoiceBorderGlow";
+import { GlassTile } from "./components/GlassTile";
+import { useVoiceAgent } from "./lib/useVoiceAgent";
 import { streamChat } from "./lib/sse";
 import type { ChatMessage, WidgetEvent } from "./lib/types";
 
@@ -30,7 +33,7 @@ export default function App() {
     node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
   }, [turns]);
 
-  async function handleSubmit(text: string) {
+  async function handleSubmit(text: string): Promise<string> {
     const userTurn: Turn = { id: makeId(), role: "user", text, widgets: [] };
     const assistantTurn: Turn = { id: makeId(), role: "assistant", text: "", widgets: [] };
     const nextHistory: ChatMessage[] = [...history, { role: "user", content: text }];
@@ -61,28 +64,67 @@ export default function App() {
         }
       }
       setHistory((current) => [...current, { role: "assistant", content: assistantText }]);
-    } catch {
+      return assistantText;
+    } catch (error) {
+      const fallback = "Something went wrong reaching the assistant. Please try again.";
       setTurns((current) =>
-        current.map((turn) =>
-          turn.id === assistantTurn.id
-            ? { ...turn, text: "Something went wrong reaching the assistant. Please try again." }
-            : turn
-        )
+        current.map((turn) => (turn.id === assistantTurn.id ? { ...turn, text: fallback } : turn))
       );
+      return fallback;
     } finally {
       setPending(false);
       setPendingTurnId(null);
     }
   }
 
+  const voice = useVoiceAgent(BACKEND_URL, handleSubmit);
+  const voiceActive = voice.state !== "idle";
+
+  function handleMicClick() {
+    if (voice.state === "listening") {
+      void voice.stopAndSend();
+    } else {
+      void voice.start();
+    }
+  }
+
+  const closeVoiceButton = voiceActive ? (
+    <button
+      type="button"
+      aria-label="Close voice mode"
+      onClick={voice.cancel}
+      className="quiet-focus relative z-50 flex h-11 w-11 items-center justify-center rounded-full bg-white/70 text-neutral-600 shadow-glass-sm backdrop-blur-xl transition hover:bg-white/90"
+    >
+      <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden>
+        <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    </button>
+  ) : null;
+
+  const voiceErrorBanner =
+    voice.state === "error" && voice.errorMessage ? (
+      <GlassTile className="max-w-2xl p-4 text-sm text-neutral-700">
+        <span className="mr-2 font-medium text-rose-500">Voice error:</span>
+        {voice.errorMessage}
+      </GlassTile>
+    ) : null;
+
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="flex h-dvh flex-col overflow-hidden">
+      {voiceActive && <VoiceBorderGlow state={voice.state} level={voice.level} />}
       {turns.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-10 px-6">
-          <h1 className="animate-rise text-center text-4xl font-medium tracking-tight text-neutral-800 sm:text-5xl">
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
+          <h1 className="animate-rise mb-6 text-center text-4xl font-medium tracking-tight text-neutral-800 sm:text-5xl">
             Where are you headed?
           </h1>
-          <Composer disabled={pending} onSubmit={handleSubmit} />
+          {closeVoiceButton}
+          {voiceErrorBanner}
+          <Composer
+            disabled={pending}
+            onSubmit={handleSubmit}
+            voiceState={voice.state}
+            onMicClick={handleMicClick}
+          />
         </div>
       ) : (
         <>
@@ -90,8 +132,15 @@ export default function App() {
             <ChatThread turns={turns} pendingTurnId={pendingTurnId} onClarify={handleSubmit} />
           </div>
           <div className="w-full shrink-0 bg-gradient-to-t from-[#cfe4ff] via-[#cfe4ff]/80 to-transparent px-4 py-6">
-            <div className="flex justify-center">
-              <Composer disabled={pending} onSubmit={handleSubmit} />
+            <div className="flex flex-col items-center gap-3">
+              {closeVoiceButton}
+              {voiceErrorBanner}
+              <Composer
+                disabled={pending}
+                onSubmit={handleSubmit}
+                voiceState={voice.state}
+                onMicClick={handleMicClick}
+              />
             </div>
           </div>
         </>

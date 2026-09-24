@@ -92,3 +92,11 @@ def test_serpapi_defaults_and_env_overrides():
     assert configured.serpapi_api_key == "test-key"
     assert configured.serpapi_base_url == "https://example.test/search.json"
     assert configured.serpapi_timeout_seconds == 4.0
+
+
+def test_trip_time_margin_minutes_default_and_override():
+    defaults = Settings.from_env({})
+    configured = Settings.from_env({"TRIP_TIME_MARGIN_MINUTES": "5"})
+
+    assert defaults.trip_time_margin_minutes == 10.0
+    assert configured.trip_time_margin_minutes == 5.0

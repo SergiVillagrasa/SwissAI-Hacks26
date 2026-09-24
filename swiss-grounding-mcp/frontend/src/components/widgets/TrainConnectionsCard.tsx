@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { RouteMap } from "./RouteMap";
+import { lazy, Suspense, useState } from "react";
 import { GlassTile, glassRowInteractive } from "../GlassTile";
+
+const RouteMap = lazy(() => import("./RouteMap").then((m) => ({ default: m.RouteMap })));
 
 interface Leg {
   mode: string;
@@ -60,16 +61,18 @@ export function TrainConnectionsCard({ data, onSelect }: TrainConnectionsCardPro
             <span className="tabular">
               {formatTime(connection.departure)} → {formatTime(connection.arrival)}
             </span>
-            <span className="tabular text-accent">{connection.duration_minutes} min</span>
+            <span className="tabular text-accent-ink">{connection.duration_minutes} min</span>
           </div>
-          <div className="text-xs text-neutral-500">
+          <div className="text-xs text-neutral-600">
             {connection.changes === 0 ? "Direct" : `${connection.changes} change${connection.changes > 1 ? "s" : ""}`}
           </div>
         </button>
       ))}
       {selected && selected.legs.length > 0 && (
         <div className="overflow-hidden rounded-2xl border border-white/50">
-          <RouteMap origin={selected.legs[0].from_name} destination={selected.legs[selected.legs.length - 1].to_name} />
+          <Suspense fallback={null}>
+            <RouteMap origin={selected.legs[0].from_name} destination={selected.legs[selected.legs.length - 1].to_name} />
+          </Suspense>
         </div>
       )}
       {data.provenance && (
@@ -77,7 +80,7 @@ export function TrainConnectionsCard({ data, onSelect }: TrainConnectionsCardPro
           href={data.provenance.source_url}
           target="_blank"
           rel="noreferrer"
-          className="block px-1 text-xs text-neutral-500 hover:text-accent hover:underline"
+          className="block px-1 text-xs text-neutral-600 hover:text-accent-ink hover:underline"
         >
           Source: {data.provenance.source}
         </a>

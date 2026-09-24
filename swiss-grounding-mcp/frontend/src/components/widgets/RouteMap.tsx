@@ -40,5 +40,13 @@ export function RouteMap({ origin, destination }: { origin: string; destination:
     return <p className="p-4 text-xs text-neutral-500">Map unavailable for this location.</p>;
   }
 
-  return <div ref={containerRef} data-testid="route-map" className="h-64 w-full" />;
+  return (
+    <div
+      ref={containerRef}
+      data-testid="route-map"
+      className="h-64 w-full"
+      role="img"
+      aria-label={`Map from ${origin} to ${destination}`}
+    />
+  );
 }

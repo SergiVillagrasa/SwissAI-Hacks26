@@ -90,6 +90,16 @@ def find_connections(
     travel. If the origin or destination is outside Switzerland, is not a
     recognizable station, or the question is unrelated to travel, this
     tool will say so rather than guess.
+
+    departure_time / arrival_time: ISO 8601, e.g. "2026-09-25T18:00:00Z".
+    Leave unset for "now" — this tool fills in the current real date and
+    time itself, so do not guess or compute "today"/"tomorrow" yourself
+    from prior knowledge. If the caller gives a relative day ("tomorrow",
+    "next Monday"), resolve it against the current date rather than
+    assuming one. A requested time that misses the timetable by a couple
+    of minutes still returns the nearest connections rather than
+    "not found". All returned times are UTC (trailing "Z"), not local
+    Swiss time.
     """
     return find_train_connections(
         origin,
@@ -105,11 +115,16 @@ def find_connections(
 def find_disruptions(
     stop: str,
 ) -> DisruptionSearchResult:
-    """Find current public-transport disruptions affecting a Swiss station.
+    """Find current public-transport disruptions affecting a station.
 
-    Uses current real-time OJP 2.0 stop-event information.
-    Covers cancellations, delays, and boarding/alighting restrictions
-    affecting services at the requested station.
+    Uses current real-time OJP 2.0 stop-event information. Covers
+    cancellations, delays, and boarding/alighting restrictions affecting
+    services at the requested station. Unlike find_connections and
+    get_station_board, this is not restricted to Swiss stations: OJP 2.0
+    indexes stops across the wider network (e.g. nearby stations in
+    France, Germany, Italy, or Austria), so call this tool for a
+    disruption question about any such stop rather than refusing it as
+    out of scope.
     """
     return find_station_disruptions(
         stop,
@@ -129,9 +144,12 @@ def get_station_board(
 
     Scope: station boards for stops in the Swiss network only, via OJP 2.0
     (opentransportdata.swiss). `mode` is 'departures' (default) or
-    'arrivals'; `when` is an optional ISO 8601 timestamp (defaults to now);
-    `results` is capped at 10. Stations outside Switzerland are refused as
-    out of scope rather than guessed.
+    'arrivals'; `when` is an optional ISO 8601 timestamp — leave it unset
+    for "now" rather than computing today's date yourself, since this
+    tool fills in the current real date and time automatically; `results`
+    is capped at 10. Stations outside Switzerland are refused as out of
+    scope rather than guessed. Returned times are UTC (trailing "Z"), not
+    local Swiss time.
     """
     return get_station_board_impl(
         station,
@@ -182,8 +200,11 @@ def get_flight_fares(
 
     Scope: domestic Swiss routes only, using SerpApi Google Flights results.
     Supported locations are Zurich, Geneva, Basel/Mulhouse, Lugano,
-    St. Gallen/Altenrhein, and Sion. The date defaults to tomorrow and the
-    currency defaults to CHF. Foreign routes are refused rather than queried.
+    St. Gallen/Altenrhein, and Sion. `outbound_date` (YYYY-MM-DD) defaults
+    to tomorrow when left unset — leave it unset for relative dates like
+    "tomorrow" instead of computing the date yourself, since this tool
+    resolves it against the current real date. The currency defaults to
+    CHF. Foreign routes are refused rather than queried.
     """
     return _get_flight_fares(
         origin_city,
@@ -208,7 +229,10 @@ def find_flight_by_number(
     (not the airport operator). Supports scheduled future dates, not just
     the current day. Only fields present in the response are returned.
     direction, if given, is 'arrival' or 'departure' at ZRH. Does not
-    cover fares, visas, or airline-specific rules.
+    cover fares, visas, or airline-specific rules. `flight_date` has no
+    default — resolve relative dates like "today" or "tomorrow" against
+    the current real date rather than guessing. All returned times are
+    UTC, not the airport's local zone.
     """
     return _find_flight_by_number(
         flight_number, flight_date, direction, client=get_aviation_client(), settings=settings

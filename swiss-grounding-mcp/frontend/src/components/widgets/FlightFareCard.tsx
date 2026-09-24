@@ -33,14 +33,14 @@ export function FlightFareCard({ data }: { data: FlightFareSearchData }) {
               <div className="min-w-0">
                 <div className="flex items-center gap-2 font-semibold text-neutral-800">
                   <span>{flight.airline}</span>
-                  <span className="text-xs font-normal text-neutral-500">{flight.flight_number}</span>
+                  <span className="text-xs font-normal text-neutral-600">{flight.flight_number}</span>
                 </div>
-                <div className="mt-1 text-xs text-neutral-500">
+                <div className="mt-1 text-xs text-neutral-600">
                   {flight.departure_time} → {flight.arrival_time}
                   {duration ? ` · ${duration}` : ""}
                 </div>
               </div>
-              <span className="shrink-0 tabular font-semibold text-accent">
+              <span className="shrink-0 tabular font-semibold text-accent-ink">
                 {flight.currency} {flight.price}
               </span>
             </li>

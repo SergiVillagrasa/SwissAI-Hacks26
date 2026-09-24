@@ -1,3 +1,6 @@
+import io
+from types import SimpleNamespace
+
 from fastapi.testclient import TestClient
 
 from agent_backend import main as main_module
@@ -97,3 +100,60 @@ def test_chat_endpoint_reports_missing_openai_key(monkeypatch):
 
 def test_build_openai_client_returns_none_without_key():
     assert main_module._build_openai_client("") is None
+
+
+def test_transcribe_endpoint_returns_openai_transcript_text(monkeypatch):
+    def fake_create(*, model, file):
+        assert model == main_module.settings.openai_transcribe_model
+        assert file.read() == b"fake-audio-bytes"
+        return SimpleNamespace(text=" hello there ")
+
+    monkeypatch.setattr(
+        main_module._openai_client.audio.transcriptions, "create", fake_create
+    )
+
+    client = TestClient(main_module.app)
+    response = client.post(
+        "/api/voice/transcribe",
+        files={"audio": ("utterance.webm", io.BytesIO(b"fake-audio-bytes"), "audio/webm")},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"text": "hello there"}
+
+
+def test_transcribe_endpoint_rejects_empty_upload():
+    client = TestClient(main_module.app)
+
+    response = client.post(
+        "/api/voice/transcribe",
+        files={"audio": ("utterance.webm", io.BytesIO(b""), "audio/webm")},
+    )
+
+    assert response.status_code == 400
+
+
+def test_speak_endpoint_returns_mp3_audio_bytes(monkeypatch):
+    def fake_create(*, model, voice, input, response_format):
+        assert model == main_module.settings.openai_tts_model
+        assert voice == main_module.settings.openai_tts_voice
+        assert input == "hello there"
+        assert response_format == "mp3"
+        return SimpleNamespace(read=lambda: b"fake-mp3-bytes")
+
+    monkeypatch.setattr(main_module._openai_client.audio.speech, "create", fake_create)
+
+    client = TestClient(main_module.app)
+    response = client.post("/api/voice/speak", json={"text": "hello there"})
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "audio/mpeg"
+    assert response.content == b"fake-mp3-bytes"
+
+
+def test_speak_endpoint_rejects_empty_text():
+    client = TestClient(main_module.app)
+
+    response = client.post("/api/voice/speak", json={"text": "   "})
+
+    assert response.status_code == 400
