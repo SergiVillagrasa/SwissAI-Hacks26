@@ -260,7 +260,7 @@ def parse_disruption_stop_event_response(xml_bytes: bytes) -> list[Disruption]:
 
         line = _text_of(
             service,
-            "ojp:PublishedLineName/ojp:Text",
+            "ojp:PublishedServiceName/ojp:Text",
         )
 
         journey_ref = _text_of(
