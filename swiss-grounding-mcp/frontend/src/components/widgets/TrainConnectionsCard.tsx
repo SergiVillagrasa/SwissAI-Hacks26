@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { RouteMap } from "./RouteMap";
+import { GlassTile, glassRowInteractive } from "../GlassTile";
 
 interface Leg {
   mode: string;
@@ -47,17 +48,19 @@ export function TrainConnectionsCard({ data, onSelect }: TrainConnectionsCardPro
   }
 
   return (
-    <div className="space-y-2">
+    <GlassTile className="space-y-2 p-4">
       {data.connections.map((connection, index) => (
         <button
           key={index}
           type="button"
           onClick={() => handleSelect(connection)}
-          className="w-full rounded-xl border border-neutral-200 p-3 text-left hover:border-accent"
+          className={`w-full p-3.5 text-left ${glassRowInteractive} ${selected === connection ? "ring-2 ring-accent/60" : ""}`}
         >
-          <div className="flex items-center justify-between text-sm font-medium">
-            <span>{formatTime(connection.departure)} → {formatTime(connection.arrival)}</span>
-            <span>{connection.duration_minutes} min</span>
+          <div className="flex items-center justify-between text-sm font-semibold text-neutral-800">
+            <span className="tabular">
+              {formatTime(connection.departure)} → {formatTime(connection.arrival)}
+            </span>
+            <span className="tabular text-accent">{connection.duration_minutes} min</span>
           </div>
           <div className="text-xs text-neutral-500">
             {connection.changes === 0 ? "Direct" : `${connection.changes} change${connection.changes > 1 ? "s" : ""}`}
@@ -65,18 +68,20 @@ export function TrainConnectionsCard({ data, onSelect }: TrainConnectionsCardPro
         </button>
       ))}
       {selected && selected.legs.length > 0 && (
-        <RouteMap origin={selected.legs[0].from_name} destination={selected.legs[selected.legs.length - 1].to_name} />
+        <div className="overflow-hidden rounded-2xl border border-white/50">
+          <RouteMap origin={selected.legs[0].from_name} destination={selected.legs[selected.legs.length - 1].to_name} />
+        </div>
       )}
       {data.provenance && (
         <a
           href={data.provenance.source_url}
           target="_blank"
           rel="noreferrer"
-          className="block text-xs text-neutral-400 hover:underline"
+          className="block px-1 text-xs text-neutral-500 hover:text-accent hover:underline"
         >
           Source: {data.provenance.source}
         </a>
       )}
-    </div>
+    </GlassTile>
   );
 }

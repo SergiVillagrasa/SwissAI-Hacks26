@@ -1,3 +1,5 @@
+import { GlassTile, glassRowInteractive } from "../GlassTile";
+
 interface AirportInfo {
   iata: string | null;
   icao: string | null;
@@ -34,21 +36,20 @@ function fieldOrNotReported(value: string | null | undefined): string {
   return value ?? "not reported by source";
 }
 
-function FlightSummary({ flight }: { flight: Flight }) {
+function FlightSummary({ flight, nested = false }: { flight: Flight; nested?: boolean }) {
   return (
-    <div className="rounded-xl border border-neutral-200 p-3">
-      <div className="flex items-center justify-between text-sm font-medium">
+    <div className={nested ? `p-3.5 ${glassRowInteractive}` : "space-y-1"}>
+      <div className="flex items-center justify-between text-sm font-semibold text-neutral-800">
         <span>{flight.flight_number}</span>
-        <span>{fieldOrNotReported(flight.airline.name)}</span>
+        <span className="text-accent">{fieldOrNotReported(flight.airline.name)}</span>
       </div>
-      <div className="text-xs text-neutral-500">
+      <div className="mt-1 text-xs font-medium tracking-wide text-neutral-600">
         {fieldOrNotReported(flight.departure.airport.iata)} → {fieldOrNotReported(flight.arrival.airport.iata)}
       </div>
-      <div className="text-xs text-neutral-500">
-        Gate: {fieldOrNotReported(flight.departure.gate)} · Terminal: {fieldOrNotReported(flight.departure.terminal)}
-      </div>
-      <div className="text-xs text-neutral-500">
-        Arrival gate: {fieldOrNotReported(flight.arrival.gate)}
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
+        <span>Gate: {fieldOrNotReported(flight.departure.gate)}</span>
+        <span>Terminal: {fieldOrNotReported(flight.departure.terminal)}</span>
+        <span>Arrival gate: {fieldOrNotReported(flight.arrival.gate)}</span>
       </div>
     </div>
   );
@@ -56,16 +57,20 @@ function FlightSummary({ flight }: { flight: Flight }) {
 
 export function FlightCard({ data, onSelect }: { data: FlightSearchData; onSelect: (flight: Flight) => void }) {
   if (data.flight) {
-    return <FlightSummary flight={data.flight} />;
+    return (
+      <GlassTile className="p-4">
+        <FlightSummary flight={data.flight} />
+      </GlassTile>
+    );
   }
 
   return (
-    <div className="space-y-2">
+    <GlassTile className="space-y-2 p-4">
       {(data.flights ?? []).map((flight, index) => (
         <button key={index} type="button" onClick={() => onSelect(flight)} className="block w-full text-left">
-          <FlightSummary flight={flight} />
+          <FlightSummary flight={flight} nested />
         </button>
       ))}
-    </div>
+    </GlassTile>
   );
 }

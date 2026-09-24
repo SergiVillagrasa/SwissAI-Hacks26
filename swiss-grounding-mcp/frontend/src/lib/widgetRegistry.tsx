@@ -39,3 +39,18 @@ export const WIDGET_TYPE_BY_TOOL: Record<string, string> = {
   get_airport_guidance: "airport_guidance",
   connect_flight_to_train: "flight_to_train",
 };
+
+/**
+ * Dashboard-grid tile width per widget type, iCloud-style: dense/composite
+ * widgets span two columns, compact ones take one and pack side by side.
+ */
+export const WIDGET_GRID_SPAN: Record<string, "wide" | "narrow"> = {
+  train_connections: "wide",
+  station_board: "wide",
+  fares: "narrow",
+  disruptions: "narrow",
+  flight: "narrow",
+  flight_search: "wide",
+  airport_guidance: "narrow",
+  flight_to_train: "wide",
+};
