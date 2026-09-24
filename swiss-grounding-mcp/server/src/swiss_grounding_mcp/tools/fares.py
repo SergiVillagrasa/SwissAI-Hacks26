@@ -35,10 +35,10 @@ def build_sbb_deep_link(
     optional (``YYYY-MM-DD``); when omitted the SBB website defaults to
     today.
     """
-    base_url = "https://www.sbb.ch/en/timetable.html"
+    base_url = "https://sbb.ch/en"
     params: dict[str, str] = {
-        "from": origin,
-        "to": destination,
+        "von": origin,
+        "nach": destination,
     }
     if travel_date is not None:
         params["date"] = travel_date
