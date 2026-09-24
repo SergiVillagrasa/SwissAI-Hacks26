@@ -5,13 +5,16 @@ from swiss_grounding_mcp.tools.find_connections import find_train_connections
 
 
 class StubOjpClient:
-    def __init__(self, *, candidates_by_name=None, connections=None, raise_on_trip=None):
+    def __init__(self, *, candidates_by_name=None, connections=None, raise_on_trip=None, raise_on_location=None):
         self.candidates_by_name = candidates_by_name or {}
         self.connections = connections if connections is not None else []
         self.raise_on_trip = raise_on_trip
+        self.raise_on_location = raise_on_location
         self.trip_calls = []
 
     def location_information(self, name):
+        if self.raise_on_location is not None:
+            raise self.raise_on_location
         return self.candidates_by_name.get(name, [])
 
     def trip_request(self, origin_ref, destination_ref, **kwargs):
@@ -212,3 +215,17 @@ def test_results_parameter_is_clamped_to_valid_range():
         "Bern", "Zürich HB", None, None, 500, client=client, settings=_settings()
     )
     assert client.trip_calls[1]["number_of_results"] == 5
+
+
+def test_source_error_from_location_information_returns_source_error_status():
+    client = StubOjpClient(
+        raise_on_location=OjpSourceError("OJP returned HTTP 403"),
+    )
+
+    result = find_train_connections(
+        "Bern", "Zürich HB", None, None, 3, client=client, settings=_settings()
+    )
+
+    assert result.status == "source_error"
+    assert result.connections == []
+    assert "403" in result.message

@@ -66,12 +66,20 @@ def find_train_connections(
 
     clamped_results = max(1, min(5, results))
 
-    origin_candidates = client.location_information(origin)
+    try:
+        origin_candidates = client.location_information(origin)
+    except OjpSourceError as exc:
+        return ConnectionSearchResult(status="source_error", message=str(exc))
+
     resolved_origin, failure = _resolve_station(origin, origin_candidates, "origin")
     if failure is not None:
         return failure
 
-    destination_candidates = client.location_information(destination)
+    try:
+        destination_candidates = client.location_information(destination)
+    except OjpSourceError as exc:
+        return ConnectionSearchResult(status="source_error", message=str(exc))
+
     resolved_destination, failure = _resolve_station(
         destination, destination_candidates, "destination"
     )

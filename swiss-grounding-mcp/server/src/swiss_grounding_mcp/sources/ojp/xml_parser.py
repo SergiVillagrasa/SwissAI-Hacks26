@@ -40,7 +40,10 @@ def parse_location_information_response(xml_bytes: bytes) -> list[StopCandidate]
     candidates: list[StopCandidate] = []
 
     for place_result in root.findall(".//ojp:PlaceResult", NS):
-        name = _text_of(place_result, "ojp:Place/ojp:Name/ojp:Text")
+        name = (
+            _text_of(place_result, "ojp:Place/ojp:StopPlace/ojp:StopPlaceName/ojp:Text")
+            or _text_of(place_result, "ojp:Place/ojp:Name/ojp:Text")
+        )
         stop_ref = _text_of(place_result, "ojp:Place/ojp:StopPlace/ojp:StopPlaceRef")
         if name is None or stop_ref is None:
             continue
