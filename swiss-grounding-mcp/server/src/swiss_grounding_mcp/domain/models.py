@@ -42,3 +42,23 @@ class ConnectionSearchResult(BaseModel):
     connections: list[Connection] = Field(default_factory=list)
     candidates: list[StopCandidate] = Field(default_factory=list)
     provenance: Provenance | None = None
+
+
+class StopEvent(BaseModel):
+    line: str | None = None
+    mode: str | None = None
+    direction_name: str | None = None
+    planned_time: str | None = None
+    estimated_time: str | None = None
+    platform: str | None = None
+    delay_minutes: int | None = None
+
+
+class StationBoardResult(BaseModel):
+    status: Status
+    message: str | None = None
+    station_name: str | None = None
+    event_type: str | None = None
+    events: list[StopEvent] = Field(default_factory=list)
+    candidates: list[StopCandidate] = Field(default_factory=list)
+    provenance: Provenance | None = None

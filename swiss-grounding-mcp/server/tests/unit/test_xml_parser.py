@@ -3,6 +3,7 @@ from pathlib import Path
 from swiss_grounding_mcp.sources.ojp.xml_parser import (
     has_service_delivery_error,
     parse_location_information_response,
+    parse_stop_event_response,
     parse_trip_response,
 )
 
@@ -73,3 +74,27 @@ def test_parse_trip_response_returns_two_connections_with_legs_and_changes():
     assert len(with_change.legs) == 2
     assert with_change.legs[0].line == "IR 15"
     assert with_change.legs[1].line == "S8"
+
+
+def test_parse_stop_event_response_departures():
+    events = parse_stop_event_response(
+        _read("ser_response_departures.xml"), event_type="departure"
+    )
+
+    assert len(events) == 2
+
+    first = events[0]
+    assert first.line == "IC 1"
+    assert first.mode == "rail"
+    assert first.direction_name == "Genève-Aéroport"
+    assert first.planned_time == "2026-09-24T12:33:00Z"
+    assert first.estimated_time == "2026-09-24T12:37:00Z"
+    assert first.platform == "9"
+    assert first.delay_minutes == 4
+
+    second = events[1]
+    assert second.line == "IR 75"
+    assert second.direction_name == "Luzern"
+    assert second.platform == "31"
+    assert second.estimated_time is None
+    assert second.delay_minutes is None

@@ -4,6 +4,7 @@ from swiss_grounding_mcp.sources.ojp.xml_builder import (
     OJP_NS,
     SIRI_NS,
     build_location_information_request,
+    build_stop_event_request,
     build_trip_request,
 )
 
@@ -83,3 +84,51 @@ def test_trip_request_with_arrival_time_omits_dep_arr_time_on_origin():
 
     arr_time = root.find(".//ojp:OJPTripRequest/ojp:Destination/ojp:DepArrTime", NS)
     assert arr_time.text == "2026-09-24T20:00:00Z"
+
+
+def test_stop_event_request_contains_stop_ref_and_event_type():
+    xml_bytes = build_stop_event_request(
+        "ch:1:sloid:8503000",
+        "swiss-grounding-mcp",
+        station_name="Zürich HB",
+        event_type="departure",
+        when="2026-09-24T12:00:00Z",
+        number_of_results=5,
+        message_identifier="SER-1",
+        timestamp="2026-09-24T11:59:00Z",
+    )
+
+    root = ET.fromstring(xml_bytes)
+    stop_ref = root.find(
+        ".//ojp:OJPStopEventRequest/ojp:Location/ojp:PlaceRef/siri:StopPointRef", NS
+    )
+    assert stop_ref.text == "ch:1:sloid:8503000"
+
+    dep_arr = root.find(
+        ".//ojp:OJPStopEventRequest/ojp:Location/ojp:DepArrTime", NS
+    )
+    assert dep_arr.text == "2026-09-24T12:00:00Z"
+
+    event_type = root.find(
+        ".//ojp:OJPStopEventRequest/ojp:Params/ojp:StopEventType", NS
+    )
+    assert event_type.text == "departure"
+
+    count = root.find(
+        ".//ojp:OJPStopEventRequest/ojp:Params/ojp:NumberOfResults", NS
+    )
+    assert count.text == "5"
+
+
+def test_stop_event_request_defaults_dep_arr_time_to_now():
+    xml_bytes = build_stop_event_request(
+        "ch:1:sloid:8503000",
+        "swiss-grounding-mcp",
+        timestamp="2026-09-24T11:59:00Z",
+    )
+
+    root = ET.fromstring(xml_bytes)
+    dep_arr = root.find(
+        ".//ojp:OJPStopEventRequest/ojp:Location/ojp:DepArrTime", NS
+    )
+    assert dep_arr.text == "2026-09-24T11:59:00Z"

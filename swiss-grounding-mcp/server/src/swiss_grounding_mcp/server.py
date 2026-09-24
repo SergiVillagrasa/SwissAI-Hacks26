@@ -6,9 +6,12 @@ from dotenv import load_dotenv
 from mcp.server.mcpserver import MCPServer
 
 from swiss_grounding_mcp.config.settings import Settings
-from swiss_grounding_mcp.domain.models import ConnectionSearchResult
+from swiss_grounding_mcp.domain.models import ConnectionSearchResult, StationBoardResult
 from swiss_grounding_mcp.sources.ojp.client import OjpClient
 from swiss_grounding_mcp.tools.find_connections import find_train_connections
+from swiss_grounding_mcp.tools.station_timetable import (
+    get_station_board as get_station_board_impl,
+)
 
 load_dotenv()
 
@@ -48,6 +51,31 @@ def find_connections(
         destination,
         departure_time,
         arrival_time,
+        results,
+        client=get_client(),
+        settings=settings,
+    )
+
+
+@mcp.tool()
+def get_station_board(
+    station: str,
+    mode: str = "departures",
+    when: str | None = None,
+    results: int = 5,
+) -> StationBoardResult:
+    """Show upcoming departures or arrivals at a Swiss public-transport stop.
+
+    Scope: station boards for stops in the Swiss network only, via OJP 2.0
+    (opentransportdata.swiss). `mode` is 'departures' (default) or
+    'arrivals'; `when` is an optional ISO 8601 timestamp (defaults to now);
+    `results` is capped at 10. Stations outside Switzerland are refused as
+    out of scope rather than guessed.
+    """
+    return get_station_board_impl(
+        station,
+        mode,
+        when,
         results,
         client=get_client(),
         settings=settings,
