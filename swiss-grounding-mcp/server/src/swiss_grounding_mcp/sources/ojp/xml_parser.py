@@ -57,7 +57,17 @@ def parse_location_information_response(xml_bytes: bytes) -> list[StopCandidate]
         probability_text = _text_of(place_result, "ojp:Probability")
         probability = float(probability_text) if probability_text is not None else None
 
-        candidates.append(StopCandidate(name=name, stop_ref=stop_ref, probability=probability))
+        longitude_text = _text_of(place_result, "ojp:Place/ojp:GeoPosition/siri:Longitude",)
+        latitude_text = _text_of(place_result, "ojp:Place/ojp:GeoPosition/siri:Latitude",)
+
+        longitude = float(longitude_text) if longitude_text is not None else None
+        latitude = float(latitude_text) if latitude_text is not None else None
+
+        candidates.append(StopCandidate(name=name,
+                                        stop_ref=stop_ref,
+                                        probability=probability,
+                                        latitude=latitude,
+                                        longitude=longitude))
 
     return candidates
 

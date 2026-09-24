@@ -97,6 +97,12 @@ def find_train_connections(
             ),
         )
 
+    for connection in connections:
+        connection.origin_latitude = resolved_origin.latitude
+        connection.origin_longitude = resolved_origin.longitude
+        connection.destination_latitude = resolved_destination.latitude
+        connection.destination_longitude = resolved_destination.longitude
+
     return ConnectionSearchResult(
         status="ok",
         message=("Connections found." + time_note) if time_note else None,
