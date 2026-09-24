@@ -7,13 +7,30 @@ from mcp.server.mcpserver import MCPServer
 
 from swiss_grounding_mcp.config.settings import Settings
 from swiss_grounding_mcp.domain.models import (
+    AirportGuidanceResult,
     ConnectionSearchResult,
     DisruptionSearchResult,
+    FlightLookupResult,
+    FlightSearchResult,
+    FlightToTrainResult,
     StationBoardResult,
 )
+from swiss_grounding_mcp.sources.aerodatabox.client import AerodataboxClient
 from swiss_grounding_mcp.sources.ojp.client import OjpClient
+from swiss_grounding_mcp.tools.connect_flight_to_train import (
+    connect_flight_to_train as _connect_flight_to_train,
+)
 from swiss_grounding_mcp.tools.find_connections import find_train_connections
 from swiss_grounding_mcp.tools.find_disruptions import find_station_disruptions
+from swiss_grounding_mcp.tools.find_flight_by_number import (
+    find_flight_by_number as _find_flight_by_number,
+)
+from swiss_grounding_mcp.tools.get_airport_guidance import (
+    get_airport_guidance as _get_airport_guidance,
+)
+from swiss_grounding_mcp.tools.search_airport_flights import (
+    search_airport_flights as _search_airport_flights,
+)
 from swiss_grounding_mcp.tools.station_timetable import (
     get_station_board as get_station_board_impl,
 )
@@ -24,6 +41,7 @@ settings = Settings.from_env()
 mcp = MCPServer("Swiss Grounding MCP")
 
 _client: OjpClient | None = None
+_aviation_client: AerodataboxClient | None = None
 
 
 def get_client() -> OjpClient:
@@ -31,6 +49,13 @@ def get_client() -> OjpClient:
     if _client is None:
         _client = OjpClient(settings)
     return _client
+
+
+def get_aviation_client() -> AerodataboxClient:
+    global _aviation_client
+    if _aviation_client is None:
+        _aviation_client = AerodataboxClient(settings)
+    return _aviation_client
 
 
 @mcp.tool()
@@ -99,6 +124,96 @@ def get_station_board(
         when,
         results,
         client=get_client(),
+        settings=settings,
+    )
+
+
+@mcp.tool()
+def find_flight_by_number(
+    flight_number: str,
+    flight_date: str,
+    direction: str | None = None,
+) -> FlightLookupResult:
+    """Look up a flight at Zurich Airport (ZRH) by flight number and date.
+
+    Scope: scheduled/estimated/actual times, terminal, gate, and delay as
+    reported by AeroDataBox (aerodatabox.com), a third-party aggregator
+    (not the airport operator). Supports scheduled future dates, not just
+    the current day. Only fields present in the response are returned.
+    direction, if given, is 'arrival' or 'departure' at ZRH. Does not
+    cover fares, visas, or airline-specific rules.
+    """
+    return _find_flight_by_number(
+        flight_number, flight_date, direction, client=get_aviation_client(), settings=settings
+    )
+
+
+@mcp.tool()
+def search_airport_flights(
+    direction: str,
+    flight_date: str,
+    airport_iata: str | None = None,
+    airport_icao: str | None = None,
+    airline_iata: str | None = None,
+    limit: int = 10,
+) -> FlightSearchResult:
+    """Search ZRH arrivals or departures for a date.
+
+    direction is 'arrival' or 'departure'. Filter by the exact IATA/ICAO
+    code of the other airport (a city or country name is not accepted;
+    the tool will ask for the precise airport code) and/or an airline
+    IATA code. Data via AeroDataBox (aerodatabox.com).
+    """
+    return _search_airport_flights(
+        direction,
+        flight_date,
+        airport_iata,
+        airport_icao,
+        airline_iata,
+        limit,
+        client=get_aviation_client(),
+        settings=settings,
+    )
+
+
+@mcp.tool()
+def get_airport_guidance(topic: str) -> AirportGuidanceResult:
+    """Cited Zurich Airport passenger guidance.
+
+    Topics: arrival_process, transfers, baggage, airport_rail_access,
+    flight_status_verification. Every answer cites an official Zurich
+    Airport (flughafen-zuerich.ch) page. Does not cover visa/immigration
+    rules or airline-specific policies.
+    """
+    return _get_airport_guidance(topic)
+
+
+@mcp.tool()
+def connect_flight_to_train(
+    destination_station: str,
+    transfer_buffer_minutes: int,
+    flight_number: str | None = None,
+    flight_date: str | None = None,
+    confirmed_arrival_time: str | None = None,
+    rail_results: int = 3,
+) -> FlightToTrainResult:
+    """Connect a ZRH arrival to onward Swiss train travel.
+
+    Provide either flight_number + flight_date (looked up via
+    aerodatabox.com) or a confirmed_arrival_time. transfer_buffer_minutes
+    (minimum 15) is added to the arrival time before searching trains via
+    OJP 2.0 from Zürich Flughafen. Never assumes a train is reachable
+    without this explicit buffer.
+    """
+    return _connect_flight_to_train(
+        flight_number,
+        flight_date,
+        confirmed_arrival_time,
+        destination_station,
+        transfer_buffer_minutes,
+        rail_results,
+        aviation_client=get_aviation_client(),
+        ojp_client=get_client(),
         settings=settings,
     )
 

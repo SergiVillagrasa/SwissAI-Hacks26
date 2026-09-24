@@ -82,3 +82,85 @@ class DisruptionSearchResult(BaseModel):
     disruptions: list[Disruption] = Field(default_factory=list)
     provenance: Provenance | None = None
     candidates: list[StopCandidate] = Field(default_factory=list)
+
+
+AviationStatus = Literal[
+    "answered", "needs_context", "insufficient_evidence", "out_of_scope", "source_unavailable"
+]
+
+
+class AirportInfo(BaseModel):
+    iata: str | None = None
+    icao: str | None = None
+    name: str | None = None
+    timezone: str | None = None
+
+
+class FlightEndpoint(BaseModel):
+    airport: AirportInfo
+    scheduled: str | None = None
+    estimated: str | None = None
+    actual: str | None = None
+    terminal: str | None = None
+    gate: str | None = None
+    delay_minutes: int | None = None
+
+
+class AirlineInfo(BaseModel):
+    name: str | None = None
+    iata: str | None = None
+    icao: str | None = None
+
+
+class Flight(BaseModel):
+    flight_number: str
+    flight_date: str
+    airline: AirlineInfo
+    departure: FlightEndpoint
+    arrival: FlightEndpoint
+    flight_status: str | None = None
+
+
+class AviationProvenance(BaseModel):
+    source: str
+    source_url: str
+    retrieved_at: str
+    applicable_date: str
+    timezone: str
+
+
+class FlightLookupResult(BaseModel):
+    status: AviationStatus
+    message: str | None = None
+    flight: Flight | None = None
+    fields_present: list[str] = Field(default_factory=list)
+    fields_missing: list[str] = Field(default_factory=list)
+    provenance: AviationProvenance | None = None
+
+
+class FlightSearchResult(BaseModel):
+    status: AviationStatus
+    message: str | None = None
+    flights: list[Flight] = Field(default_factory=list)
+    provenance: AviationProvenance | None = None
+
+
+class AirportGuidanceResult(BaseModel):
+    status: AviationStatus
+    topic: str
+    message: str | None = None
+    guidance: str | None = None
+    source: str | None = None
+    source_url: str | None = None
+    retrieved_at: str | None = None
+    applicable_airport: str | None = None
+    limitations: str | None = None
+
+
+class FlightToTrainResult(BaseModel):
+    status: AviationStatus
+    message: str | None = None
+    flight: Flight | None = None
+    train_connections: list[Connection] = Field(default_factory=list)
+    flight_provenance: AviationProvenance | None = None
+    rail_provenance: Provenance | None = None

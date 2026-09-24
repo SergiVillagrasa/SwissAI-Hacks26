@@ -26,6 +26,12 @@ class Settings:
     respect_robots_txt: bool = True
     mcp_http_host: str = "127.0.0.1"
     mcp_http_port: int = 8000
+    aerodatabox_api_key: str = ""
+    aerodatabox_host: str = "aerodatabox.p.rapidapi.com"
+    aerodatabox_base_url: str = "https://aerodatabox.p.rapidapi.com"
+    aerodatabox_timeout_seconds: float = 10.0
+    aerodatabox_enable: bool = True
+    aerodatabox_cache_seconds: float = 60.0
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "Settings":
@@ -44,4 +50,25 @@ class Settings:
             ),
             mcp_http_host=source.get("MCP_HTTP_HOST", defaults.mcp_http_host),
             mcp_http_port=int(source.get("MCP_HTTP_PORT", defaults.mcp_http_port)),
+            aerodatabox_api_key=source.get(
+                "AERODATABOX_API_KEY", defaults.aerodatabox_api_key
+            ),
+            aerodatabox_host=source.get("AERODATABOX_HOST", defaults.aerodatabox_host),
+            aerodatabox_base_url=source.get(
+                "AERODATABOX_BASE_URL", defaults.aerodatabox_base_url
+            ),
+            aerodatabox_timeout_seconds=float(
+                source.get(
+                    "AERODATABOX_TIMEOUT_SECONDS", defaults.aerodatabox_timeout_seconds
+                )
+            ),
+            aerodatabox_enable=_parse_bool(
+                source.get("AERODATABOX_ENABLE", str(defaults.aerodatabox_enable)),
+                defaults.aerodatabox_enable,
+            ),
+            aerodatabox_cache_seconds=float(
+                source.get(
+                    "AERODATABOX_CACHE_SECONDS", defaults.aerodatabox_cache_seconds
+                )
+            ),
         )
