@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Iterator
 from datetime import datetime, timezone
+from uuid import uuid4
 
-from agent_backend.dispatch import UnknownToolError, dispatch
-from agent_backend.tools_registry import TOOL_SCHEMAS
-from agent_backend.widget_mapper import map_result
+from agent_backend.agent_graph import AgentDependencies, build_agent_graph
+from agent_backend.execution_events import ExecutionEventEmitter
 
 _SYSTEM_PROMPT_TEMPLATE = (
     "You are the Swiss Grounding travel assistant. The current date and "
@@ -18,16 +17,14 @@ _SYSTEM_PROMPT_TEMPLATE = (
     "Zurich Airport (ZRH) flights, or domestic Swiss flight fares. Never "
     "answer a travel question from memory; always call the matching tool. "
     "For anything outside these topics, say honestly that it is not "
-    "covered. Keep your own reply to "
-    "one short sentence: the tool result is shown to the user as a "
-    "visual card, so do not restate its details.\n\n"
+    "covered. Keep your own reply to one short sentence: the tool result "
+    "is shown to the user as a visual card, so do not restate its details.\n\n"
     "DISAMBIGUATION: When a tool returns status 'needs_clarification' "
     "with a list of candidate station names, the user's next message "
     "will be the exact candidate name they chose. You MUST re-call the "
     "same tool using that exact name as the station parameter (origin or "
     "destination). Do NOT paraphrase, shorten, or alter the chosen name. "
-    "Do NOT ask for further confirmation -- proceed with the search "
-    "immediately."
+    "Do NOT ask for further confirmation -- proceed with the search immediately."
 )
 
 _MAX_TOOL_ROUNDS = 4
@@ -43,97 +40,36 @@ def run_chat(
     model: str,
     flight_fares_client=None,
     now: datetime | None = None,
+    run_id: str | None = None,
 ) -> Iterator[dict]:
     current_time = now or datetime.now(timezone.utc)
     system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(now=current_time.strftime("%Y-%m-%dT%H:%M:%SZ"))
-    chat_messages = [{"role": "system", "content": system_prompt}, *messages]
-
-    for _ in range(_MAX_TOOL_ROUNDS):
-        try:
-            response = openai_client.chat.completions.create(
-                model=model,
-                messages=chat_messages,
-                tools=TOOL_SCHEMAS,
-            )
-        except Exception as exc:  # SDK network/auth/rate-limit failure
-            yield {
-                "type": "widget",
-                "tool": None,
-                "status": "source_error",
-                "data": {"message": f"The assistant service is unavailable: {exc}"},
-            }
-            yield {"type": "done"}
-            return
-
-        choice_message = response.choices[0].message
-        tool_calls = list(choice_message.tool_calls or [])
-
-        if choice_message.content:
-            yield {"type": "token", "text": choice_message.content}
-
-        if not tool_calls:
-            yield {"type": "done"}
-            return
-
-        chat_messages.append(
-            {
-                "role": "assistant",
-                "content": choice_message.content,
-                "tool_calls": [
-                    {
-                        "id": call.id,
-                        "type": "function",
-                        "function": {"name": call.function.name, "arguments": call.function.arguments},
-                    }
-                    for call in tool_calls
-                ],
-            }
-        )
-
-        for tool_call in tool_calls:
-            name = tool_call.function.name
-            try:
-                arguments = json.loads(tool_call.function.arguments or "{}")
-            except json.JSONDecodeError:
-                arguments = {}
-
-            try:
-                result = dispatch(
-                    name,
-                    arguments,
-                    ojp_client=ojp_client,
-                    aviation_client=aviation_client,
-                    settings=settings,
-                    flight_fares_client=flight_fares_client,
-                )
-                mapped = map_result(name, result)
-            except UnknownToolError:
-                mapped = {
-                    "widget_type": None,
-                    "status": "source_error",
-                    "data": {"message": f"Unknown tool requested: {name}"},
-                }
-            except Exception as exc:
-                mapped = {
-                    "widget_type": None,
-                    "status": "source_error",
-                    "data": {"message": f"{name} failed: {exc}"},
-                }
-
-            yield {
-                "type": "widget",
-                "tool": name,
-                "status": mapped["status"],
-                "data": mapped["data"],
-            }
-
-            chat_messages.append(
-                {
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": json.dumps(mapped["data"]),
-                }
-            )
-
-    yield {"type": "token", "text": "I've reached the maximum number of steps for this request."}
+    emitter = ExecutionEventEmitter(run_id or str(uuid4()), now=lambda: current_time)
+    yield emitter.emit(
+        "run_started",
+        node_id="run",
+        label="Workflow started",
+        status="running",
+        summary="Starting your request",
+    )
+    graph = build_agent_graph(AgentDependencies(
+        openai_client=openai_client,
+        ojp_client=ojp_client,
+        aviation_client=aviation_client,
+        flight_fares_client=flight_fares_client,
+        settings=settings,
+        model=model,
+        emitter=emitter,
+        max_rounds=_MAX_TOOL_ROUNDS,
+    ))
+    initial_state = {
+        "chat_messages": [{"role": "system", "content": system_prompt}, *messages],
+        "pending_tool_calls": [],
+        "round_count": 0,
+        "output_events": [],
+        "outcome": None,
+    }
+    for update in graph.stream(initial_state, stream_mode="updates"):
+        for node_update in update.values():
+            yield from node_update.get("output_events", [])
     yield {"type": "done"}
