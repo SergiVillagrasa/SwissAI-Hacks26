@@ -48,8 +48,10 @@ structured, verifiable widgets rather than free-form generated text.
   carry zero or more widgets alongside streamed text.
 - Desktop/tablet is the primary target for this hackathon demo; mobile must
   not be broken but is not the optimization priority.
-- Hackathon demo project — no existing brand identity, logo, or product name
-  beyond "Swiss Grounding MCP".
+- Brand commitment: the product presents as **"Swiss Travel by Swisscom"** on
+  its landing surface — `SWISS TRAVEL` wordmark plus the Swisscom dual-color
+  emblem (`#001AFF` / `#E30613`). Behind that surface the codebase name remains
+  Swiss Grounding MCP.
 
 ## Product Principles
 

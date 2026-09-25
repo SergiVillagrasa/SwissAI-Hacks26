@@ -3,6 +3,7 @@ import { Composer } from "./components/Composer";
 import { ChatThread } from "./components/ChatThread";
 import { VoiceBorderGlow } from "./components/VoiceBorderGlow";
 import { GlassTile } from "./components/GlassTile";
+import { LandingScreen } from "./components/landing/LandingScreen";
 import { useVoiceAgent } from "./lib/useVoiceAgent";
 import { streamChat } from "./lib/sse";
 import type { ChatMessage, WidgetEvent } from "./lib/types";
@@ -113,19 +114,15 @@ export default function App() {
     <div className="flex h-dvh flex-col overflow-hidden">
       {voiceActive && <VoiceBorderGlow state={voice.state} level={voice.level} />}
       {turns.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
-          <h1 className="animate-rise mb-6 text-center text-4xl font-medium tracking-tight text-neutral-800 sm:text-5xl">
-            Where are you headed?
-          </h1>
-          {closeVoiceButton}
-          {voiceErrorBanner}
-          <Composer
-            disabled={pending}
-            onSubmit={handleSubmit}
-            voiceState={voice.state}
-            onMicClick={handleMicClick}
-          />
-        </div>
+        <LandingScreen
+          disabled={pending}
+          onSubmit={handleSubmit}
+          voiceState={voice.state}
+          voiceActive={voiceActive}
+          onMicClick={handleMicClick}
+          onVoiceCancel={voice.cancel}
+          voiceError={voiceErrorBanner}
+        />
       ) : (
         <>
           <div ref={scrollRef} className="flex-1 overflow-y-auto">

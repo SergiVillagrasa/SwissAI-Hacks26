@@ -7,9 +7,21 @@ export default {
         accent: "#0A84FF",
         "accent-dim": "#3d9bff",
         "accent-ink": "#0A5FC2",
+        // Swiss Travel by Swisscom — pinned landing palette
+        "swiss-ink": "#0F1E36",
+        "swiss-navy": "#0B2545",
+        "swisscom-blue": "#001AFF",
+        "swisscom-red": "#E30613",
+        "ice-base": "#F0F6FB",
+        "alp-haze": "#E9F3FA",
+        "alp-back": "#D9E8F5",
+        "alp-mid": "#94A8BD",
+        "alp-fore": "#5A728A",
       },
       fontFamily: {
         sans: ["-apple-system", "BlinkMacSystemFont", "Inter", "Segoe UI", "sans-serif"],
+        display: ["'Space Grotesk Variable'", "Space Grotesk", "Inter", "sans-serif"],
+        inter: ["'Inter Variable'", "Inter", "sans-serif"],
       },
       backgroundImage: {
         "sky-glow":

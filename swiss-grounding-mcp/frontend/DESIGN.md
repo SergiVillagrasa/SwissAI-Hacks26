@@ -4,6 +4,32 @@
 
 ## Status
 
+**Update (landing surface):** the app's empty state is now the "Swiss Travel
+by Swisscom" landing surface — a second, brief-pinned world that lives only on
+the entry screen. The Liquid Glass system below continues to own the chat
+surface (turns, widgets, composer) once a conversation starts.
+
+## Landing surface: paper-cut alpine
+
+Brief-pinned. Brand "Swiss Travel by Swisscom": `SWISS TRAVEL` typographic
+logo top-left (Space Grotesk, 600, uppercase, `#0F1E36`), `by swisscom` +
+dual-color vortex emblem bottom-right (`#001AFF` / `#E30613`). Canvas is a
+linear gradient `#FFFFFF → #F0F6FB` (glacial ice).
+
+Five paper-cut mountain sheets rise from the bottom edge — haze `#E9F3FA`,
+back crests `#D9E8F5`, mid peaks `#94A8BD`, fore slopes `#5A728A`, navy base
+`#0B2545` — crisp polygonal ridgelines, tallest near the horizontal center so
+the range reads as an amphitheatre framing the frosted search pill
+(`rgba(255,255,255,0.82)`, `backdrop-filter: blur(24px)`, `9999px` radius).
+Each sheet renders twice, clipped to its half of the viewport; on search focus
+(or voice start) the halves glide `±50vw` apart on a 650ms
+`cubic-bezier(0.16,1,0.3,1)` spring, front sheet first — the "curtain canyon
+sweep". The opened center stays empty: no cards, no widgets. Pointer parallax
+drifts sheets against the cursor by depth (6–34px); disabled under
+`prefers-reduced-motion`, which also collapses the sweep to 1ms.
+
+## Status (original)
+
 Replacement visual world (redesign), brief-pinned by the user. Two reference
 images were supplied and named explicitly: macOS/iCloud.com's dashboard
 (icloud.com — light, saturated blue glass, rounded widget tiles of varying
