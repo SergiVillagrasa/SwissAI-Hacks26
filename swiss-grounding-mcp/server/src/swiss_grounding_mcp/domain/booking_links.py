@@ -44,6 +44,9 @@ def _normalize_airline_code(airline_iata: str | None, airline_icao: str | None) 
     return _ICAO_TO_IATA.get(icao, icao)
 
 
+_ZRH_IATA = "ZRH"
+
+
 def _google_flights_url(
     origin_iata: str | None, destination_iata: str | None, flight_date: str | None
 ) -> str:
@@ -55,18 +58,26 @@ def _google_flights_url(
     return f"{_GOOGLE_FLIGHTS_BASE}?q={quote_plus(query)}"
 
 
+def _portal_fallback(airline_iata: str | None, airline_icao: str | None) -> str:
+    portal = _AIRLINE_PORTALS.get(_normalize_airline_code(airline_iata, airline_icao))
+    return portal if portal else _GOOGLE_FLIGHTS_BASE
+
+
 def build_flight_booking_url(
     airline_iata: str | None,
     airline_icao: str | None,
     origin_iata: str | None,
     destination_iata: str | None,
     flight_date: str | None,
+    *,
+    origin_icao: str | None = None,
+    destination_icao: str | None = None,
 ) -> str:
-    if origin_iata and destination_iata:
-        return _google_flights_url(origin_iata, destination_iata, flight_date)
-
-    portal = _AIRLINE_PORTALS.get(_normalize_airline_code(airline_iata, airline_icao))
-    if portal:
-        return portal
-
-    return _google_flights_url(origin_iata, destination_iata, flight_date)
+    # The flight tools are Zurich-scoped: a missing endpoint code means
+    # the flight's other side is Zurich airport. ICAO codes work as
+    # fallback identifiers for Google Flights.
+    origin = origin_iata or origin_icao or _ZRH_IATA
+    destination = destination_iata or destination_icao or _ZRH_IATA
+    if origin != destination:
+        return _google_flights_url(origin, destination, flight_date)
+    return _portal_fallback(airline_iata, airline_icao)

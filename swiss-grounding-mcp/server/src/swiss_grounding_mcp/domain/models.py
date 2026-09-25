@@ -158,6 +158,7 @@ class Flight(BaseModel):
     arrival: FlightEndpoint
     flight_status: str | None = None
     booking_url: str | None = None
+    price_chf: float | None = None
 
 
 class AviationProvenance(BaseModel):

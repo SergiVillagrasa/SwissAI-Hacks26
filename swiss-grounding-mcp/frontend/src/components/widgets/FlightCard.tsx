@@ -25,6 +25,7 @@ interface Flight {
   arrival: FlightEndpoint;
   flight_status: string | null;
   booking_url?: string | null;
+  price_chf?: number | null;
 }
 
 export interface FlightSearchData {
@@ -39,6 +40,10 @@ function fieldOrNotReported(value: string | null | undefined): string {
 
 function airlineLabel(flight: Flight): string {
   return flight.airline.name ?? flight.airline.iata ?? "the airline";
+}
+
+function airportCode(airport: AirportInfo): string {
+  return airport.iata ?? airport.icao ?? "not reported by source";
 }
 
 function BookFlightButton({ flight, compact = false }: { flight: Flight; compact?: boolean }) {
@@ -69,12 +74,21 @@ function FlightSummary({ flight }: { flight: Flight }) {
         <span className="text-accent-ink">{fieldOrNotReported(flight.airline.name)}</span>
       </div>
       <div className="mt-1 text-xs font-medium tracking-wide text-neutral-600">
-        {fieldOrNotReported(flight.departure.airport.iata)} → {fieldOrNotReported(flight.arrival.airport.iata)}
+        {airportCode(flight.departure.airport)} → {airportCode(flight.arrival.airport)}
       </div>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-600">
         <span>Gate: {fieldOrNotReported(flight.departure.gate)}</span>
         <span>Terminal: {fieldOrNotReported(flight.departure.terminal)}</span>
         <span>Arrival gate: {fieldOrNotReported(flight.arrival.gate)}</span>
+      </div>
+      <div className="mt-1 text-xs">
+        {flight.price_chf != null ? (
+          <span className="tabular font-semibold text-accent-ink">
+            From CHF {flight.price_chf.toFixed(2)}
+          </span>
+        ) : (
+          <span className="text-neutral-500">Check live fares on booking</span>
+        )}
       </div>
     </div>
   );

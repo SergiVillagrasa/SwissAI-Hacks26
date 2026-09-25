@@ -36,6 +36,22 @@ describe("FlightCard", () => {
     expect(link).toHaveTextContent("Book on SWISS");
   });
 
+  it("shows the live-fares hint when the flight has no price", () => {
+    render(<FlightCard data={{ flight: sampleFlight, flights: [] }} onSelect={() => {}} />);
+
+    expect(screen.getByText(/check live fares on booking/i)).toBeInTheDocument();
+    expect(screen.queryByText(/CHF/)).not.toBeInTheDocument();
+  });
+
+  it("shows the price when the flight payload includes one", () => {
+    render(
+      <FlightCard data={{ flight: { ...sampleFlight, price_chf: 189.5 }, flights: [] }} onSelect={() => {}} />
+    );
+
+    expect(screen.getByText(/CHF 189\.50/)).toBeInTheDocument();
+    expect(screen.queryByText(/check live fares/i)).not.toBeInTheDocument();
+  });
+
   it("renders no booking link when booking_url is absent", () => {
     const { booking_url: _omit, ...flightWithoutUrl } = sampleFlight;
     render(<FlightCard data={{ flight: flightWithoutUrl, flights: [] }} onSelect={() => {}} />);

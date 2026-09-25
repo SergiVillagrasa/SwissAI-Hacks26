@@ -105,6 +105,8 @@ def parse_flight_items(items: list[dict]) -> list[Flight]:
                     departure.airport.iata,
                     arrival.airport.iata,
                     flight_date or None,
+                    origin_icao=departure.airport.icao,
+                    destination_icao=arrival.airport.icao,
                 ),
             )
         )
