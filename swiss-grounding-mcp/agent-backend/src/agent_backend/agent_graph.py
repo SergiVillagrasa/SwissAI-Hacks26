@@ -52,6 +52,7 @@ def build_agent_graph(dependencies: AgentDependencies):
                 model=dependencies.model,
                 messages=state["chat_messages"],
                 tools=TOOL_SCHEMAS,
+                temperature=0.2,
             )
         except Exception:
             events.extend([

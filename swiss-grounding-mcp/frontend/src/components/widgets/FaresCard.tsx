@@ -1,4 +1,5 @@
 import { GlassTile, glassRow } from "../GlassTile";
+import { SortBadge } from "./SortBadge";
 
 interface FareProduct {
   product: string;
@@ -10,12 +11,29 @@ interface FareProduct {
 export interface FareSearchData {
   fares: FareProduct[];
   booking_url: string | null;
+  sorted_by?: string | null;
+}
+
+function BookOnSbbButton({ bookingUrl }: { bookingUrl: string | null }) {
+  if (!bookingUrl) return null;
+  return (
+    <a
+      href={bookingUrl}
+      target="_blank"
+      rel="noreferrer"
+      aria-label="Book on SBB, opens the official SBB website in a new tab"
+      className="inline-block rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-glass-sm transition duration-200 hover:bg-accent-dim"
+    >
+      Book on SBB
+    </a>
+  );
 }
 
 export function FaresCard({ data }: { data: FareSearchData }) {
   if (data.fares.length > 0) {
     return (
       <GlassTile className="space-y-2 p-4">
+        <SortBadge sortedBy={data.sorted_by} />
         <ul className="space-y-2">
           {data.fares.map((fare, index) => (
             <li
@@ -30,20 +48,14 @@ export function FaresCard({ data }: { data: FareSearchData }) {
             </li>
           ))}
         </ul>
+        <BookOnSbbButton bookingUrl={data.booking_url} />
       </GlassTile>
     );
   }
 
   return (
     <GlassTile className="flex items-center justify-center p-4">
-      <a
-        href={data.booking_url ?? undefined}
-        target="_blank"
-        rel="noreferrer"
-        className="inline-block rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-glass-sm transition duration-200 hover:bg-accent-dim"
-      >
-        Book on SBB
-      </a>
+      <BookOnSbbButton bookingUrl={data.booking_url} />
     </GlassTile>
   );
 }

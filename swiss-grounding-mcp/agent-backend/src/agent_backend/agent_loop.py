@@ -55,7 +55,34 @@ _SYSTEM_PROMPT_TEMPLATE = (
     "will be the exact candidate name they chose. You MUST re-call the "
     "same tool using that exact name as the station parameter (origin or "
     "destination). Do NOT paraphrase, shorten, or alter the chosen name. "
-    "Do NOT ask for further confirmation -- proceed with the search immediately."
+    "Do NOT ask for further confirmation -- proceed with the search immediately.\n\n"
+    "SORT PREFERENCE: When the user asks for ticket options, fares, or "
+    "connection options for a journey, check the conversation for an "
+    "ordering preference BEFORE calling the tool. If the user already "
+    "stated one anywhere (e.g. 'the cheapest ticket', 'the next train', "
+    "'as soon as possible', 'fastest'), call the matching tool "
+    "immediately with sort_by: 'departure' -> "
+    "find_connections(sort_by='departure'), 'price' -> "
+    "check_public_transport_fares(sort_by='price'). If NO ordering "
+    "preference appears anywhere in the conversation, you MUST NOT call "
+    "the tool in this turn: reply with exactly one short question "
+    "offering (A) soonest departure / shortest wait or (B) cheapest "
+    "price. On the user's next turn, reuse the remembered journey "
+    "(origin, destination, date/time) and call the matching tool with "
+    "the chosen sort_by.\n\n"
+    "BOOKING LINK: check_public_transport_fares returns a booking_url -- "
+    "the official SBB purchase link for the journey. The fares card shows "
+    "a 'Book on SBB' button that opens it in a new tab; point the user to "
+    "that button in one short sentence whenever a fares result is shown."
+)
+
+_VOICE_PROMPT_ADDON = (
+    "\n\nVOICE CHANNEL: The user is talking to you by voice; your reply "
+    "is read aloud and the result cards appear on their screen. Keep "
+    "answers short and never read URLs aloud. When a fares result "
+    "includes a booking_url, always say explicitly that you have left "
+    "the official SBB purchase link on their screen so they can "
+    "complete the purchase securely."
 )
 
 _MAX_TOOL_ROUNDS = 4
@@ -72,9 +99,12 @@ def run_chat(
     flight_fares_client=None,
     now: datetime | None = None,
     run_id: str | None = None,
+    channel: str | None = None,
 ) -> Iterator[dict]:
     current_time = now or datetime.now(timezone.utc)
     system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(now=current_time.strftime("%Y-%m-%dT%H:%M:%SZ"))
+    if channel == "voice":
+        system_prompt += _VOICE_PROMPT_ADDON
     emitter = ExecutionEventEmitter(run_id or str(uuid4()))
     request_summary = next((str(message.get("content", "")) for message in reversed(messages) if message.get("role") == "user"), "")
     yield emitter.emit(

@@ -317,6 +317,67 @@ def test_both_times_given_departure_time_wins_and_message_says_so():
     assert "departure_time" in result.message
 
 
+def test_sort_by_departure_orders_connections_soonest_first():
+    later = Connection(
+        departure="2026-09-24T19:04:00Z",
+        arrival="2026-09-24T19:57:00Z",
+        duration_minutes=53,
+        changes=0,
+        legs=[],
+    )
+    sooner = _connection()
+    client = StubOjpClient(
+        candidates_by_name={
+            "Bern": [StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=1.0)],
+            "Zürich HB": [
+                StopCandidate(name="Zürich HB", stop_ref="ch:1:sloid:8503000", probability=1.0)
+            ],
+        },
+        connections=[later, sooner],
+    )
+
+    result = find_train_connections(
+        "Bern", "Zürich HB", None, None, 3, "departure",
+        client=client, settings=_settings(),
+    )
+
+    assert result.status == "ok"
+    assert [c.departure for c in result.connections] == [
+        "2026-09-24T18:04:00Z",
+        "2026-09-24T19:04:00Z",
+    ]
+    assert result.sorted_by == "departure"
+
+
+def test_no_sort_by_keeps_source_order_and_no_sorted_by():
+    later = Connection(
+        departure="2026-09-24T19:04:00Z",
+        arrival="2026-09-24T19:57:00Z",
+        duration_minutes=53,
+        changes=0,
+        legs=[],
+    )
+    client = StubOjpClient(
+        candidates_by_name={
+            "Bern": [StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=1.0)],
+            "Zürich HB": [
+                StopCandidate(name="Zürich HB", stop_ref="ch:1:sloid:8503000", probability=1.0)
+            ],
+        },
+        connections=[later, _connection()],
+    )
+
+    result = find_train_connections(
+        "Bern", "Zürich HB", None, None, 3, client=client, settings=_settings()
+    )
+
+    assert [c.departure for c in result.connections] == [
+        "2026-09-24T19:04:00Z",
+        "2026-09-24T18:04:00Z",
+    ]
+    assert result.sorted_by is None
+
+
 def test_results_parameter_is_clamped_to_valid_range():
     client = StubOjpClient(
         candidates_by_name={

@@ -42,6 +42,7 @@ from swiss_grounding_mcp.domain.models import (
     AirportGuidanceResult,
     ConnectionSearchResult,
     DisruptionSearchResult,
+    FareSearchResult,
     FlightLookupResult,
     FlightSearchResult,
     FlightToTrainResult,
@@ -52,6 +53,7 @@ from swiss_grounding_mcp.sources.ojp.client import OjpClient
 from swiss_grounding_mcp.tools.connect_flight_to_train import (
     connect_flight_to_train,
 )
+from swiss_grounding_mcp.tools.fares import check_public_transport_fares
 from swiss_grounding_mcp.tools.find_connections import find_train_connections
 from swiss_grounding_mcp.tools.find_disruptions import find_station_disruptions
 from swiss_grounding_mcp.tools.find_flight_by_number import find_flight_by_number
@@ -321,6 +323,12 @@ def route_intent(text: str, tools: "ToolBox") -> tuple[str, object]:
 
     origin, dest = _parse_station_pair(text)
     if origin and dest:
+        if any(w in t for w in ("fare", "price", "ticket", "cost",
+                                "tarif", "preis", "billet", "boleto",
+                                "precio", "cheap", "tarifa")):
+            sort_by = "price" if "cheap" in t else None
+            return "check_public_transport_fares", tools.check_public_transport_fares(
+                origin, dest, sort_by=sort_by)
         return "find_connections", tools.find_connections(origin, dest)
 
     # Bare short utterance — e.g. a multi-turn clarification answer like
@@ -419,6 +427,25 @@ def _say(result: object) -> str:
             parts.append(f"train at {dep} arriving {arr}")
         return " ".join(parts)
 
+    if isinstance(result, FareSearchResult):
+        if result.status not in ("success", "fallback_link"):
+            return _fallback(result.status, result.message, result.candidates)
+        parts = []
+        if result.fares:
+            items = ", ".join(
+                f"{f.product} {f.price_chf:g} francs"
+                for f in result.fares[:3]
+            )
+            order = "cheapest first" if result.sorted_by == "price" else ""
+            parts.append(f"Fares{', ' + order if order else ''}: {items}.")
+        if result.booking_url:
+            parts.append(
+                "I've left the official SBB booking link on your screen "
+                "so you can complete the purchase securely: "
+                f"{result.booking_url}"
+            )
+        return " ".join(parts) or _fallback(result.status, result.message, [])
+
     return str(result)
 
 
@@ -442,9 +469,17 @@ class ToolBox:
         self.aviation = AerodataboxClient(settings)
 
     def find_connections(self, origin, destination, departure_time=None,
-                         arrival_time=None, results=3):
+                         arrival_time=None, results=3, sort_by=None):
         return find_train_connections(
             origin, destination, departure_time, arrival_time, results,
+            sort_by, client=self.ojp, settings=self.settings)
+
+    def check_public_transport_fares(self, origin, destination,
+                                     departure_time=None, travel_class="2",
+                                     discount_card=None, sort_by=None):
+        return check_public_transport_fares(
+            origin, destination, departure_time, travel_class,
+            discount_card, sort_by,
             client=self.ojp, settings=self.settings)
 
     def get_station_board(self, station, mode="departures", when=None, results=5):
@@ -491,6 +526,16 @@ all real data. Rules:
 - Once you know origin and destination, call find_connections immediately —
   assume "depart now" unless the user gave a time. Do not ask follow-up
   questions when you already have enough information to call a tool.
+- If the user asks to compare ticket options, fares, or several
+  connections for a journey and has NOT said how to sort them, FIRST ask
+  one short question: soonest departure (shortest wait) or cheapest
+  price? On their next turn, remember the journey details and call the
+  matching tool with sort_by: "departure" -> find_connections, "price" ->
+  check_public_transport_fares. If they already stated a preference,
+  apply it directly without asking.
+- When a fares result includes a booking_url, say that you have left the
+  official SBB purchase link on their screen so they can finish the
+  purchase securely — never read the URL aloud.
 - For flight_date, default to today: {today}.
 - Scope: Swiss domestic journeys, cross-border journeys touching
   Switzerland, and ZRH flights. Politely refuse anything else.
@@ -521,7 +566,17 @@ TOOL_SCHEMAS = [
         "cross-border touching Switzerland). Returns live OJP 2.0 data.",
         {"origin": _S, "destination": _S,
          "departure_time": _S, "arrival_time": _S,
-         "results": {"type": "integer"}},
+         "results": {"type": "integer"},
+         "sort_by": {"type": "string", "enum": ["departure"]}},
+        ["origin", "destination"]),
+    _fn("check_public_transport_fares",
+        "Check public-transport fares between two Swiss stations. Returns "
+        "live OJP fare products when available, plus the official SBB "
+        "booking deep link for the journey.",
+        {"origin": _S, "destination": _S,
+         "departure_time": _S, "travel_class": _S,
+         "discount_card": _S,
+         "sort_by": {"type": "string", "enum": ["price"]}},
         ["origin", "destination"]),
     _fn("get_station_board",
         "Show upcoming departures or arrivals at a Swiss station.",
@@ -571,7 +626,12 @@ def _dispatch_tool(tools: ToolBox, name: str, args: dict) -> str:
         r = tools.find_connections(
             args.get("origin", ""), args.get("destination", ""),
             args.get("departure_time"), args.get("arrival_time"),
-            int(args.get("results") or 3))
+            int(args.get("results") or 3), args.get("sort_by"))
+    elif name == "check_public_transport_fares":
+        r = tools.check_public_transport_fares(
+            args.get("origin", ""), args.get("destination", ""),
+            args.get("departure_time"), args.get("travel_class") or "2",
+            args.get("discount_card"), args.get("sort_by"))
     elif name == "get_station_board":
         r = tools.get_station_board(
             args.get("station", ""), args.get("mode") or "departures",

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { GlassTile, glassRowInteractive } from "../GlassTile";
+import { SortBadge } from "./SortBadge";
 
 const RouteMap = lazy(() => import("./RouteMap").then((m) => ({ default: m.RouteMap })));
 
@@ -29,6 +30,7 @@ interface Provenance {
 export interface ConnectionSearchData {
   connections: Connection[];
   provenance?: Provenance | null;
+  sorted_by?: string | null;
 }
 
 interface TrainConnectionsCardProps {
@@ -50,6 +52,7 @@ export function TrainConnectionsCard({ data, onSelect }: TrainConnectionsCardPro
 
   return (
     <GlassTile className="space-y-2 p-4">
+      <SortBadge sortedBy={data.sorted_by} />
       {data.connections.map((connection, index) => (
         <button
           key={index}

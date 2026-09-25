@@ -80,6 +80,7 @@ def find_connections(
     departure_time: str | None = None,
     arrival_time: str | None = None,
     results: int = 3,
+    sort_by: str | None = None,
 ) -> ConnectionSearchResult:
     """Find Swiss passenger-train connections between two stations.
 
@@ -99,7 +100,9 @@ def find_connections(
     assuming one. A requested time that misses the timetable by a couple
     of minutes still returns the nearest connections rather than
     "not found". All returned times are UTC (trailing "Z"), not local
-    Swiss time.
+    Swiss time. `sort_by` accepts "departure" to order the returned
+    connections by soonest departure (shortest wait); the applied
+    criterion is echoed back in the `sorted_by` field.
     """
     return find_train_connections(
         origin,
@@ -107,6 +110,7 @@ def find_connections(
         departure_time,
         arrival_time,
         results,
+        sort_by,
         client=get_client(),
         settings=settings,
     )
@@ -168,6 +172,7 @@ def check_public_transport_fares(
     departure_time: str | None = None,
     travel_class: str = "2",
     discount_card: str | None = None,
+    sort_by: str | None = None,
 ) -> FareSearchResult:
     """Check public-transport fares between two Swiss stations.
 
@@ -177,6 +182,8 @@ def check_public_transport_fares(
     "Halbtax". If live fare data is unavailable, the response includes a
     pre-populated SBB booking deep link for official pricing. International
     routes and ambiguous station names are refused rather than guessed.
+    `sort_by` accepts "price" to order fares from cheapest to most
+    expensive; the applied criterion is echoed back in `sorted_by`.
     """
     return _check_public_transport_fares(
         origin,
@@ -184,6 +191,7 @@ def check_public_transport_fares(
         departure_time=departure_time,
         travel_class=travel_class,
         discount_card=discount_card,
+        sort_by=sort_by,
         client=get_client(),
         settings=settings,
     )

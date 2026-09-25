@@ -2,12 +2,13 @@ import type { AgentEvent, ChatMessage } from "./types";
 
 export async function* streamChat(
   backendUrl: string,
-  messages: ChatMessage[]
+  messages: ChatMessage[],
+  channel?: "text" | "voice"
 ): AsyncGenerator<AgentEvent> {
   const response = await fetch(`${backendUrl}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages }),
+    body: JSON.stringify(channel ? { messages, channel } : { messages }),
   });
 
   if (!response.ok || !response.body) {

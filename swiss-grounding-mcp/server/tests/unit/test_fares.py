@@ -159,6 +159,54 @@ class TestCheckFaresSuccess:
         assert result.provenance.source_url.startswith("https://sbb.ch/")
 
 
+# ── Preference ordering ─────────────────────────────────────────────
+
+class TestCheckFaresSortBy:
+    def _client(self, fares) -> StubOjpClient:
+        return StubOjpClient(
+            candidates_by_name={
+                "Bern": [StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=1.0)],
+                "Zürich HB": [StopCandidate(name="Zürich HB", stop_ref="ch:1:sloid:8503000", probability=1.0)],
+            },
+            fares=fares,
+        )
+
+    def test_sort_by_price_orders_fares_cheapest_first(self):
+        client = self._client([
+            FareProduct(product="Single ticket 1st", price_chf=51.0, class_of_travel="1"),
+            FareProduct(product="Single ticket 2nd", price_chf=31.0, class_of_travel="2"),
+            FareProduct(product="Supersaver ticket", price_chf=22.6, class_of_travel="2"),
+        ])
+
+        result = check_public_transport_fares(
+            "Bern",
+            "Zürich HB",
+            sort_by="price",
+            client=client,
+            settings=_settings(),
+        )
+
+        assert result.status == "success"
+        assert [f.price_chf for f in result.fares] == [22.6, 31.0, 51.0]
+        assert result.sorted_by == "price"
+
+    def test_no_sort_by_keeps_source_order_and_no_sorted_by(self):
+        client = self._client([
+            FareProduct(product="Single ticket 1st", price_chf=51.0, class_of_travel="1"),
+            FareProduct(product="Single ticket 2nd", price_chf=31.0, class_of_travel="2"),
+        ])
+
+        result = check_public_transport_fares(
+            "Bern",
+            "Zürich HB",
+            client=client,
+            settings=_settings(),
+        )
+
+        assert [f.price_chf for f in result.fares] == [51.0, 31.0]
+        assert result.sorted_by is None
+
+
 # ── Fallback / API failure ──────────────────────────────────────────
 
 class TestCheckFaresFallback:

@@ -50,4 +50,16 @@ describe("TrainConnectionsCard", () => {
 
     expect(onSelect).toHaveBeenCalledWith(sampleData.connections[0]);
   });
+
+  it("shows the applied ordering badge when sorted by soonest departure", () => {
+    render(<TrainConnectionsCard data={{ ...sampleData, sorted_by: "departure" }} onSelect={() => {}} />);
+
+    expect(screen.getByTestId("sort-badge")).toHaveTextContent("Sorted by: Soonest departure");
+  });
+
+  it("renders no ordering badge when no sorting was applied", () => {
+    render(<TrainConnectionsCard data={sampleData} onSelect={() => {}} />);
+
+    expect(screen.queryByTestId("sort-badge")).not.toBeInTheDocument();
+  });
 });

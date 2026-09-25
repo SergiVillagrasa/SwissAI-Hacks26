@@ -41,6 +41,32 @@ describe("streamChat", () => {
     ]);
   });
 
+  it("includes the voice channel in the request body when provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeStreamResponse(['data: {"type": "done"}\n\n']));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const messages: ChatMessage[] = [{ role: "user", content: "spoken request" }];
+    for await (const _event of streamChat("http://backend", messages, "voice")) {
+      void _event;
+    }
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.channel).toBe("voice");
+    expect(body.messages).toEqual(messages);
+  });
+
+  it("omits the channel field for typed requests", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeStreamResponse(['data: {"type": "done"}\n\n']));
+    vi.stubGlobal("fetch", fetchMock);
+
+    for await (const _event of streamChat("http://backend", [{ role: "user", content: "typed" }])) {
+      void _event;
+    }
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.channel).toBeUndefined();
+  });
+
   it("throws when the backend responds with a non-OK status", async () => {
     vi.stubGlobal(
       "fetch",
