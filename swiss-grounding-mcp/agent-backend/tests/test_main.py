@@ -70,7 +70,10 @@ def test_cors_rejects_non_local_origin_not_in_allowlist():
 def test_chat_endpoint_streams_events_from_run_chat(monkeypatch):
     def fake_run_chat(messages, **kwargs):
         assert messages == [{"role": "user", "content": "hi"}]
+        assert kwargs["run_id"]
+        yield {"type": "run_started", "run_id": kwargs["run_id"], "sequence": 1}
         yield {"type": "token", "text": "hello"}
+        yield {"type": "run_completed", "run_id": kwargs["run_id"], "sequence": 2}
         yield {"type": "done"}
 
     monkeypatch.setattr(main_module, "run_chat", fake_run_chat)
@@ -93,8 +96,10 @@ def test_chat_endpoint_reports_missing_openai_key(monkeypatch):
     response = client.post("/api/chat", json={"messages": [{"role": "user", "content": "hi"}]})
 
     assert response.status_code == 200
+    assert '"type": "run_started"' in response.text
     assert '"status": "source_error"' in response.text
     assert "OPENAI_API_KEY" in response.text
+    assert '"type": "run_completed"' in response.text
     assert 'data: {"type": "done"}' in response.text
 
 

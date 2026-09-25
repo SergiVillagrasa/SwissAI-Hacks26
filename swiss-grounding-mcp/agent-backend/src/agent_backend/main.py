@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+from uuid import uuid4
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +11,7 @@ from pydantic import BaseModel
 
 from agent_backend.agent_loop import run_chat
 from agent_backend.clients import build_aviation_client, build_flight_fares_client, build_ojp_client
+from agent_backend.execution_events import ExecutionEventEmitter
 from agent_backend.settings import LOCAL_DEV_ORIGIN_REGEX, AgentSettings
 from agent_backend.sse import format_sse
 
@@ -73,18 +75,36 @@ def health() -> dict:
 @app.post("/api/chat")
 def chat(request: ChatRequest) -> StreamingResponse:
     def event_stream():
+        run_id = str(uuid4())
         if _openai_client is None:
+            emitter = ExecutionEventEmitter(run_id)
+            yield format_sse(emitter.emit(
+                "run_started",
+                node_id="run",
+                label="Workflow started",
+                status="running",
+                summary="Starting your request",
+            ))
             yield format_sse({
                 "type": "widget",
                 "tool": None,
                 "status": "source_error",
                 "data": {"message": _OPENAI_MISSING_MESSAGE},
             })
+            yield format_sse(emitter.emit(
+                "run_completed",
+                node_id="run",
+                label="Workflow failed",
+                status="failed",
+                summary="The assistant service is unavailable",
+                outcome="failed",
+            ))
             yield format_sse({"type": "done"})
             return
         messages = [message.model_dump() for message in request.messages]
         for event in run_chat(
             messages,
+            run_id=run_id,
             openai_client=_openai_client,
             ojp_client=_ojp_client,
             aviation_client=_aviation_client,

@@ -33,8 +33,9 @@ Or, from the repository root: `make dev-api` / `npm run dev:api`.
   missing or invalid `OPENAI_API_KEY` degrades cleanly instead of
   crashing the service at startup.
 - `POST /api/chat` — `{"messages": [{"role": "user", "content": "..."}]}`,
-  returns a `text/event-stream` of `{"type": "token"|"widget"|"done", ...}`
-  events. See the design spec at
+  returns a `text/event-stream` containing the existing `token`, `widget`, and
+  `done` events plus sanitized `run_*`, `node_*`, and `tool_*` workflow events.
+  Clients may safely ignore event types they do not recognize. See the design spec at
   `docs/superpowers/specs/2026-09-24-swiss-grounding-mcp-frontend-design.md`
   for the full event/widget schema.
 
