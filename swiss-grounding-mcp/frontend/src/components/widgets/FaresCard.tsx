@@ -14,7 +14,7 @@ export interface FareSearchData {
   sorted_by?: string | null;
 }
 
-function BookOnSbbButton({ bookingUrl }: { bookingUrl: string | null }) {
+export function BookOnSbbButton({ bookingUrl }: { bookingUrl: string | null | undefined }) {
   if (!bookingUrl) return null;
   return (
     <a
