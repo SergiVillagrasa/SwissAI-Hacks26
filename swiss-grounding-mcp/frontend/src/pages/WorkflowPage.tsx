@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Background, BackgroundVariant, Controls, ReactFlow } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useRun } from "../workflow/runContext";
@@ -10,7 +10,11 @@ const nodeTypes = { execution: ExecutionNode };
 
 export function WorkflowPage({ onGoHome }: { onGoHome: () => void }) {
   const { state } = useRun();
-  const elements = useMemo(() => toFlowElements(state), [state]);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const elements = useMemo(() => {
+    const projected = toFlowElements(state);
+    return { ...projected, nodes: projected.nodes.map((node) => ({ ...node, selected: node.id === selectedNodeId })) };
+  }, [state, selectedNodeId]);
   if (!state.runId) {
     return <section className="workflow-page workflow-empty">
       <h1>Your workflow will appear here</h1>
@@ -20,7 +24,7 @@ export function WorkflowPage({ onGoHome }: { onGoHome: () => void }) {
   }
   return <section className="workflow-page">
     <header className="workflow-header">
-      <div><h1>Current execution</h1><p>Frontend-initiated run · {state.runId.slice(0, 8)}</p></div>
+      <div><button type="button" className="back-home" onClick={onGoHome}>Back to Home</button><h1>Current execution</h1><p>Frontend-initiated run · {state.runId.slice(0, 8)}</p></div>
       <span className="workflow-status" data-status={state.status}>{state.status === "waiting_for_input" ? "Needs input" : state.status}</span>
     </header>
     {state.connectionStatus === "interrupted" && <p className="connection-alert">Connection interrupted. The workflow may still be running.</p>}
@@ -32,6 +36,8 @@ export function WorkflowPage({ onGoHome }: { onGoHome: () => void }) {
         nodesDraggable={false}
         nodesConnectable={false}
         elementsSelectable
+        deleteKeyCode={null}
+        onNodeClick={(_, node) => setSelectedNodeId(node.id)}
         fitView
         minZoom={0.45}
         maxZoom={1.4}

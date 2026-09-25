@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
+from agent_backend import agent_graph
 from agent_backend.agent_loop import run_chat
 
 
@@ -41,6 +42,23 @@ def test_plain_reply_emits_graph_lifecycle_and_preserves_chat_events():
     assert [event["type"] for event in events if event["type"] in {"token", "widget", "done"}] == ["token", "done"]
     assert next(event for event in events if event["type"] == "run_completed")["outcome"] == "completed"
     assert events[-1] == {"type": "done"}
+
+
+def test_clarification_marks_run_waiting(monkeypatch):
+    tool_call = SimpleNamespace(
+        id="call-1",
+        function=SimpleNamespace(name="find_connections", arguments='{"origin":"Bern"}'),
+    )
+    monkeypatch.setattr(agent_graph, "dispatch", lambda *args, **kwargs: object())
+    monkeypatch.setattr(agent_graph, "map_result", lambda *args: {
+        "status": "needs_clarification",
+        "data": {"message": "Which station?", "candidates": ["Bern"]},
+    })
+
+    events = _run(_FakeOpenAI([_response(tool_calls=[tool_call])]))
+
+    assert any(event["type"] == "run_waiting" for event in events)
+    assert next(event for event in events if event["type"] == "run_completed")["outcome"] == "waiting"
 
 
 def test_model_failure_emits_failed_node_and_run_before_done():

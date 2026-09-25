@@ -31,7 +31,11 @@ export async function* streamChat(
       if (!line.startsWith("data:")) continue;
       const payload = line.slice("data:".length).trim();
       if (!payload) continue;
-      yield JSON.parse(payload) as AgentEvent;
+      try {
+        yield JSON.parse(payload) as AgentEvent;
+      } catch {
+        continue;
+      }
     }
   }
 }

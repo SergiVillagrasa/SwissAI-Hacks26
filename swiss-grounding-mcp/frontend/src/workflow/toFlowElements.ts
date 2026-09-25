@@ -11,6 +11,7 @@ export function toFlowElements(state: RunState): { nodes: Node<ExecutionNodeData
     data: state.nodes[id] as ExecutionNodeData,
     draggable: false,
     connectable: false,
+    deletable: false,
   }));
   const edges = state.nodeOrder.slice(1).map((id, index) => ({
     id: `${state.nodeOrder[index]}-${id}`,

@@ -37,6 +37,14 @@ describe("runReducer", () => {
     expect(next.nodes.old).toBeUndefined();
   });
 
+  it("preserves operation details when a tool completes", () => {
+    const started = runReducer(emptyRunState, event({ type: "run_started", node_id: "run" }));
+    const running = runReducer(started, event({ type: "tool_started", sequence: 2, node_id: "tool-1", tool: "find_connections", details: { origin: "Bern" } }));
+    const completed = runReducer(running, event({ type: "tool_completed", sequence: 3, node_id: "tool-1", status: "completed", details: undefined }));
+
+    expect(completed.nodes["tool-1"].details).toEqual({ origin: "Bern" });
+  });
+
   it("marks only the visualization connection interrupted", () => {
     const running = runReducer(emptyRunState, event({ type: "run_started", node_id: "run" }));
     const disconnected = markRunDisconnected(running);

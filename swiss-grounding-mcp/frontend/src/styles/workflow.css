@@ -31,6 +31,15 @@
   margin-bottom: 1.25rem;
 }
 
+.back-home {
+  margin-bottom: 1rem;
+  color: #4e6655;
+  font-size: 0.78rem;
+  text-decoration: underline;
+  text-decoration-color: #b7c8bc;
+  text-underline-offset: 0.25rem;
+}
+
 .workflow-header h1,
 .workflow-empty h1 {
   margin: 0 0 0.35rem;
@@ -82,6 +91,11 @@
   border-radius: 0.75rem;
   background: #fbfefc;
   box-shadow: 0 9px 22px rgba(44, 78, 54, 0.08);
+}
+
+.react-flow__node.selected .execution-node {
+  outline: 2px solid rgba(56, 168, 97, 0.24);
+  outline-offset: 3px;
 }
 
 .execution-node[data-status="running"] {

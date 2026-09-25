@@ -64,13 +64,14 @@ export function runReducer(state: RunState, event: RunAction): RunState {
     nodes: {
       ...state.nodes,
       [event.node_id]: {
+        ...state.nodes[event.node_id],
         id: event.node_id,
         label: event.label,
         summary: event.summary,
         status: event.status,
-        tool: event.tool,
-        details: event.details,
-        durationMs: event.duration_ms,
+        tool: event.tool ?? state.nodes[event.node_id]?.tool,
+        details: event.details ?? state.nodes[event.node_id]?.details,
+        durationMs: event.duration_ms ?? state.nodes[event.node_id]?.durationMs,
       },
     },
     nodeOrder: exists ? state.nodeOrder : [...state.nodeOrder, event.node_id],

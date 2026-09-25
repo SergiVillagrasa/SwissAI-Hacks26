@@ -44,7 +44,7 @@ def run_chat(
 ) -> Iterator[dict]:
     current_time = now or datetime.now(timezone.utc)
     system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(now=current_time.strftime("%Y-%m-%dT%H:%M:%SZ"))
-    emitter = ExecutionEventEmitter(run_id or str(uuid4()), now=lambda: current_time)
+    emitter = ExecutionEventEmitter(run_id or str(uuid4()))
     yield emitter.emit(
         "run_started",
         node_id="run",

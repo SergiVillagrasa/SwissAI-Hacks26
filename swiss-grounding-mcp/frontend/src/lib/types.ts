@@ -52,6 +52,19 @@ export interface ExecutionEvent {
 
 export type AgentEvent = TokenEvent | WidgetEvent | DoneEvent | ExecutionEvent;
 
-export function isExecutionEvent(event: AgentEvent): event is ExecutionEvent {
-  return ["run_started", "node_started", "node_completed", "node_skipped", "node_failed", "tool_started", "tool_completed", "tool_failed", "run_waiting", "run_completed"].includes(event.type);
+const EXECUTION_EVENT_TYPES: ExecutionEventType[] = ["run_started", "node_started", "node_completed", "node_skipped", "node_failed", "tool_started", "tool_completed", "tool_failed", "run_waiting", "run_completed"];
+const EXECUTION_STATUSES: ExecutionStatus[] = ["pending", "running", "completed", "waiting_for_input", "failed", "skipped"];
+
+export function isExecutionEvent(event: unknown): event is ExecutionEvent {
+  if (!event || typeof event !== "object") return false;
+  const candidate = event as Partial<ExecutionEvent>;
+  return typeof candidate.type === "string"
+    && EXECUTION_EVENT_TYPES.includes(candidate.type as ExecutionEventType)
+    && typeof candidate.run_id === "string"
+    && typeof candidate.sequence === "number"
+    && typeof candidate.node_id === "string"
+    && typeof candidate.label === "string"
+    && typeof candidate.summary === "string"
+    && typeof candidate.status === "string"
+    && EXECUTION_STATUSES.includes(candidate.status as ExecutionStatus);
 }

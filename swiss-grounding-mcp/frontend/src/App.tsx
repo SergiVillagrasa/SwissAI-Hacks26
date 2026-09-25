@@ -11,6 +11,7 @@ import { usePage } from "./navigation/usePage";
 import { RunProvider } from "./workflow/RunProvider";
 import { useRun } from "./workflow/runContext";
 import { WorkflowPage } from "./pages/WorkflowPage";
+import { WorkflowBoundary } from "./workflow/WorkflowBoundary";
 
 export interface Turn {
   id: string;
@@ -122,7 +123,7 @@ function AppContent() {
   return (
     <AppShell page={page} onNavigate={navigate}>
       {page === "workflow" ? (
-        <WorkflowPage onGoHome={() => navigate("home")} />
+        <WorkflowBoundary onGoHome={() => navigate("home")}><WorkflowPage onGoHome={() => navigate("home")} /></WorkflowBoundary>
       ) : <div className="flex h-full flex-col overflow-hidden">
       {voiceActive && <VoiceBorderGlow state={voice.state} level={voice.level} />}
       {turns.length === 0 ? (

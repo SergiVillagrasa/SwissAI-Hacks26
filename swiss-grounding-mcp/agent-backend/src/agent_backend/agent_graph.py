@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from time import perf_counter
 from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -45,6 +46,7 @@ def build_agent_graph(dependencies: AgentDependencies):
             status="running",
             summary="Interpreting your request" if round_number == 1 else "Preparing your travel answer",
         )]
+        started = perf_counter()
         try:
             response = dependencies.openai_client.chat.completions.create(
                 model=dependencies.model,
@@ -74,6 +76,7 @@ def build_agent_graph(dependencies: AgentDependencies):
             label="Request understood" if tool_calls else "Response prepared",
             status="completed",
             summary="Selected the appropriate Swiss data source" if tool_calls else "Your answer is ready",
+            duration_ms=round((perf_counter() - started) * 1000),
         ))
         messages = list(state["chat_messages"])
         if tool_calls:
@@ -96,6 +99,7 @@ def build_agent_graph(dependencies: AgentDependencies):
     def execute_tools(state: AgentState) -> dict:
         events: list[dict] = []
         messages = list(state["chat_messages"])
+        waiting = False
         for index, tool_call in enumerate(state["pending_tool_calls"]):
             name = tool_call.function.name
             node_id = f"tool-{state['round_count']}-{index + 1}"
@@ -103,6 +107,7 @@ def build_agent_graph(dependencies: AgentDependencies):
                 arguments = json.loads(tool_call.function.arguments or "{}")
             except json.JSONDecodeError:
                 arguments = {}
+            started = perf_counter()
             events.append(emitter.emit(
                 "tool_started",
                 node_id=node_id,
@@ -122,6 +127,7 @@ def build_agent_graph(dependencies: AgentDependencies):
                     flight_fares_client=dependencies.flight_fares_client,
                 )
                 mapped = map_result(name, result)
+                waiting = waiting or mapped["status"] == "needs_clarification"
                 event_type = "tool_completed"
                 summary = "Authoritative source returned a result"
             except UnknownToolError:
@@ -140,18 +146,36 @@ def build_agent_graph(dependencies: AgentDependencies):
                     status="completed" if event_type == "tool_completed" else "failed",
                     summary=summary,
                     tool=name,
+                    duration_ms=round((perf_counter() - started) * 1000),
                 ),
                 {"type": "widget", "tool": name, "status": mapped["status"], "data": mapped["data"]},
             ])
             messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": json.dumps(mapped["data"])})
-        return {"chat_messages": messages, "pending_tool_calls": [], "output_events": events}
+        if waiting:
+            events.append(emitter.emit(
+                "run_waiting",
+                node_id="run",
+                label="More information needed",
+                status="waiting_for_input",
+                summary="Choose one of the suggested locations to continue",
+                outcome="waiting",
+            ))
+        return {
+            "chat_messages": messages,
+            "pending_tool_calls": [],
+            "output_events": events,
+            "outcome": "waiting" if waiting else None,
+        }
 
     def route_after_model(state: AgentState) -> str:
         if state["outcome"] is not None:
             return "finish"
-        if state["round_count"] >= dependencies.max_rounds:
-            return "limit"
         return "execute_tools"
+
+    def route_after_tools(state: AgentState) -> str:
+        if state["outcome"] == "waiting":
+            return "finish"
+        return "limit" if state["round_count"] >= dependencies.max_rounds else "call_model"
 
     def limit(state: AgentState) -> dict:
         return {
@@ -161,12 +185,18 @@ def build_agent_graph(dependencies: AgentDependencies):
 
     def finish(state: AgentState) -> dict:
         outcome = state["outcome"] or "completed"
+        status = "failed" if outcome == "failed" else "waiting_for_input" if outcome == "waiting" else "completed"
+        summaries = {
+            "failed": "Your request could not be completed",
+            "waiting": "More information is needed to continue",
+            "incomplete": "The workflow reached its step limit",
+        }
         return {"output_events": [emitter.emit(
             "run_completed",
             node_id="run",
             label="Workflow complete",
-            status="failed" if outcome == "failed" else "completed",
-            summary="Your request could not be completed" if outcome == "failed" else "Your travel answer is ready",
+            status=status,
+            summary=summaries.get(outcome, "Your travel answer is ready"),
             outcome=outcome,
         )]}
 
@@ -178,10 +208,13 @@ def build_agent_graph(dependencies: AgentDependencies):
     graph.add_edge(START, "call_model")
     graph.add_conditional_edges("call_model", route_after_model, {
         "execute_tools": "execute_tools",
+        "finish": "finish",
+    })
+    graph.add_conditional_edges("execute_tools", route_after_tools, {
+        "call_model": "call_model",
         "limit": "limit",
         "finish": "finish",
     })
-    graph.add_edge("execute_tools", "call_model")
     graph.add_edge("limit", "finish")
     graph.add_edge("finish", END)
     return graph.compile()
