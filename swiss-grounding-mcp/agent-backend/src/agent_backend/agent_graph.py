@@ -79,13 +79,22 @@ def build_agent_graph(dependencies: AgentDependencies):
             duration_ms=round((perf_counter() - started) * 1000),
         ))
         if not tool_calls:
-            for skipped_id, label in (("invoke-tool", "Invoke Swiss tool"), ("verify-result", "Verify result")):
+            if round_number == 1:
+                # No tool was ever invoked for this request.
+                skip_labels = (("invoke-tool", "Invoke Swiss tool"), ("verify-result", "Verify result"))
+                summary = "Not needed for this response"
+            else:
+                # A Swiss tool already ran in an earlier round; this round just
+                # means no *additional* tool call was required to answer.
+                skip_labels = (("invoke-tool", "Additional Swiss tool call"), ("verify-result", "Additional verification"))
+                summary = "No further lookup needed"
+            for skipped_id, label in skip_labels:
                 events.append(emitter.emit(
                     "node_skipped",
                     node_id=f"{skipped_id}-{round_number}",
                     label=label,
                     status="skipped",
-                    summary="Not needed for this response",
+                    summary=summary,
                 ))
         messages = list(state["chat_messages"])
         if tool_calls:

@@ -8,7 +8,7 @@ interface RoundGroup {
   children: RunNode[];
 }
 
-const COLUMN_WIDTH = 300;
+const COLUMN_WIDTH = 360;
 const ROW_Y = 60;
 
 function groupByRound(state: RunState): RoundGroup[] {

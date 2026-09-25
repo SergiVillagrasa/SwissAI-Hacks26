@@ -51,8 +51,8 @@ export function WorkflowPage({ onGoHome }: { onGoHome: () => void }) {
         elementsSelectable
         deleteKeyCode={null}
         onNodeClick={(_, node) => setSelectedNodeId(node.id)}
-        fitView
-        minZoom={0.45}
+        defaultViewport={{ x: 36, y: 24, zoom: 1 }}
+        minZoom={0.65}
         maxZoom={1.4}
       >
         <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#dfe7e1" />

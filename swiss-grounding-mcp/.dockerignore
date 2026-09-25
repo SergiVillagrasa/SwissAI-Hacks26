@@ -1,0 +1,18 @@
+# Build context for the agent-backend service (root directory = swiss-grounding-mcp).
+# The Dockerfile only COPYs server/ and agent-backend/, so exclude
+# everything else to keep the build context small.
+frontend
+docs
+evaluation
+briefing-swiss-grounding-mcp.pdf
+.superpowers
+
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/node_modules
+**/.env
+**/.env.*
+!**/.env.example
+.git

@@ -1,40 +1,62 @@
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
-import { geocode } from "../../lib/geocode";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN ?? "";
 
-export function RouteMap({ origin, destination }: { origin: string; destination: string }) {
+export function RouteMap({ origin, destination, originCoords, destinationCoords, }: {
+  origin: string; destination: string; originCoords: { lat: number; lng: number } | null; destinationCoords: { lat: number; lng: number } | null;}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function draw() {
-      const [originCoords, destinationCoords] = await Promise.all([geocode(origin), geocode(destination)]);
-      if (cancelled) return;
-
-      if (!originCoords || !destinationCoords || !containerRef.current) {
-        setUnavailable(true);
-        return;
-      }
-
-      const map = new mapboxgl.Map({
-        container: containerRef.current,
-        style: "mapbox://styles/mapbox/light-v11",
-        center: [originCoords.lng, originCoords.lat],
-        zoom: 7,
-      });
-      new mapboxgl.Marker().setLngLat([originCoords.lng, originCoords.lat]).addTo(map);
-      new mapboxgl.Marker().setLngLat([destinationCoords.lng, destinationCoords.lat]).addTo(map);
+    if (!originCoords || !destinationCoords || !containerRef.current) {
+      setUnavailable(true);
+      return;
     }
 
-    draw();
+    setUnavailable(false);
+
+    const map = new mapboxgl.Map({
+      container: containerRef.current,
+      style: "mapbox://styles/mapbox/light-v11",
+      center: [originCoords.lng, originCoords.lat],
+      zoom: 7,
+    });
+
+    map.on("load", () => {
+      const bounds = new mapboxgl.LngLatBounds();
+
+      bounds.extend([originCoords.lng, originCoords.lat]);
+      bounds.extend([destinationCoords.lng, destinationCoords.lat]);
+
+      map.fitBounds(bounds, {
+        padding: 50,
+        maxZoom: 12,
+      });
+
+      console.log("Adding origin marker:", [
+        originCoords.lng,
+        originCoords.lat,
+      ]);
+
+      console.log("Adding destination marker:", [
+        destinationCoords.lng,
+        destinationCoords.lat,
+      ]);
+
+      new mapboxgl.Marker()
+        .setLngLat([originCoords.lng, originCoords.lat])
+        .addTo(map);
+
+      new mapboxgl.Marker()
+        .setLngLat([destinationCoords.lng, destinationCoords.lat])
+        .addTo(map);
+    });
+
     return () => {
-      cancelled = true;
+      map.remove();
     };
-  }, [origin, destination]);
+  }, [originCoords, destinationCoords]);
 
   if (unavailable) {
     return <p className="p-4 text-xs text-neutral-500">Map unavailable for this location.</p>;

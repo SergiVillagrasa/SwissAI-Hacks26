@@ -17,6 +17,10 @@ interface Connection {
   arrival: string;
   duration_minutes: number;
   changes: number;
+  origin_latitude: number | null;
+  origin_longitude: number | null;
+  destination_latitude: number | null;
+  destination_longitude: number | null;
   legs: Leg[];
 }
 
@@ -71,7 +75,26 @@ export function TrainConnectionsCard({ data, onSelect }: TrainConnectionsCardPro
       {selected && selected.legs.length > 0 && (
         <div className="overflow-hidden rounded-2xl border border-white/50">
           <Suspense fallback={null}>
-            <RouteMap origin={selected.legs[0].from_name} destination={selected.legs[selected.legs.length - 1].to_name} />
+            <RouteMap
+              origin={selected.legs[0].from_name}
+              destination={selected.legs[selected.legs.length - 1].to_name}
+              originCoords={
+                selected.origin_latitude !== null && selected.origin_longitude !== null
+                  ? {
+                      lat: selected.origin_latitude,
+                      lng: selected.origin_longitude,
+                    }
+                  : null
+              }
+              destinationCoords={
+                selected.destination_latitude !== null && selected.destination_longitude !== null
+                  ? {
+                      lat: selected.destination_latitude,
+                      lng: selected.destination_longitude,
+                    }
+                  : null
+              }
+            />
           </Suspense>
         </div>
       )}

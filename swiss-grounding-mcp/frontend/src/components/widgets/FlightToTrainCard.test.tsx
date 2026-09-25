@@ -17,7 +17,17 @@ describe("FlightToTrainCard", () => {
             flight_status: "scheduled",
           },
           train_connections: [
-            { departure: "2026-09-25T15:10:00+02:00", arrival: "2026-09-25T16:00:00+02:00", duration_minutes: 50, changes: 0, legs: [] },
+            {
+              departure: "2026-09-25T15:10:00+02:00",
+              arrival: "2026-09-25T16:00:00+02:00",
+              duration_minutes: 50,
+              changes: 0,
+              origin_latitude: null,
+              origin_longitude: null,
+              destination_latitude: null,
+              destination_longitude: null,
+              legs: [],
+            },
           ],
         }}
         onSelectConnection={() => {}}

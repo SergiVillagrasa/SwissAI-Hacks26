@@ -64,3 +64,12 @@ export function DotCircleIcon(props: SVGProps<SVGSVGElement>) {
 export function ChevronDownIcon(props: SVGProps<SVGSVGElement>) {
   return <Icon {...props}><path d="M5.5 8l4.5 4.5L14.5 8" /></Icon>;
 }
+
+export function SidebarPinIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <Icon {...props}>
+      <rect x="3.5" y="4" width="13" height="12" rx="2.2" />
+      <path d="M8.4 4v12" />
+    </Icon>
+  );
+}

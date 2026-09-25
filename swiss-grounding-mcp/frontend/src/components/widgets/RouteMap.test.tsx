@@ -1,7 +1,6 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { RouteMap } from "./RouteMap";
-import * as geocodeModule from "../../lib/geocode";
 
 vi.mock("mapbox-gl", () => {
   class FakeMap {
@@ -19,21 +18,29 @@ vi.mock("mapbox-gl", () => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("RouteMap", () => {
-  it("shows an unavailable message when a location cannot be geocoded", async () => {
-    vi.spyOn(geocodeModule, "geocode").mockResolvedValue(null);
+  it("shows an unavailable message when coordinates are missing", () => {
+    render(
+      <RouteMap
+        origin="Bern"
+        destination="Nowhereville"
+        originCoords={null}
+        destinationCoords={null}
+      />
+    );
 
-    render(<RouteMap origin="Bern" destination="Nowhereville" />);
-
-    await waitFor(() => expect(screen.getByText(/map unavailable/i)).toBeInTheDocument());
+    expect(screen.getByText(/map unavailable/i)).toBeInTheDocument();
   });
 
-  it("renders the map container once both endpoints resolve", async () => {
-    vi.spyOn(geocodeModule, "geocode")
-      .mockResolvedValueOnce({ lat: 46.9481, lng: 7.4474 })
-      .mockResolvedValueOnce({ lat: 47.3769, lng: 8.5417 });
+  it("renders the map container when both endpoint coordinates are available", () => {
+    render(
+      <RouteMap
+        origin="Bern"
+        destination="Zürich"
+        originCoords={{ lat: 46.9481, lng: 7.4474 }}
+        destinationCoords={{ lat: 47.3769, lng: 8.5417 }}
+      />
+    );
 
-    render(<RouteMap origin="Bern" destination="Zürich" />);
-
-    await waitFor(() => expect(screen.getByTestId("route-map")).toBeInTheDocument());
+    expect(screen.getByTestId("route-map")).toBeInTheDocument();
   });
 });
