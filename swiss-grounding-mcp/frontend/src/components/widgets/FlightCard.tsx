@@ -24,6 +24,7 @@ interface Flight {
   departure: FlightEndpoint;
   arrival: FlightEndpoint;
   flight_status: string | null;
+  booking_url?: string | null;
 }
 
 export interface FlightSearchData {
@@ -36,9 +37,33 @@ function fieldOrNotReported(value: string | null | undefined): string {
   return value ?? "not reported by source";
 }
 
-function FlightSummary({ flight, nested = false }: { flight: Flight; nested?: boolean }) {
+function airlineLabel(flight: Flight): string {
+  return flight.airline.name ?? flight.airline.iata ?? "the airline";
+}
+
+function BookFlightButton({ flight, compact = false }: { flight: Flight; compact?: boolean }) {
+  if (!flight.booking_url) return null;
+  const airline = airlineLabel(flight);
   return (
-    <div className={nested ? `p-3.5 ${glassRowInteractive}` : "space-y-1"}>
+    <a
+      href={flight.booking_url}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={`Book flight ${flight.flight_number} on ${airline}, opens the official booking site in a new tab`}
+      className={
+        compact
+          ? "inline-block shrink-0 cursor-pointer rounded-full bg-accent px-3 py-1.5 text-xs font-medium text-white shadow-glass-sm transition duration-200 hover:bg-accent-dim"
+          : "mt-3 inline-block cursor-pointer rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-glass-sm transition duration-200 hover:bg-accent-dim"
+      }
+    >
+      {compact ? "Book" : `Book on ${airline}`}
+    </a>
+  );
+}
+
+function FlightSummary({ flight }: { flight: Flight }) {
+  return (
+    <div className="space-y-1">
       <div className="flex items-center justify-between text-sm font-semibold text-neutral-800">
         <span>{flight.flight_number}</span>
         <span className="text-accent-ink">{fieldOrNotReported(flight.airline.name)}</span>
@@ -60,6 +85,7 @@ export function FlightCard({ data, onSelect }: { data: FlightSearchData; onSelec
     return (
       <GlassTile className="p-4">
         <FlightSummary flight={data.flight} />
+        <BookFlightButton flight={data.flight} />
       </GlassTile>
     );
   }
@@ -67,9 +93,16 @@ export function FlightCard({ data, onSelect }: { data: FlightSearchData; onSelec
   return (
     <GlassTile className="space-y-2 p-4">
       {(data.flights ?? []).map((flight, index) => (
-        <button key={index} type="button" onClick={() => onSelect(flight)} className="block w-full text-left">
-          <FlightSummary flight={flight} nested />
-        </button>
+        <div key={index} className={`flex items-center gap-3 p-3.5 ${glassRowInteractive}`}>
+          <button
+            type="button"
+            onClick={() => onSelect(flight)}
+            className="min-w-0 flex-1 cursor-pointer text-left"
+          >
+            <FlightSummary flight={flight} />
+          </button>
+          <BookFlightButton flight={flight} compact />
+        </div>
       ))}
     </GlassTile>
   );

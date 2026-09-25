@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from swiss_grounding_mcp.domain.booking_links import build_flight_booking_url
 from swiss_grounding_mcp.domain.models import AirlineInfo, AirportInfo, Flight, FlightEndpoint
 
 _ADB_UTC_FORMAT = "%Y-%m-%d %H:%MZ"
@@ -82,18 +83,29 @@ def parse_flight_items(items: list[dict]) -> list[Flight]:
     for item in items:
         airline_json = item.get("airline") or {}
         raw_number = item.get("number") or item.get("callSign") or ""
+        airline = AirlineInfo(
+            name=airline_json.get("name"),
+            iata=airline_json.get("iata"),
+            icao=airline_json.get("icao"),
+        )
+        departure = _parse_endpoint(item.get("departure"))
+        arrival = _parse_endpoint(item.get("arrival"))
+        flight_date = _flight_date_from_item(item)
         flights.append(
             Flight(
                 flight_number=_normalize_flight_number(raw_number),
-                flight_date=_flight_date_from_item(item),
-                airline=AirlineInfo(
-                    name=airline_json.get("name"),
-                    iata=airline_json.get("iata"),
-                    icao=airline_json.get("icao"),
-                ),
-                departure=_parse_endpoint(item.get("departure")),
-                arrival=_parse_endpoint(item.get("arrival")),
+                flight_date=flight_date,
+                airline=airline,
+                departure=departure,
+                arrival=arrival,
                 flight_status=item.get("status"),
+                booking_url=build_flight_booking_url(
+                    airline.iata,
+                    airline.icao,
+                    departure.airport.iata,
+                    arrival.airport.iata,
+                    flight_date or None,
+                ),
             )
         )
     return flights

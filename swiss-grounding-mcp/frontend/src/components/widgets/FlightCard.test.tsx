@@ -9,6 +9,7 @@ const sampleFlight = {
   departure: { airport: { iata: "ZRH", icao: "LSZH", name: "Zurich Airport", timezone: null }, scheduled: "2026-09-25T10:20:00+02:00", estimated: null, actual: null, terminal: "1", gate: "A12", delay_minutes: 5 },
   arrival: { airport: { iata: "JFK", icao: "KJFK", name: "John F. Kennedy Intl", timezone: null }, scheduled: "2026-09-25T14:10:00-04:00", estimated: null, actual: null, terminal: "4", gate: null, delay_minutes: null },
   flight_status: "scheduled",
+  booking_url: "https://www.swiss.com/us/en/Book/ZRH-JFK/from-2026-09-25",
 };
 
 describe("FlightCard", () => {
@@ -25,12 +26,42 @@ describe("FlightCard", () => {
     expect(screen.getAllByText(/not reported by source/i).length).toBeGreaterThan(0);
   });
 
+  it("renders the booking link as an accessible new-tab anchor for a single flight", () => {
+    render(<FlightCard data={{ flight: sampleFlight, flights: [] }} onSelect={() => {}} />);
+
+    const link = screen.getByRole("link", { name: /book flight lx14/i });
+    expect(link).toHaveAttribute("href", "https://www.swiss.com/us/en/Book/ZRH-JFK/from-2026-09-25");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noreferrer");
+    expect(link).toHaveTextContent("Book on SWISS");
+  });
+
+  it("renders no booking link when booking_url is absent", () => {
+    const { booking_url: _omit, ...flightWithoutUrl } = sampleFlight;
+    render(<FlightCard data={{ flight: flightWithoutUrl, flights: [] }} onSelect={() => {}} />);
+
+    expect(screen.queryByRole("link", { name: /book/i })).not.toBeInTheDocument();
+  });
+
   it("renders a selectable list for a flight search result", () => {
     const onSelect = vi.fn();
     render(<FlightCard data={{ flight: null, flights: [sampleFlight], fields_missing: [] }} onSelect={onSelect} />);
 
     fireEvent.click(screen.getByRole("button", { name: /LX14/ }));
 
+    expect(onSelect).toHaveBeenCalledWith(sampleFlight);
+  });
+
+  it("renders a per-flight booking link in the search list without hijacking selection", () => {
+    const onSelect = vi.fn();
+    render(<FlightCard data={{ flight: null, flights: [sampleFlight] }} onSelect={onSelect} />);
+
+    const link = screen.getByRole("link", { name: /book flight lx14/i });
+    expect(link).toHaveAttribute("href", "https://www.swiss.com/us/en/Book/ZRH-JFK/from-2026-09-25");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noreferrer");
+
+    fireEvent.click(screen.getByRole("button", { name: /LX14/ }));
     expect(onSelect).toHaveBeenCalledWith(sampleFlight);
   });
 });

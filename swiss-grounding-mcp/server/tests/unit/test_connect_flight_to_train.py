@@ -108,6 +108,9 @@ def test_flight_lookup_success_computes_buffered_departure_and_calls_ojp():
 
     assert result.status == "answered"
     assert result.flight.flight_number == "LX15"
+    assert result.flight.booking_url == (
+        "https://www.swiss.com/us/en/Book/JFK-ZRH/from-2026-09-25"
+    )
     assert len(result.train_connections) == 1
     assert result.flight_provenance.source == "AeroDataBox (aerodatabox.com)"
     assert result.rail_provenance is not None
