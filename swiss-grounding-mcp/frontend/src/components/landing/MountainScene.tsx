@@ -1,94 +1,81 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 
-interface AlpsFacet {
-  fill: string;
-  d: string;
-}
-
 interface AlpsLayer {
-  fill: string;
+  /** Gradient stops: haze tint at the ridge line fading into the sheet color. */
+  from: string;
+  to: string;
+  /** Ridge y where the haze tint is full strength (userSpaceOnUse). */
+  hazeFrom: number;
   d: string;
-  facets: AlpsFacet[];
   /** Max horizontal pointer-parallax travel in px (near layers move most). */
   parallax: number;
-  /** Curtain-sweep transition delay in ms (front curtain opens first). */
+  /** Curtain-split transition delay in ms (foreground leads, strata follow). */
   delay: number;
   /** Paper drop-shadow cast onto the layer behind. */
   shadow: string;
 }
 
 /**
- * Paper-cut alpine range: five stacked vector ridges, each drawn as one
- * full-width silhouette. Every layer is rendered twice — once clipped to the
- * left half of the viewport, once to the right — so `.landing[data-open]` can
- * sweep the halves apart like curtains. Peaks are tallest near x=720 so the
- * closed range reads as an amphitheatre framing the search pill, and splitting
- * the central summit opens the canyon.
+ * Tectonic strata: five full-width zig-zag ridges of cut paper, each drawn as
+ * one silhouette spanning the whole viewport. Every layer renders twice —
+ * once clipped to the left half, once to the right — so `.landing[data-open]`
+ * can split the range at the center seam and glide the halves ±55vw apart.
+ * Foreground sheets lead the split; the opened center stays empty.
  */
 const LAYERS: AlpsLayer[] = [
   {
-    // Haze crest — furthest and tallest
-    fill: "#E9F3FA",
-    d: "M0 720 L0 316 L56 288 L128 310 L204 236 L284 276 L352 216 L428 268 L508 168 L584 224 L660 148 L736 208 L812 132 L886 196 L958 158 L1036 222 L1112 176 L1192 232 L1268 200 L1344 248 L1440 214 L1440 720 Z",
-    facets: [],
+    // Glacial mist crest — furthest sheet, fades toward the pure sky
+    from: "#FFFFFF",
+    to: "#EAF3FA",
+    hazeFrom: 140,
+    d: "M0 720 L0 300 L90 210 L180 300 L270 170 L360 290 L450 150 L540 280 L630 140 L720 270 L810 160 L900 280 L990 180 L1080 290 L1170 200 L1260 300 L1350 220 L1440 310 L1440 720 Z",
     parallax: 6,
-    delay: 220,
-    shadow: "drop-shadow(0 -3px 6px rgba(11, 37, 69, 0.06))",
+    delay: 240,
+    shadow: "drop-shadow(0 -3px 6px rgba(16, 42, 69, 0.06))",
   },
   {
-    // Back crests
-    fill: "#D9E8F5",
-    d: "M0 720 L0 372 L64 344 L140 372 L222 292 L306 338 L382 288 L462 350 L544 258 L622 314 L700 256 L778 310 L856 244 L936 302 L1014 268 L1094 326 L1172 286 L1254 336 L1332 302 L1440 336 L1440 720 Z",
-    facets: [
-      { fill: "rgba(255,255,255,0.55)", d: "M838 262 L856 244 L876 266 L862 260 L850 268 Z" },
-      { fill: "rgba(255,255,255,0.45)", d: "M682 274 L700 256 L720 278 L706 272 L694 280 Z" },
-    ],
+    // Layer 1 — light glacial mist
+    from: "#FFFFFF",
+    to: "#D6E3EF",
+    hazeFrom: 230,
+    d: "M0 720 L0 380 L100 300 L200 385 L300 250 L400 370 L500 230 L600 360 L700 250 L800 360 L900 240 L1000 350 L1100 270 L1200 370 L1300 290 L1440 380 L1440 720 Z",
     parallax: 10,
-    delay: 165,
-    shadow: "drop-shadow(0 -4px 8px rgba(11, 37, 69, 0.10))",
+    delay: 180,
+    shadow: "drop-shadow(0 -4px 8px rgba(16, 42, 69, 0.10))",
   },
   {
-    // Mid peaks
-    fill: "#94A8BD",
-    d: "M0 720 L0 452 L84 424 L168 456 L252 380 L344 428 L428 374 L512 440 L596 362 L676 420 L756 350 L838 412 L918 364 L1000 424 L1082 380 L1166 436 L1250 396 L1336 440 L1440 412 L1440 720 Z",
-    facets: [
-      { fill: "rgba(233,243,250,0.5)", d: "M732 372 L756 350 L784 376 L766 368 L750 378 Z" },
-      { fill: "rgba(233,243,250,0.4)", d: "M574 382 L596 362 L620 386 L604 378 L590 388 Z" },
-      { fill: "rgba(233,243,250,0.4)", d: "M232 398 L252 380 L274 402 L260 396 L246 404 Z" },
-    ],
+    // Layer 2 — soft slate blue
+    from: "#DCE8F2",
+    to: "#ADC2D6",
+    hazeFrom: 320,
+    d: "M0 720 L0 460 L90 380 L190 470 L290 340 L390 455 L490 320 L590 445 L690 350 L790 450 L890 330 L990 445 L1090 360 L1190 460 L1290 380 L1390 465 L1440 420 L1440 720 Z",
     parallax: 16,
-    delay: 110,
-    shadow: "drop-shadow(0 -5px 10px rgba(11, 37, 69, 0.14))",
+    delay: 120,
+    shadow: "drop-shadow(0 -5px 10px rgba(16, 42, 69, 0.14))",
   },
   {
-    // Fore slopes
-    fill: "#5A728A",
-    d: "M0 720 L0 544 L96 518 L190 550 L284 480 L384 528 L474 478 L566 544 L662 468 L748 528 L838 462 L928 520 L1016 482 L1106 540 L1196 498 L1288 546 L1378 510 L1440 536 L1440 720 Z",
-    facets: [
-      { fill: "rgba(148,168,189,0.6)", d: "M806 486 L838 462 L872 490 L848 482 L828 494 Z" },
-      { fill: "rgba(148,168,189,0.5)", d: "M636 490 L662 468 L690 494 L668 486 L652 496 Z" },
-      { fill: "rgba(148,168,189,0.4)", d: "M452 496 L474 478 L498 500 L482 494 L468 502 Z" },
-    ],
+    // Layer 3 — muted mountain blue
+    from: "#B9CBDC",
+    to: "#7E9AB3",
+    hazeFrom: 415,
+    d: "M0 720 L0 540 L110 460 L220 550 L330 430 L440 545 L550 415 L660 540 L770 445 L880 545 L990 430 L1100 540 L1210 460 L1320 555 L1440 500 L1440 720 Z",
     parallax: 24,
-    delay: 55,
-    shadow: "drop-shadow(0 -6px 12px rgba(11, 37, 69, 0.18))",
+    delay: 60,
+    shadow: "drop-shadow(0 -6px 12px rgba(16, 42, 69, 0.18))",
   },
   {
-    // Deep navy base — nearest paper sheet
-    fill: "#0B2545",
-    d: "M0 720 L0 636 L120 612 L240 644 L360 596 L480 634 L600 590 L720 628 L840 588 L960 626 L1080 598 L1200 634 L1320 608 L1440 628 L1440 720 Z",
-    facets: [
-      { fill: "rgba(22,53,95,0.85)", d: "M560 720 L600 590 L720 628 L720 720 Z" },
-      { fill: "rgba(22,53,95,0.85)", d: "M960 626 L1080 598 L1200 634 L1200 720 L960 720 Z" },
-      { fill: "rgba(22,53,95,0.7)", d: "M240 644 L360 596 L480 634 L480 720 L240 720 Z" },
-    ],
+    // Layer 4 — deep navy base, nearest sheet
+    from: "#3A5A7C",
+    to: "#102A45",
+    hazeFrom: 540,
+    d: "M0 720 L0 630 L120 560 L240 645 L360 545 L480 635 L600 540 L720 630 L840 555 L960 640 L1080 565 L1200 645 L1320 580 L1440 640 L1440 720 Z",
     parallax: 34,
     delay: 0,
-    shadow: "drop-shadow(0 -8px 16px rgba(11, 37, 69, 0.24))",
+    shadow: "drop-shadow(0 -8px 16px rgba(16, 42, 69, 0.24))",
   },
 ];
 
-function LayerSvg({ layer }: { layer: AlpsLayer }) {
+function LayerSvg({ layer, index }: { layer: AlpsLayer; index: number }) {
   return (
     <svg
       viewBox="0 0 1440 720"
@@ -98,10 +85,7 @@ function LayerSvg({ layer }: { layer: AlpsLayer }) {
       aria-hidden="true"
       focusable="false"
     >
-      <path d={layer.d} fill={layer.fill} />
-      {layer.facets.map((facet, i) => (
-        <path key={i} d={facet.d} fill={facet.fill} />
-      ))}
+      <path d={layer.d} fill={`url(#alp-g${index})`} />
     </svg>
   );
 }
@@ -150,6 +134,26 @@ export function MountainScene() {
 
   return (
     <div ref={ref} className="alps-scene" aria-hidden="true">
+      {/* Shared gradient defs: each ridge fades from a haze tint at its peaks
+          into its pinned strata color at the base. */}
+      <svg width="0" height="0" className="absolute" aria-hidden="true" focusable="false">
+        <defs>
+          {LAYERS.map((layer, i) => (
+            <linearGradient
+              key={i}
+              id={`alp-g${i}`}
+              gradientUnits="userSpaceOnUse"
+              x1="0"
+              y1={layer.hazeFrom}
+              x2="0"
+              y2="720"
+            >
+              <stop offset="0" stopColor={layer.from} />
+              <stop offset="1" stopColor={layer.to} />
+            </linearGradient>
+          ))}
+        </defs>
+      </svg>
       {LAYERS.map((layer, i) => (
         <div
           key={i}
@@ -160,13 +164,13 @@ export function MountainScene() {
             className="alps-half alps-half--left"
             style={{ transitionDelay: `${layer.delay}ms` }}
           >
-            <LayerSvg layer={layer} />
+            <LayerSvg layer={layer} index={i} />
           </div>
           <div
             className="alps-half alps-half--right"
             style={{ transitionDelay: `${layer.delay}ms` }}
           >
-            <LayerSvg layer={layer} />
+            <LayerSvg layer={layer} index={i} />
           </div>
         </div>
       ))}

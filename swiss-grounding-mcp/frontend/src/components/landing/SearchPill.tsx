@@ -111,7 +111,7 @@ export function SearchPill({
         type="submit"
         disabled={disabled || !value.trim()}
         aria-label="Search"
-        className="quiet-focus-swiss mr-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-swiss-navy text-white transition duration-200 hover:bg-[#14345f] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+        className="quiet-focus-swiss mr-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-swiss-navy text-white transition duration-200 hover:bg-[#1a3a5c] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
       >
         <svg viewBox="0 0 24 24" fill="none" className="h-[18px] w-[18px]" aria-hidden>
           <path
