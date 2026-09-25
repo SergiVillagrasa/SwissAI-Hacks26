@@ -29,12 +29,18 @@ class Connection(BaseModel):
     duration_minutes: int
     changes: int
     legs: list[Leg] = Field(default_factory=list)
+    origin_latitude: float | None = None
+    origin_longitude: float | None = None
+    destination_latitude: float | None = None
+    destination_longitude: float | None = None
 
 
 class StopCandidate(BaseModel):
     name: str
     stop_ref: str
     probability: float | None = None
+    latitude: float | None = None
+    longitude: float | None = None
 
 
 class Provenance(BaseModel):
