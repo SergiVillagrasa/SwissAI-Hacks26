@@ -4,6 +4,7 @@ import "@xyflow/react/dist/style.css";
 import { useRun } from "../workflow/runContext";
 import { ExecutionNode } from "../workflow/ExecutionNode";
 import { toFlowElements } from "../workflow/toFlowElements";
+import { ArrowLeftIcon } from "../workflow/icons";
 import "../styles/workflow.css";
 
 const nodeTypes = { execution: ExecutionNode };
@@ -23,10 +24,21 @@ export function WorkflowPage({ onGoHome }: { onGoHome: () => void }) {
       <button type="button" onClick={onGoHome}>Go to Home</button>
     </section>;
   }
+  const statusLabel = state.status === "waiting_for_input" ? "Needs input" : state.status;
   return <section className="workflow-page">
     <header className="workflow-header">
-      <div><button type="button" className="back-home" onClick={onGoHome}>Back to Home</button><h1>{state.requestSummary || "Current execution"}</h1><p>Run {state.runId.slice(0, 8)} · {durationLabel}</p></div>
-      <span className="workflow-status" data-status={state.status}>{state.status === "waiting_for_input" ? "Needs input" : state.status}</span>
+      <div className="workflow-header__top">
+        <button type="button" className="back-home" onClick={onGoHome}>
+          <ArrowLeftIcon className="back-home__icon" />Back to Home
+        </button>
+        <span className="workflow-status" data-status={state.status}>
+          <i className="status-dot" aria-hidden />{statusLabel}
+        </span>
+      </div>
+      <div className="workflow-header__titles">
+        <h1>{state.requestSummary || "Current execution"}</h1>
+        <p>Run {state.runId.slice(0, 8)} · {durationLabel}</p>
+      </div>
     </header>
     {state.connectionStatus === "interrupted" && <p className="connection-alert">Connection interrupted. The workflow may still be running.</p>}
     <div className="workflow-canvas" aria-label="Current execution workflow">

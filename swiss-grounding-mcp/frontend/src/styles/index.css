@@ -15,6 +15,7 @@ body {
 .workflow-shell {
   display: grid;
   grid-template-columns: 184px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   height: 100dvh;
 }
 
@@ -34,10 +35,19 @@ body {
 }
 
 .app-nav button {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
   padding: 0.6rem 0.75rem;
   border-radius: 0.75rem;
   text-align: left;
   color: #64748b;
+}
+
+.nav-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
 }
 
 .app-nav button[aria-current="page"] {
@@ -49,6 +59,8 @@ body {
 .app-content {
   min-width: 0;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .workflow-placeholder {
