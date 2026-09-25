@@ -9,6 +9,7 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "openai>=1.40",
     "python-dotenv>=1.0.1",
+    "langgraph==1.2.10",
 ]
 
 [tool.uv.sources]

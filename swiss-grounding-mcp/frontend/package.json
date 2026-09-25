@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@xyflow/react": "^12.11.6",
     "mapbox-gl": "^3.31.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
