@@ -58,6 +58,46 @@ def test_unknown_airline_without_route_falls_back_to_google_flights_root():
     assert url == "https://www.google.com/travel/flights"
 
 
+def test_missing_destination_iata_defaults_to_zurich():
+    url = build_flight_booking_url("LX", "SWR", "LHR", None, "2026-09-25")
+
+    assert url == (
+        "https://www.google.com/travel/flights?q=Flights+from+LHR+to+ZRH+on+2026-09-25"
+    )
+
+
+def test_missing_origin_iata_defaults_to_zurich():
+    url = build_flight_booking_url("LX", "SWR", None, "LHR", "2026-09-25")
+
+    assert url == (
+        "https://www.google.com/travel/flights?q=Flights+from+ZRH+to+LHR+on+2026-09-25"
+    )
+
+
+def test_icao_code_used_when_iata_missing():
+    url = build_flight_booking_url(
+        "LX", "SWR", None, "LHR", "2026-09-25", origin_icao="LSZH"
+    )
+
+    assert url == (
+        "https://www.google.com/travel/flights?q=Flights+from+LSZH+to+LHR+on+2026-09-25"
+    )
+
+
+def test_no_route_at_all_falls_back_to_airline_portal():
+    url = build_flight_booking_url("LX", None, None, None, None)
+
+    assert url == "https://www.swiss.com/ch/en/book-flights"
+
+
+def test_missing_origin_with_zrh_destination_falls_back_to_portal():
+    # Destination resolves to ZRH while origin is unknown: no route to
+    # preload, so the airline portal is safer than a ZRH->ZRH query.
+    url = build_flight_booking_url("U2", "EZY", None, "ZRH", "2026-09-25")
+
+    assert url == "https://www.easyjet.com"
+
+
 def test_every_branch_returns_a_https_url_without_invented_paths():
     for url in (
         build_flight_booking_url("LX", None, "ZRH", "JFK", "2026-09-25"),

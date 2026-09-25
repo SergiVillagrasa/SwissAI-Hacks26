@@ -45,6 +45,9 @@ VERSION_ID = os.environ.get(
 
 BACKEND_URL = os.environ.get("GALTEA_AGENT_BACKEND_URL", "http://127.0.0.1:3001").rstrip("/")
 EVAL_MODE = os.environ.get("GALTEA_EVAL_MODE", "backend").strip().lower()
+# Optional: restrict a run to specific specifications (comma-separated ids),
+# e.g. to iterate quickly on a single spec instead of the whole version.
+SPEC_IDS = [s.strip() for s in os.environ.get("GALTEA_SPEC_IDS", "").split(",") if s.strip()] or None
 
 _LOCAL_TOOLS = None
 
@@ -169,8 +172,12 @@ def main() -> int:
 
     galtea = Galtea(api_key=key)
 
-    print(f"Running evaluations for version {VERSION_ID} (mode={EVAL_MODE}) ...", flush=True)
-    run = galtea.evaluations.run(version_id=VERSION_ID, agent=agent)
+    print(
+        f"Running evaluations for version {VERSION_ID} (mode={EVAL_MODE}"
+        f"{', specs=' + ','.join(SPEC_IDS) if SPEC_IDS else ''}) ...",
+        flush=True,
+    )
+    run = galtea.evaluations.run(version_id=VERSION_ID, agent=agent, specification_ids=SPEC_IDS)
     run_evals = run.get("evaluations") if isinstance(run, dict) else None
     print(f"run returned {len(run_evals or [])} evaluations", flush=True)
     run_id = None
