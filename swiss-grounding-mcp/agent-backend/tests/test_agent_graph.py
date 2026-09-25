@@ -45,6 +45,24 @@ def test_plain_reply_emits_graph_lifecycle_and_preserves_chat_events():
     assert events[-1] == {"type": "done"}
 
 
+def test_final_reply_after_tool_call_uses_additional_round_labels(monkeypatch):
+    tool_call = SimpleNamespace(
+        id="call-1",
+        function=SimpleNamespace(name="find_connections", arguments='{"origin":"Zurich HB","destination":"Lucerne"}'),
+    )
+    monkeypatch.setattr(agent_graph, "dispatch", lambda *args, **kwargs: object())
+    monkeypatch.setattr(agent_graph, "map_result", lambda *args: {"status": "ok", "data": {}})
+
+    events = _run(_FakeOpenAI([
+        _response(tool_calls=[tool_call]),
+        _response(content="Take the IR from Zurich HB to Lucerne."),
+    ]))
+
+    skipped = [event for event in events if event["type"] == "node_skipped"]
+    assert [event["label"] for event in skipped] == ["Additional Swiss tool call", "Additional verification"]
+    assert all(event["summary"] == "No further lookup needed" for event in skipped)
+
+
 def test_clarification_marks_run_waiting(monkeypatch):
     tool_call = SimpleNamespace(
         id="call-1",

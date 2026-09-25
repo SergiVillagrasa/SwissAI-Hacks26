@@ -29,6 +29,12 @@ body {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.app-logo {
+  width: auto;
+  height: 34px;
+  align-self: flex-start;
+}
+
 .app-nav > div {
   display: grid;
   gap: 0.35rem;
@@ -81,6 +87,10 @@ body {
     padding: 0.75rem 1rem;
     border-right: 0;
     border-bottom: 1px solid rgba(100, 116, 139, 0.16);
+  }
+
+  .app-logo {
+    height: 26px;
   }
 
   .app-nav > div {
