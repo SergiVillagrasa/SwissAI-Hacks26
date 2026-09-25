@@ -8,7 +8,9 @@ import { useVoiceAgent } from "./lib/useVoiceAgent";
 import { streamChat } from "./lib/sse";
 import { isExecutionEvent, type ChatMessage, type WidgetEvent } from "./lib/types";
 import { usePage } from "./navigation/usePage";
-import { RunProvider, useRun } from "./workflow/RunProvider";
+import { RunProvider } from "./workflow/RunProvider";
+import { useRun } from "./workflow/runContext";
+import { WorkflowPage } from "./pages/WorkflowPage";
 
 export interface Turn {
   id: string;
@@ -26,7 +28,7 @@ function makeId(): string {
 function AppContent() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const { page, navigate } = usePage();
-  const { state: runState, acceptEvent, markDisconnected } = useRun();
+  const { acceptEvent, markDisconnected } = useRun();
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [pending, setPending] = useState(false);
   const [pendingTurnId, setPendingTurnId] = useState<string | null>(null);
@@ -72,7 +74,7 @@ function AppContent() {
       }
       setHistory((current) => [...current, { role: "assistant", content: assistantText }]);
       return assistantText;
-    } catch (error) {
+    } catch {
       markDisconnected();
       const fallback = "Something went wrong reaching the assistant. Please try again.";
       setTurns((current) =>
@@ -120,10 +122,7 @@ function AppContent() {
   return (
     <AppShell page={page} onNavigate={navigate}>
       {page === "workflow" ? (
-        <section className="workflow-placeholder">
-          <h1>Workflow</h1>
-          <p>{runState.runId ? "Current execution" : "Start a request from Home to see its workflow."}</p>
-        </section>
+        <WorkflowPage onGoHome={() => navigate("home")} />
       ) : <div className="flex h-full flex-col overflow-hidden">
       {voiceActive && <VoiceBorderGlow state={voice.state} level={voice.level} />}
       {turns.length === 0 ? (

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { RunProvider, useRun } from "./RunProvider";
+import { RunProvider } from "./RunProvider";
+import { useRun } from "./runContext";
 
 function Probe() {
   const { state, acceptEvent, markDisconnected } = useRun();
