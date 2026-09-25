@@ -465,6 +465,19 @@ wheels = [
 ]
 
 [[package]]
+name = "galtea-cli"
+version = "5.4.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b3/df/5dc2d485c63645c54ca9e624aecd72fbbc7a61f206c63a381ffacd699603/galtea_cli-5.4.0-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:3ec2c905863ba04fe77b2dd0fe9f11ebfa6281d01fe65f02c14a0048854ca3c3", size = 9743146, upload-time = "2026-09-21T08:54:11.115Z" },
+    { url = "https://files.pythonhosted.org/packages/24/d7/18c0facd2c46d03781bd2573f494721cb4809fe652aff5ac3802ad63d78e/galtea_cli-5.4.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:81c4f60364f84d6f29d3e5e0501d25502cfb79056299fdc24dbdbd0615fefd00", size = 8923501, upload-time = "2026-09-21T08:54:12.986Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/e3/5892772cadf38ba21a547b4af5d0e5e4f3932d024cc404042304519190ec/galtea_cli-5.4.0-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:b964a928090dc380c30a172c6476832927d7e9e736d5d137bc51ee6c24d4bfaa", size = 8478787, upload-time = "2026-09-21T08:54:14.597Z" },
+    { url = "https://files.pythonhosted.org/packages/c7/0e/c54aab4aabe73e1c739b884c159a99e39c3eb757822d77f6a6b5fcef854a/galtea_cli-5.4.0-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:10b145d31c01a84372cc625b090bb3b26a1e58291237ea1387980dadd64922cd", size = 9534902, upload-time = "2026-09-21T08:54:16.646Z" },
+    { url = "https://files.pythonhosted.org/packages/3a/59/d9def4db01ccef112a43e0e639d3e5543b4f90ad12ee7748e55521a8da7a/galtea_cli-5.4.0-py3-none-win_amd64.whl", hash = "sha256:1670c8f683dbc05d08441b822706a2809febcc3794e54b318422b9547d147f27", size = 9775837, upload-time = "2026-09-21T08:54:18.38Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/44/d37b1707d3cf478690a78ed31e52a294660b1191f6e5fbd0125987b6938a/galtea_cli-5.4.0-py3-none-win_arm64.whl", hash = "sha256:0225bdd27e03c8b51a26f6b892436c2712498e7eb86a36cdce21bbecc9b6039d", size = 8580270, upload-time = "2026-09-21T08:54:20.189Z" },
+]
+
+[[package]]
 name = "h11"
 version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1712,6 +1725,7 @@ dev = [
 ]
 eval = [
     { name = "galtea" },
+    { name = "galtea-cli" },
 ]
 voice = [
     { name = "elevenlabs" },
@@ -1733,7 +1747,10 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = ">=8.0" }]
-eval = [{ name = "galtea", specifier = ">=5.4,<6" }]
+eval = [
+    { name = "galtea", specifier = ">=5.4,<6" },
+    { name = "galtea-cli", specifier = ">=5.4,<6" },
+]
 voice = [
     { name = "elevenlabs", specifier = ">=2.69" },
     { name = "numpy", specifier = ">=2.0" },

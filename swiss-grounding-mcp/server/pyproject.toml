@@ -27,7 +27,7 @@ default-groups = ["dev", "eval", "voice"]
 
 [dependency-groups]
 dev = ["pytest>=8.0"]
-eval = ["galtea>=5.4,<6"]
+eval = ["galtea>=5.4,<6", "galtea-cli>=5.4,<6"]
 voice = [
     "elevenlabs>=2.69",
     "sounddevice>=0.5",

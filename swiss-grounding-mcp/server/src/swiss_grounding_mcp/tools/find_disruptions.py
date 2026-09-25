@@ -42,6 +42,7 @@ def find_station_disruptions(
             status=failure.status,
             message=failure.message,
             candidates=failure.candidates,
+            provenance=build_provenance(settings),
         )
 
     try:
@@ -61,6 +62,7 @@ def find_station_disruptions(
         return DisruptionSearchResult(
             status="not_found",
             message=f"No current disruptions found at '{resolved_stop.name}'.",
+            provenance=build_provenance(settings),
         )
 
     return DisruptionSearchResult(

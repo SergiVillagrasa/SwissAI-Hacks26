@@ -58,11 +58,14 @@ def get_station_board(
             status=failure.status,
             message=failure.message,
             candidates=failure.candidates,
+            provenance=build_provenance(settings),
         )
 
     if not is_swiss_stop(resolved.stop_ref):
         return StationBoardResult(
-            status="out_of_scope", message=_OUT_OF_SCOPE_MESSAGE
+            status="out_of_scope",
+            message=_OUT_OF_SCOPE_MESSAGE,
+            provenance=build_provenance(settings),
         )
 
     try:
@@ -85,6 +88,7 @@ def get_station_board(
             ),
             station_name=resolved.name,
             event_type=event_type,
+            provenance=build_provenance(settings),
         )
 
     return StationBoardResult(
