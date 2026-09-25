@@ -11,20 +11,21 @@ surface (turns, widgets, composer) once a conversation starts.
 
 ## Landing surface: tectonic strata
 
-Brief-pinned (v2, replaces the clustered paper-cut pile). Brand "Swiss Travel
+Brief-pinned (v3, replaces the clustered paper-cut pile). Brand "Swiss Travel
 by Swisscom": `SWISS TRAVEL` typographic logo top-left (Space Grotesk, 600,
-uppercase, `#102A45`), `by swisscom` + dual-color vortex emblem bottom-right
-(`#001AFF` / `#E30613`). Canvas is a linear gradient `#FFFFFF → #F0F6FB`
-(glacial ice).
+uppercase, `#18344E`), `by swisscom` + the official Swisscom lifeform emblem
+(public/swisscom.jpg, blue `#001AFF` / red `#E30613`, multiply-blended) at
+bottom-right. Canvas is a linear gradient `#FFFFFF → #F0F6FB` (glacial ice).
 
-Five full-width geometric zig-zag ridges span 100vw — glacial mist `#EAF3FA`
-fading toward `#FFFFFF`, mist `#D6E3EF`, slate `#ADC2D6`, mountain blue
-`#7E9AB3`, navy base `#102A45` — each a sharp polygonal sawtooth silhouette
-with a vertical haze gradient (light tint at the ridge line → pinned color at
-the base) and a paper drop-shadow onto the sheet behind. Behind the strata
-floats the frosted search pill (`rgba(255,255,255,0.88)`,
-`backdrop-filter: blur(20px)`, `9999px` radius): search icon left, voice/mic
-affordance and arrow action circle right.
+Five full-width geometric zig-zag ridges span 100vw — a faintest mist sheet
+dissolving toward `#FFFFFF`, sky-to-mist `#FFFFFF → #EAF1F7`, glacial slate
+`#D6E3EF`, alpine blue `#9BB3C9`, navy foreground `#18344E` — each a sharp
+polygonal sawtooth silhouette with a vertical haze gradient (light tint at
+the ridge line → pinned color at the base) and a paper drop-shadow onto the
+sheet behind. Above the strata floats the frosted search pill
+(`rgba(255,255,255,0.92)`, `backdrop-filter: blur(20px)`, `9999px` radius,
+placeholder `#64748B`): search icon left, voice/mic affordance and arrow
+action circle right.
 
 Each sheet renders twice, clipped to its half of the viewport; on search focus
 (or voice start) the halves glide `±55vw` apart on a 650ms

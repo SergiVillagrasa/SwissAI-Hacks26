@@ -24,54 +24,54 @@ interface AlpsLayer {
  */
 const LAYERS: AlpsLayer[] = [
   {
-    // Glacial mist crest — furthest sheet, fades toward the pure sky
+    // Faintest mist crest — furthest sheet, dissolves into the pure sky
     from: "#FFFFFF",
-    to: "#EAF3FA",
+    to: "#F6FAFD",
     hazeFrom: 140,
     d: "M0 720 L0 300 L90 210 L180 300 L270 170 L360 290 L450 150 L540 280 L630 140 L720 270 L810 160 L900 280 L990 180 L1080 290 L1170 200 L1260 300 L1350 220 L1440 310 L1440 720 Z",
     parallax: 6,
     delay: 240,
-    shadow: "drop-shadow(0 -3px 6px rgba(16, 42, 69, 0.06))",
+    shadow: "drop-shadow(0 -3px 6px rgba(24, 52, 78, 0.06))",
   },
   {
-    // Layer 1 — light glacial mist
+    // Layer 1 — pure sky fading into faint glacial mist
     from: "#FFFFFF",
-    to: "#D6E3EF",
+    to: "#EAF1F7",
     hazeFrom: 230,
     d: "M0 720 L0 380 L100 300 L200 385 L300 250 L400 370 L500 230 L600 360 L700 250 L800 360 L900 240 L1000 350 L1100 270 L1200 370 L1300 290 L1440 380 L1440 720 Z",
     parallax: 10,
     delay: 180,
-    shadow: "drop-shadow(0 -4px 8px rgba(16, 42, 69, 0.10))",
+    shadow: "drop-shadow(0 -4px 8px rgba(24, 52, 78, 0.10))",
   },
   {
-    // Layer 2 — soft slate blue
-    from: "#DCE8F2",
-    to: "#ADC2D6",
+    // Layer 2 — soft glacial slate
+    from: "#E7EFF6",
+    to: "#D6E3EF",
     hazeFrom: 320,
     d: "M0 720 L0 460 L90 380 L190 470 L290 340 L390 455 L490 320 L590 445 L690 350 L790 450 L890 330 L990 445 L1090 360 L1190 460 L1290 380 L1390 465 L1440 420 L1440 720 Z",
     parallax: 16,
     delay: 120,
-    shadow: "drop-shadow(0 -5px 10px rgba(16, 42, 69, 0.14))",
+    shadow: "drop-shadow(0 -5px 10px rgba(24, 52, 78, 0.14))",
   },
   {
-    // Layer 3 — muted mountain blue
-    from: "#B9CBDC",
-    to: "#7E9AB3",
+    // Layer 3 — muted alpine blue
+    from: "#BCCEDD",
+    to: "#9BB3C9",
     hazeFrom: 415,
     d: "M0 720 L0 540 L110 460 L220 550 L330 430 L440 545 L550 415 L660 540 L770 445 L880 545 L990 430 L1100 540 L1210 460 L1320 555 L1440 500 L1440 720 Z",
     parallax: 24,
     delay: 60,
-    shadow: "drop-shadow(0 -6px 12px rgba(16, 42, 69, 0.18))",
+    shadow: "drop-shadow(0 -6px 12px rgba(24, 52, 78, 0.18))",
   },
   {
-    // Layer 4 — deep navy base, nearest sheet
-    from: "#3A5A7C",
-    to: "#102A45",
+    // Layer 4 — deep navy foreground, nearest sheet
+    from: "#4E6E8C",
+    to: "#18344E",
     hazeFrom: 540,
     d: "M0 720 L0 630 L120 560 L240 645 L360 545 L480 635 L600 540 L720 630 L840 555 L960 640 L1080 565 L1200 645 L1320 580 L1440 640 L1440 720 Z",
     parallax: 34,
     delay: 0,
-    shadow: "drop-shadow(0 -8px 16px rgba(16, 42, 69, 0.24))",
+    shadow: "drop-shadow(0 -8px 16px rgba(24, 52, 78, 0.24))",
   },
 ];
 

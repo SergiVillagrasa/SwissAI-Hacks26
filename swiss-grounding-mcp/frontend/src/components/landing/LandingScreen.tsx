@@ -57,7 +57,7 @@ export function LandingScreen({
               type="button"
               aria-label="Close voice mode"
               onClick={onVoiceCancel}
-              className="quiet-focus-swiss flex h-11 w-11 items-center justify-center rounded-full border border-white/95 bg-white/80 text-swiss-ink/70 shadow-[0_8px_24px_-8px_rgba(16,42,69,0.25)] backdrop-blur-xl transition hover:bg-white"
+              className="quiet-focus-swiss flex h-11 w-11 items-center justify-center rounded-full border border-white/95 bg-white/80 text-swiss-ink/70 shadow-[0_8px_24px_-8px_rgba(24,52,78,0.25)] backdrop-blur-xl transition hover:bg-white"
             >
               <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" aria-hidden>
                 <path

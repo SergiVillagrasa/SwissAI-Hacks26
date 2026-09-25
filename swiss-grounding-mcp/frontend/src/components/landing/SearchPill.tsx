@@ -62,7 +62,7 @@ export function SearchPill({
         type="text"
         aria-label="Search your journey"
         placeholder="Buscar tus resultados..."
-        className="quiet-focus-plain min-w-0 flex-1 bg-transparent px-4 font-inter text-base text-swiss-ink outline-none placeholder:text-swiss-ink/55 disabled:opacity-50"
+        className="quiet-focus-plain min-w-0 flex-1 bg-transparent px-4 font-inter text-base text-swiss-ink outline-none placeholder:text-[#64748B] disabled:opacity-50"
         value={value}
         disabled={disabled}
         onChange={(event) => setValue(event.target.value)}
@@ -111,7 +111,7 @@ export function SearchPill({
         type="submit"
         disabled={disabled || !value.trim()}
         aria-label="Search"
-        className="quiet-focus-swiss mr-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-swiss-navy text-white transition duration-200 hover:bg-[#1a3a5c] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+        className="quiet-focus-swiss mr-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-swiss-navy text-white transition duration-200 hover:bg-[#22496c] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
       >
         <svg viewBox="0 0 24 24" fill="none" className="h-[18px] w-[18px]" aria-hidden>
           <path
