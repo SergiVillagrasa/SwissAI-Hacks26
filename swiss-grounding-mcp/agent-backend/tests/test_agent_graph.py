@@ -41,6 +41,7 @@ def test_plain_reply_emits_graph_lifecycle_and_preserves_chat_events():
     assert events[0]["type"] == "run_started"
     assert [event["type"] for event in events if event["type"] in {"token", "widget", "done"}] == ["token", "done"]
     assert next(event for event in events if event["type"] == "run_completed")["outcome"] == "completed"
+    assert [event["label"] for event in events if event["type"] == "node_skipped"] == ["Invoke Swiss tool", "Verify result"]
     assert events[-1] == {"type": "done"}
 
 

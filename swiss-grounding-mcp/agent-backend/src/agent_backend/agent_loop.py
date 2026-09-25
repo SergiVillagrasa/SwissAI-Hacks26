@@ -45,12 +45,14 @@ def run_chat(
     current_time = now or datetime.now(timezone.utc)
     system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(now=current_time.strftime("%Y-%m-%dT%H:%M:%SZ"))
     emitter = ExecutionEventEmitter(run_id or str(uuid4()))
+    request_summary = next((str(message.get("content", "")) for message in reversed(messages) if message.get("role") == "user"), "")
     yield emitter.emit(
         "run_started",
         node_id="run",
         label="Workflow started",
         status="running",
         summary="Starting your request",
+        details={"request": request_summary[:240]},
     )
     graph = build_agent_graph(AgentDependencies(
         openai_client=openai_client,

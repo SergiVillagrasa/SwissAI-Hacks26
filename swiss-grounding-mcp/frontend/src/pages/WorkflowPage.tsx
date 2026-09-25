@@ -15,6 +15,7 @@ export function WorkflowPage({ onGoHome }: { onGoHome: () => void }) {
     const projected = toFlowElements(state);
     return { ...projected, nodes: projected.nodes.map((node) => ({ ...node, selected: node.id === selectedNodeId })) };
   }, [state, selectedNodeId]);
+  const durationLabel = state.durationMs === undefined ? "Live" : state.durationMs < 1000 ? `${state.durationMs} ms` : `${(state.durationMs / 1000).toFixed(1)} s`;
   if (!state.runId) {
     return <section className="workflow-page workflow-empty">
       <h1>Your workflow will appear here</h1>
@@ -24,7 +25,7 @@ export function WorkflowPage({ onGoHome }: { onGoHome: () => void }) {
   }
   return <section className="workflow-page">
     <header className="workflow-header">
-      <div><button type="button" className="back-home" onClick={onGoHome}>Back to Home</button><h1>Current execution</h1><p>Frontend-initiated run · {state.runId.slice(0, 8)}</p></div>
+      <div><button type="button" className="back-home" onClick={onGoHome}>Back to Home</button><h1>{state.requestSummary || "Current execution"}</h1><p>Run {state.runId.slice(0, 8)} · {durationLabel}</p></div>
       <span className="workflow-status" data-status={state.status}>{state.status === "waiting_for_input" ? "Needs input" : state.status}</span>
     </header>
     {state.connectionStatus === "interrupted" && <p className="connection-alert">Connection interrupted. The workflow may still be running.</p>}

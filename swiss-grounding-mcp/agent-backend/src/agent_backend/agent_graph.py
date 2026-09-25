@@ -78,6 +78,15 @@ def build_agent_graph(dependencies: AgentDependencies):
             summary="Selected the appropriate Swiss data source" if tool_calls else "Your answer is ready",
             duration_ms=round((perf_counter() - started) * 1000),
         ))
+        if not tool_calls:
+            for skipped_id, label in (("invoke-tool", "Invoke Swiss tool"), ("verify-result", "Verify result")):
+                events.append(emitter.emit(
+                    "node_skipped",
+                    node_id=f"{skipped_id}-{round_number}",
+                    label=label,
+                    status="skipped",
+                    summary="Not needed for this response",
+                ))
         messages = list(state["chat_messages"])
         if tool_calls:
             messages.append({

@@ -18,6 +18,10 @@ export interface RunState {
   nodeOrder: string[];
   lastSequence: number;
   connectionStatus: "connected" | "interrupted";
+  requestSummary?: string;
+  startedAt?: string;
+  completedAt?: string;
+  durationMs?: number;
 }
 
 export const emptyRunState: RunState = {
@@ -40,17 +44,23 @@ export function runReducer(state: RunState, event: RunAction): RunState {
       runId: event.run_id,
       status: "running",
       lastSequence: event.sequence,
+      requestSummary: typeof event.details?.request === "string" ? event.details.request : undefined,
+      startedAt: event.timestamp,
       nodes: {},
       nodeOrder: [],
     };
   }
   if (!state.runId || event.run_id !== state.runId || event.sequence <= state.lastSequence) return state;
   if (event.type === "run_completed") {
+    const started = state.startedAt ? Date.parse(state.startedAt) : Number.NaN;
+    const completed = Date.parse(event.timestamp);
     return {
       ...state,
       status: event.status,
       outcome: event.outcome,
       lastSequence: event.sequence,
+      completedAt: event.timestamp,
+      durationMs: Number.isFinite(started) && Number.isFinite(completed) ? Math.max(0, completed - started) : undefined,
     };
   }
   if (event.type === "run_waiting") {
