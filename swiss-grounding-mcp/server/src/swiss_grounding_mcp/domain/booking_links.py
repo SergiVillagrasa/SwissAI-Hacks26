@@ -2,17 +2,16 @@ from __future__ import annotations
 
 from urllib.parse import quote_plus
 
-# Lufthansa Group airlines share the same booking engine; the
-# /us/en/Book/{origin}-{destination}/from-{date} path is the canonical
-# swiss.com booking deep link pattern.
-_LH_GROUP_BOOKING_BASES = {
-    "LX": "https://www.swiss.com",
+# Airline portals block static deep links without a booking session
+# (swiss.com /us/en/Book/{o}-{d}/from-{date} returns 404), so flights
+# with a known route deep-link into Google Flights with origin,
+# destination and date preloaded instead. Airline portals are kept as
+# the entry point when the route is not available.
+_AIRLINE_PORTALS = {
+    "LX": "https://www.swiss.com/ch/en/book-flights",
     "LH": "https://www.lufthansa.com",
     "OS": "https://www.austrian.com",
     "SN": "https://www.brusselsairlines.com",
-}
-
-_AIRLINE_PORTALS = {
     "BA": "https://www.britishairways.com",
     "U2": "https://www.easyjet.com",
     "AF": "https://www.airfrance.com",
@@ -63,18 +62,10 @@ def build_flight_booking_url(
     destination_iata: str | None,
     flight_date: str | None,
 ) -> str:
-    code = _normalize_airline_code(airline_iata, airline_icao)
+    if origin_iata and destination_iata:
+        return _google_flights_url(origin_iata, destination_iata, flight_date)
 
-    lh_group_base = _LH_GROUP_BOOKING_BASES.get(code)
-    if lh_group_base:
-        if origin_iata and destination_iata and flight_date:
-            return (
-                f"{lh_group_base}/us/en/Book/"
-                f"{origin_iata}-{destination_iata}/from-{flight_date}"
-            )
-        return lh_group_base
-
-    portal = _AIRLINE_PORTALS.get(code)
+    portal = _AIRLINE_PORTALS.get(_normalize_airline_code(airline_iata, airline_icao))
     if portal:
         return portal
 

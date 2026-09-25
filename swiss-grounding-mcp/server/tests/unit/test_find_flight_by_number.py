@@ -87,14 +87,14 @@ def test_found_flight_returns_answered_with_provenance_and_field_lists():
     assert client.calls[0]["date_local"] == "2026-09-25"
 
 
-def test_answered_flight_includes_official_swiss_booking_url():
+def test_answered_flight_includes_prefilled_booking_url():
     client = StubAerodataboxClient(items=_LX14_ITEMS)
 
     result = find_flight_by_number("LX14", "2026-09-25", None, client=client, settings=_settings())
 
     assert result.status == "answered"
     assert result.flight.booking_url == (
-        "https://www.swiss.com/us/en/Book/ZRH-JFK/from-2026-09-25"
+        "https://www.google.com/travel/flights?q=Flights+from+ZRH+to+JFK+on+2026-09-25"
     )
 
 
