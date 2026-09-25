@@ -21,7 +21,8 @@ function readPinned(): boolean {
   if (typeof window === "undefined") return false;
   try {
     return window.localStorage.getItem(PINNED_STORAGE_KEY) === "true";
-  } catch {
+  } catch (error) {
+    console.warn("Unable to read sidebar pinned state from localStorage", error);
     return false;
   }
 }
@@ -36,8 +37,9 @@ export function AppShell({ page, onNavigate, children }: {
   useEffect(() => {
     try {
       window.localStorage.setItem(PINNED_STORAGE_KEY, String(pinned));
-    } catch {
+    } catch (error) {
       // localStorage unavailable (e.g. private mode) — pinned state just won't persist.
+      console.warn("Unable to persist sidebar pinned state to localStorage", error);
     }
   }, [pinned]);
 
