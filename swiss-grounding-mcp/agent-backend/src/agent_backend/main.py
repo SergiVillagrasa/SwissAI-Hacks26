@@ -119,6 +119,8 @@ def chat(request: ChatRequest) -> StreamingResponse:
 
 @app.post("/api/voice/transcribe")
 async def transcribe(audio: UploadFile = File(...)) -> dict:
+    if _openai_client is None:
+        raise HTTPException(status_code=503, detail=_OPENAI_MISSING_MESSAGE)
     data = await audio.read()
     if not data:
         raise HTTPException(status_code=400, detail="Empty audio upload")
@@ -134,6 +136,8 @@ async def transcribe(audio: UploadFile = File(...)) -> dict:
 
 @app.post("/api/voice/speak")
 def speak(request: SpeakRequest) -> Response:
+    if _openai_client is None:
+        raise HTTPException(status_code=503, detail=_OPENAI_MISSING_MESSAGE)
     text = request.text.strip()
     if not text:
         raise HTTPException(status_code=400, detail="Empty text")

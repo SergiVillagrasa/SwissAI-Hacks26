@@ -68,6 +68,7 @@ def find_train_connections(
 
     resolved_origin, failure = resolve_station(origin, origin_candidates, "origin")
     if failure is not None:
+        failure.provenance = build_provenance(settings)
         return failure
 
     try:
@@ -75,18 +76,39 @@ def find_train_connections(
     except OjpSourceError as exc:
         return ConnectionSearchResult(status="source_error", message=str(exc))
 
-    resolved_destination, failure = resolve_station(
+    # Fast scope check before any disambiguation: if neither side could
+    # possibly resolve to a Swiss stop (resolved stop or any LIR
+    # candidate), no user pick can produce a Swiss-connected journey --
+    # answer out_of_scope directly instead of entering a clarification
+    # loop on foreign stations that can never succeed.
+    def _could_be_swiss(resolved, candidates) -> bool:
+        if resolved is not None:
+            return is_swiss_stop(resolved.stop_ref)
+        if not candidates:
+            return True  # unresolvable input -> let the failure path answer
+        return any(is_swiss_stop(c.stop_ref) for c in candidates)
+
+    resolved_origin, origin_failure = resolve_station(
+        origin, origin_candidates, "origin"
+    )
+    resolved_destination, destination_failure = resolve_station(
         destination, destination_candidates, "destination"
     )
-    if failure is not None:
-        return failure
-
-    if not is_swiss_stop(resolved_origin.stop_ref) and not is_swiss_stop(
-        resolved_destination.stop_ref
+    if not _could_be_swiss(resolved_origin, origin_candidates) and not _could_be_swiss(
+        resolved_destination, destination_candidates
     ):
         return ConnectionSearchResult(
-            status="out_of_scope", message=_OUT_OF_SCOPE_MESSAGE
+            status="out_of_scope",
+            message=_OUT_OF_SCOPE_MESSAGE,
+            provenance=build_provenance(settings),
         )
+
+    if origin_failure is not None:
+        origin_failure.provenance = build_provenance(settings)
+        return origin_failure
+    if destination_failure is not None:
+        destination_failure.provenance = build_provenance(settings)
+        return destination_failure
 
     effective_departure_time = departure_time
     effective_arrival_time = arrival_time if departure_time is None else None
@@ -144,6 +166,7 @@ def find_train_connections(
                 f"No connections found between '{resolved_origin.name}' and "
                 f"'{resolved_destination.name}' for the requested time."
             ),
+            provenance=build_provenance(settings),
         )
 
     if used_margin:

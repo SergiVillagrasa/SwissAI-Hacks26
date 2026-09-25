@@ -266,12 +266,38 @@ cd swiss-grounding-mcp/server
 uv run pytest -v
 ```
 
-Current status: **168 unit tests passing, 0 failures**, plus 6 live
-compliance scenarios gated behind `SWISSCOM_LIVE_EVAL=1`
-(`tests/test_swisscom_compliance.py`). The Galtea benchmark run
-(`galtea_eval.py`, requires `GALTEA_API_KEY` and the `eval` dependency
-group) reported **51/51 evaluations SUCCESS** on the final run —
-see `docs/VOICE_ASSISTANT_ES.md` for the full report.
+Current status: **172 unit tests passing, 6 skipped** (live-gated
+compliance scenarios behind `SWISSCOM_LIVE_EVAL=1`).
+
+### Galtea evaluation
+
+`galtea_eval.py` (requires `GALTEA_API_KEY` and the `eval` dependency
+group) runs the product's 51-case benchmark through Galtea. Two modes:
+
+- `GALTEA_EVAL_MODE=backend` (default): drives the real agent-backend over
+  `POST /api/chat` (SSE), forwarding full message history so multi-turn
+  clarification flows work end-to-end. Point
+  `GALTEA_AGENT_BACKEND_URL` at a running backend (default
+  `http://127.0.0.1:3001`).
+- `GALTEA_EVAL_MODE=local`: in-process regex router + ToolBox fallback.
+
+`GALTEA_VERSION_ID` selects the product version to score against. Latest
+benchmarks (judge score = 1 means the rubric was met):
+
+| Run | Score |
+|---|---|
+| `run_ho9bp5amhh6h6hjs50w2ib4r` | 30/51 (58.8%) |
+| `run_varh5bh3j4rjourh902ey8lr` | 37/51 (72.5%) |
+| `run_fjma5fcs7ihponr045qdvgp1` | 36/51 (1 skipped — backend restart mid-run) |
+| `run_k4b5lc4d3hvf9zivajtjjlsd` | 41/51 (80.4%) |
+| `run_rkmov6y22asf32x87wss3v90` | 40/51 (78.4%) |
+| `run_eq6z6vzt8vycxm7565kspq65` | 38/50 scored (1 skipped — network drop mid-run) |
+
+Residual score-0 cases are dominated by rubrics that cannot be met
+honestly today: sub-second latency (`ytt8`, real backend calls take
+1–7 s), UTC retrieval timestamps on prose-only meta turns (`zk73`), and
+source-string/schema judges applied to turns where no tool ran
+(`rir49`, `ft9g`).
 
 ## Voice assistant
 
