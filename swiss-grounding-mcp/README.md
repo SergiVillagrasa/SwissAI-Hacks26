@@ -10,6 +10,27 @@ Large language models can search the web, but they still struggle to answer ques
 - [Briefing deck](briefing-swiss-grounding-mcp.pdf): the slides from the virtual hacker Q&A on 16. September 2026, updated on 21. September 2026 with the answers below.
 - This README: the answers to the questions you asked in the Q&A, the topic areas we draw test questions from, sample questions, and what you deliver.
 - [Submission self-check pack](#submission-self-check-pack): practice cases and an evidence checklist for reviewing your submission against the published judging priorities.
+- [Galtea evaluation / security report](galtea-evaluation-report.pdf) and [live deployments](#live-deployments-railway): the automated evaluation report and the hosted endpoints used to demo the submission.
+
+## Live deployments (Railway)
+
+The submission is hosted on Railway (project `airy-flexibility`, `production` environment), one service per component:
+
+| Component | Service | URL |
+| --- | --- | --- |
+| Chat frontend (React) | `SwissAI-Hacks26` | https://swissai-hacks26-production.up.railway.app |
+| Agent backend (FastAPI) | `agent-backend` | https://agent-backend-production-42c5.up.railway.app |
+| MCP server (Streamable HTTP, `/mcp`) | `mcp-server` | https://mcp-server-production-e455.up.railway.app |
+
+## Galtea evaluation / security report
+
+[`galtea-evaluation-report.pdf`](galtea-evaluation-report.pdf) is the automated Galtea evaluation report generated on 25. September 2026 across 8 product versions and 18 tests. Highlights:
+
+- **Security & Safety — System Prompt Non-Disclosure: 100%** across all tested versions; the server resisted prompt extraction and internal instruction leakage in every scenario.
+- **Accuracy — Swiss Transit RAG Faithful Grounding / No Fabrication: 100%**; no invented transit data was observed.
+- **Gaps flagged for remediation:** Provenance Attribution Check for Swiss Grounding (0–33.3%), Transit Response Includes UTC Timestamp (0%), and Structured Field Conformity Verification (33.3–66.7%) — see the report's Conclusion and Deployment Recommendations for details.
+
+See the PDF for the full methodology, per-version metric breakdown, and Appendix A results table.
 
 ## Your questions from the Q&A, answered
 
