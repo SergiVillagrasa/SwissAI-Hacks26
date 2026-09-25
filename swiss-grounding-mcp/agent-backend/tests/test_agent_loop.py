@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from swiss_grounding_mcp.domain.models import ConnectionSearchResult, FlightFareSearchResult
 
-from agent_backend import agent_loop
+from agent_backend import agent_graph
 from agent_backend.agent_loop import run_chat
 
 
@@ -69,7 +69,8 @@ def test_plain_text_reply_emits_token_then_done():
         settings=None, model="gpt-4o-mini",
     ))
 
-    assert events == [
+    chat_events = [event for event in events if event["type"] in {"token", "widget", "done"}]
+    assert chat_events == [
         {"type": "token", "text": "Hello there."},
         {"type": "done"},
     ]
@@ -81,7 +82,7 @@ def test_single_tool_call_emits_widget_before_final_text(monkeypatch):
         assert arguments == {"origin": "Bern", "destination": "Zürich HB"}
         return ConnectionSearchResult(status="ok", connections=[])
 
-    monkeypatch.setattr(agent_loop, "dispatch", fake_dispatch)
+    monkeypatch.setattr(agent_graph, "dispatch", fake_dispatch)
 
     fake_openai = _FakeOpenAI([
         _tool_call_response([_tool_call("call_1", "find_connections", '{"origin": "Bern", "destination": "Zürich HB"}')]),
@@ -94,15 +95,15 @@ def test_single_tool_call_emits_widget_before_final_text(monkeypatch):
         settings="settings", model="gpt-4o-mini",
     ))
 
-    assert events[0]["type"] == "widget"
     widget_events = [event for event in events if event["type"] == "widget"]
     assert len(widget_events) == 1
     assert widget_events[0]["tool"] == "find_connections"
     assert widget_events[0]["status"] == "ok"
-    assert events[-2] == {"type": "token", "text": "Here are your options."}
+    token_event = {"type": "token", "text": "Here are your options."}
+    assert token_event in events
     assert events[-1] == {"type": "done"}
     # the widget must appear before the follow-up text (ordering matters for the UI)
-    assert events.index(widget_events[0]) < len(events) - 2
+    assert events.index(widget_events[0]) < events.index(token_event)
 
 
 def test_flight_fares_tool_call_forwards_flight_fares_client(monkeypatch):
@@ -111,7 +112,7 @@ def test_flight_fares_tool_call_forwards_flight_fares_client(monkeypatch):
         assert flight_fares_client == "serpapi"
         return FlightFareSearchResult(status="ok", flights=[])
 
-    monkeypatch.setattr(agent_loop, "dispatch", fake_dispatch)
+    monkeypatch.setattr(agent_graph, "dispatch", fake_dispatch)
 
     fake_openai = _FakeOpenAI([
         _tool_call_response([
@@ -146,6 +147,6 @@ def test_openai_failure_emits_source_error_widget_and_done():
         settings=None, model="gpt-4o-mini",
     ))
 
-    assert events[0]["type"] == "widget"
-    assert events[0]["status"] == "source_error"
+    widget_events = [event for event in events if event["type"] == "widget"]
+    assert widget_events[0]["status"] == "source_error"
     assert events[-1] == {"type": "done"}

@@ -3,9 +3,15 @@ import { Composer } from "./components/Composer";
 import { ChatThread } from "./components/ChatThread";
 import { VoiceBorderGlow } from "./components/VoiceBorderGlow";
 import { GlassTile } from "./components/GlassTile";
+import { AppShell } from "./components/AppShell";
 import { useVoiceAgent } from "./lib/useVoiceAgent";
 import { streamChat } from "./lib/sse";
-import type { ChatMessage, WidgetEvent } from "./lib/types";
+import { isExecutionEvent, type ChatMessage, type WidgetEvent } from "./lib/types";
+import { usePage } from "./navigation/usePage";
+import { RunProvider } from "./workflow/RunProvider";
+import { useRun } from "./workflow/runContext";
+import { WorkflowPage } from "./pages/WorkflowPage";
+import { WorkflowBoundary } from "./workflow/WorkflowBoundary";
 
 export interface Turn {
   id: string;
@@ -20,8 +26,10 @@ function makeId(): string {
   return Math.random().toString(36).slice(2);
 }
 
-export default function App() {
+function AppContent() {
   const [turns, setTurns] = useState<Turn[]>([]);
+  const { page, navigate } = usePage();
+  const { acceptEvent, markDisconnected } = useRun();
   const [history, setHistory] = useState<ChatMessage[]>([]);
   const [pending, setPending] = useState(false);
   const [pendingTurnId, setPendingTurnId] = useState<string | null>(null);
@@ -46,7 +54,9 @@ export default function App() {
     let assistantText = "";
     try {
       for await (const event of streamChat(BACKEND_URL, nextHistory)) {
-        if (event.type === "token") {
+        if (isExecutionEvent(event)) {
+          acceptEvent(event);
+        } else if (event.type === "token") {
           assistantText += event.text;
           setTurns((current) =>
             current.map((turn) =>
@@ -65,7 +75,8 @@ export default function App() {
       }
       setHistory((current) => [...current, { role: "assistant", content: assistantText }]);
       return assistantText;
-    } catch (error) {
+    } catch {
+      markDisconnected();
       const fallback = "Something went wrong reaching the assistant. Please try again.";
       setTurns((current) =>
         current.map((turn) => (turn.id === assistantTurn.id ? { ...turn, text: fallback } : turn))
@@ -110,7 +121,10 @@ export default function App() {
     ) : null;
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
+    <AppShell page={page} onNavigate={navigate}>
+      {page === "workflow" ? (
+        <WorkflowBoundary onGoHome={() => navigate("home")}><WorkflowPage onGoHome={() => navigate("home")} /></WorkflowBoundary>
+      ) : <div className="flex h-full flex-col overflow-hidden">
       {voiceActive && <VoiceBorderGlow state={voice.state} level={voice.level} />}
       {turns.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
@@ -145,6 +159,11 @@ export default function App() {
           </div>
         </>
       )}
-    </div>
+      </div>}
+    </AppShell>
   );
+}
+
+export default function App() {
+  return <RunProvider><AppContent /></RunProvider>;
 }

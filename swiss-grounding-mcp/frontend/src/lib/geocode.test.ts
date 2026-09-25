@@ -23,6 +23,7 @@ describe("geocode", () => {
   });
 
   it("returns null without calling the API when no token is configured", async () => {
+    vi.stubEnv("VITE_MAPBOX_TOKEN", "");
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 

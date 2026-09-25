@@ -46,6 +46,16 @@ structured, verifiable widgets rather than free-form generated text.
   status banner (fallback/clarification).
 - Chat model: linear turn list (`user` / `assistant`), assistant turns can
   carry zero or more widgets alongside streamed text.
+- The application has a two-item menu: Home preserves the current chat and
+  result-widget experience; Workflow is a separate page showing live execution
+  maps for frontend-initiated runs.
+- The Workflow page communicates understandable progress and source/tool use
+  for end users, with safe technical details available on demand; it never
+  exposes private model reasoning.
+- LangGraph orchestration and execution events belong to the agent backend.
+  The standalone MCP server, tool schemas, and compatibility with external MCP
+  clients remain independent and unchanged. Visualization failures must never
+  interrupt the underlying query.
 - Desktop/tablet is the primary target for this hackathon demo; mobile must
   not be broken but is not the optimization priority.
 - Hackathon demo project — no existing brand identity, logo, or product name

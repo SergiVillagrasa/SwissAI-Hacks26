@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workflow layout directions</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #172033; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: radial-gradient(circle at 10% 0%, #f7fbff 0, #dcecff 35%, #a9ceff 100%); min-height: 100vh; }
+    main { width: min(1500px, calc(100% - 48px)); margin: 0 auto; padding: 42px 0 80px; }
+    .eyebrow { color: #0877e5; font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 8px 0 8px; font-size: clamp(32px, 4vw, 52px); letter-spacing: -.045em; font-weight: 650; }
+    .intro { max-width: 780px; margin: 0 0 28px; color: #506078; font-size: 17px; line-height: 1.55; }
+    .options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+    .option { position: relative; min-width: 0; padding: 14px; border: 1px solid rgba(255,255,255,.72); border-radius: 30px; background: rgba(255,255,255,.46); box-shadow: 0 24px 70px rgba(37,87,150,.16), inset 0 1px 0 white; backdrop-filter: blur(28px); cursor: pointer; transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+    .option:hover { transform: translateY(-4px); box-shadow: 0 30px 80px rgba(37,87,150,.22), inset 0 1px 0 white; }
+    .option.selected { border-color: #0a84ff; box-shadow: 0 0 0 3px rgba(10,132,255,.18), 0 30px 80px rgba(37,87,150,.22); }
+    .tag { position: absolute; z-index: 3; top: 26px; right: 26px; padding: 6px 10px; border-radius: 999px; background: rgba(10,132,255,.12); color: #0869c8; font-size: 10px; font-weight: 750; letter-spacing: .1em; }
+    .mock { min-height: 430px; overflow: hidden; border-radius: 22px; background: linear-gradient(145deg, rgba(250,253,255,.88), rgba(228,241,255,.6)); border: 1px solid rgba(255,255,255,.85); }
+    .bar { display: flex; align-items: center; justify-content: space-between; height: 46px; padding: 0 14px; border-bottom: 1px solid rgba(62,116,178,.12); font-size: 11px; font-weight: 650; }
+    .nav { display: flex; gap: 5px; padding: 4px; border-radius: 999px; background: rgba(255,255,255,.58); }
+    .nav span { padding: 5px 8px; border-radius: 999px; color: #6c7888; }
+    .nav .active { color: #0b6fd3; background: white; box-shadow: 0 2px 8px rgba(32,83,145,.12); }
+    .canvas { position: relative; padding: 18px; min-height: 384px; }
+    .runhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .title { font-size: 15px; font-weight: 700; }
+    .status { padding: 5px 9px; color: #0b7a4a; background: rgba(57,191,122,.12); border-radius: 999px; font-size: 10px; font-weight: 650; }
+    .node { position: relative; padding: 12px; border-radius: 16px; background: rgba(255,255,255,.76); border: 1px solid rgba(255,255,255,.95); box-shadow: 0 8px 22px rgba(45,91,146,.12); }
+    .node strong { display: block; font-size: 11px; }
+    .node small { display: block; margin-top: 4px; color: #7b8796; font-size: 9px; line-height: 1.35; }
+    .done::before, .live::before, .wait::before { content: ""; position: absolute; width: 7px; height: 7px; border-radius: 50%; top: 15px; right: 13px; }
+    .done::before { background: #20b66a; }
+    .live::before { background: #0a84ff; box-shadow: 0 0 0 5px rgba(10,132,255,.12); }
+    .wait::before { background: #c7d2df; }
+    .detail { margin-top: 8px; padding: 8px 9px; border-radius: 10px; color: #58708b; background: rgba(221,237,255,.55); font-size: 9px; }
+    .fold-flow { display: grid; grid-template-columns: 1fr 1.12fr 1fr 1fr; align-items: center; gap: 12px; margin-top: 62px; }
+    .fold-flow .node { min-height: 102px; }
+    .fold-flow .live { transform: translateY(-16px); min-height: 145px; }
+    .fold-flow .node:not(:last-child)::after { content: ""; position: absolute; left: calc(100% + 1px); top: 50%; width: 12px; height: 1px; background: #7cb8ef; }
+    .river { position: relative; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px 34px; align-items: center; }
+    .river .source { grid-column: 1; }
+    .river .source.two { margin-top: 8px; }
+    .river .merge { grid-column: 2; grid-row: 1 / span 2; }
+    .river .answer { grid-column: 3; grid-row: 1 / span 2; }
+    .river .source::after, .river .merge::after { content: ""; position: absolute; left: 100%; top: 50%; width: 34px; height: 1px; background: linear-gradient(90deg,#7cb8ef,#0a84ff); }
+    .river .source::before { content: ""; position: absolute; left: calc(100% + 27px); top: 50%; width: 7px; height: 7px; border-radius: 50%; background: #0a84ff; transform: translateY(-3px); }
+    .rail { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; margin-top: 64px; }
+    .rail .node { min-height: 110px; }
+    .rail .node:not(:last-child)::after { content: ""; position: absolute; top: 28px; left: calc(100% + 1px); width: 25px; height: 2px; background: #74afe6; }
+    .rail .node:not(:last-child)::before { content: ""; position: absolute; z-index: 2; top: 24px; left: calc(100% + 20px); border-left: 6px solid #74afe6; border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+    .meta { padding: 18px 10px 8px; }
+    .meta h2 { margin: 0 0 6px; font-size: 19px; letter-spacing: -.02em; }
+    .meta p { margin: 0; color: #5a687b; font-size: 13px; line-height: 1.5; }
+    .footer { margin-top: 24px; color: #53647a; font-size: 14px; }
+    @media (max-width: 1050px) { .options { grid-template-columns: 1fr; } .mock { min-height: 390px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">Workflow page · layout decision</div>
+    <h1>How should a live run unfold?</h1>
+    <p class="intro">All three directions preserve the existing liquid-glass world, the two-page Home / Workflow navigation, and expandable safe details. Choose the structure that makes progress easiest to understand.</p>
+    <div class="options">
+      <article class="option" data-choice="deployment-strip" onclick="toggleSelect(this)">
+        <span class="tag">THE ROLL</span>
+        <div class="mock">
+          <div class="bar"><span>Swiss Grounding</span><div class="nav"><span>Home</span><span class="active">Workflow</span></div></div>
+          <div class="canvas">
+            <div class="runhead"><div><div class="title">Finding trains from Bern to Zürich</div><small>Live execution · 8 seconds</small></div><span class="status">Running</span></div>
+            <div class="fold-flow">
+              <div class="node done"><strong>Understand</strong><small>Travel request recognized</small></div>
+              <div class="node live"><strong>Check connections</strong><small>Searching authoritative Swiss transport data</small><div class="detail">find_connections<br>Bern → Zürich HB · 1.2s</div></div>
+              <div class="node wait"><strong>Verify</strong><small>Confirm source and freshness</small></div>
+              <div class="node wait"><strong>Prepare</strong><small>Build the result card</small></div>
+            </div>
+          </div>
+        </div>
+        <div class="meta"><h2>Deployment Strip</h2><p>A single horizontal journey. The active stage unfolds to reveal detail while completed stages fold back into compact proof.</p></div>
+      </article>
+      <article class="option" data-choice="provenance-river" onclick="toggleSelect(this)">
+        <div class="mock">
+          <div class="bar"><span>Swiss Grounding</span><div class="nav"><span>Home</span><span class="active">Workflow</span></div></div>
+          <div class="canvas">
+            <div class="runhead"><div><div class="title">Finding trains from Bern to Zürich</div><small>Live execution · 8 seconds</small></div><span class="status">Running</span></div>
+            <div class="river">
+              <div class="node source done"><strong>Your request</strong><small>Bern to Zürich today</small></div>
+              <div class="node source two done"><strong>Swiss transport source</strong><small>Authoritative timetable data</small><div class="detail">find_connections · completed</div></div>
+              <div class="node merge live"><strong>Ground and verify</strong><small>Matching the request to current source results</small><div class="detail">3 valid connections<br>Source checked moments ago</div></div>
+              <div class="node answer wait"><strong>Travel answer</strong><small>Connection card and concise guidance</small></div>
+            </div>
+          </div>
+        </div>
+        <div class="meta"><h2>Provenance River</h2><p>Request and authoritative source flow together into a verified answer. Best at making grounding and provenance tangible.</p></div>
+      </article>
+      <article class="option" data-choice="railway-signal" onclick="toggleSelect(this)">
+        <div class="mock">
+          <div class="bar"><span>Swiss Grounding</span><div class="nav"><span>Home</span><span class="active">Workflow</span></div></div>
+          <div class="canvas">
+            <div class="runhead"><div><div class="title">Finding trains from Bern to Zürich</div><small>Live execution · 8 seconds</small></div><span class="status">Running</span></div>
+            <div class="rail">
+              <div class="node done"><strong>Request understood</strong><small>Route, date, and transport mode extracted</small><div class="detail">Completed · 0.8s</div></div>
+              <div class="node live"><strong>Swiss data lookup</strong><small>Checking live connection options</small><div class="detail">find_connections<br>Running · 1.2s</div></div>
+              <div class="node wait"><strong>Answer ready</strong><small>Waiting to assemble your result</small></div>
+            </div>
+          </div>
+        </div>
+        <div class="meta"><h2>Railway Signal Path</h2><p>A familiar left-to-right signal line. The simplest scan, with each operational stage behaving like a block section.</p></div>
+      </article>
+    </div>
+    <p class="footer">Click one direction, then return to the terminal and tell me what feels right or what you would combine.</p>
+  </main>
+</body>
+</html>
