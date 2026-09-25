@@ -22,6 +22,10 @@ const sampleData = {
       arrival: "2026-09-24T19:47:00Z",
       duration_minutes: 103,
       changes: 1,
+      origin_latitude: 46.948,
+      origin_longitude: 7.4474,
+      destination_latitude: 47.3779,
+      destination_longitude: 8.5403,
       legs: [
         { mode: "rail", line: "IC 8", from_name: "Bern", to_name: "Zürich HB", departure: "2026-09-24T18:04:00Z", arrival: "2026-09-24T18:57:00Z" },
       ],
