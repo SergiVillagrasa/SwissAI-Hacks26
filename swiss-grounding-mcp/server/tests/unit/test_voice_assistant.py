@@ -17,6 +17,8 @@ import voice_assistant as va
 from swiss_grounding_mcp.domain.models import (
     Connection,
     ConnectionSearchResult,
+    FareProduct,
+    FareSearchResult,
     StationBoardResult,
     StopCandidate,
     StopEvent,
@@ -35,6 +37,17 @@ class StubTools:
                 departure="2026-03-01T10:04:00+01:00",
                 arrival="2026-03-01T11:00:00+01:00",
                 duration_minutes=56, changes=0)],
+        )
+
+    def check_public_transport_fares(self, origin, destination, departure_time=None,
+                                     travel_class="2", discount_card=None, sort_by=None):
+        self.calls.append(("check_public_transport_fares", origin, destination, sort_by))
+        return FareSearchResult(
+            status="success",
+            fares=[FareProduct(product="Single ticket", price_chf=31.0,
+                               class_of_travel="2")],
+            booking_url="https://sbb.ch/en?von=Bern&nach=Z%C3%BCrich%20HB",
+            sorted_by=sort_by,
         )
 
     def get_station_board(self, station, mode="departures", *a, **k):
@@ -147,6 +160,39 @@ def test_board_station_strips_time_qualifiers(text, expected_station):
     tools = StubTools()
     va.route_intent(text, tools)
     assert tools.calls[0][1].lower() == expected_station
+
+
+def test_routes_to_fares_for_ticket_question():
+    tools = StubTools()
+    name, result = va.route_intent(
+        "how much is a ticket from Bern to Zurich?", tools)
+    assert name == "check_public_transport_fares"
+    assert tools.calls[0][0] == "check_public_transport_fares"
+    assert tools.calls[0][3] is None  # no stated preference -> no sort
+    assert result.status == "success"
+
+
+def test_routes_to_fares_sorted_when_user_says_cheapest():
+    tools = StubTools()
+    va.route_intent("cheapest fare from Bern to Zurich", tools)
+    assert tools.calls[0][3] == "price"
+
+
+def test_fare_rendered_for_speech_mentions_sbb_link_on_screen():
+    text = va._say(StubTools().check_public_transport_fares("Bern", "Zurich"))
+    assert "SBB" in text and "screen" in text and "sbb.ch" in text
+
+
+def test_dispatch_tool_runs_check_public_transport_fares():
+    import json as _json
+    tools = StubTools()
+    out = va._dispatch_tool(tools, "check_public_transport_fares",
+                            {"origin": "Bern", "destination": "Zurich",
+                             "sort_by": "price"})
+    payload = _json.loads(out)
+    assert tools.calls[0] == ("check_public_transport_fares", "Bern", "Zurich", "price")
+    assert payload["status"] == "success"
+    assert payload["booking_url"].startswith("https://sbb.ch/")
 
 
 def test_routes_to_disruptions():

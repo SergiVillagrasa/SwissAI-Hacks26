@@ -75,6 +75,7 @@ def check_public_transport_fares(
     departure_time: str | None = None,
     travel_class: str = "2",
     discount_card: str | None = None,
+    sort_by: str | None = None,
     *,
     client,
     settings: Settings,
@@ -159,12 +160,17 @@ def check_public_transport_fares(
         fares = []
 
     if fares:
+        sorted_by = None
+        if sort_by == "price":
+            fares = sorted(fares, key=lambda fare: fare.price_chf)
+            sorted_by = "price"
         return FareSearchResult(
             status="success",
             message="Live fares retrieved.",
             fares=fares,
             booking_url=booking_url,
             provenance=provenance,
+            sorted_by=sorted_by,
         )
 
     return FareSearchResult(

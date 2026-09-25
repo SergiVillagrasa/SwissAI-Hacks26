@@ -62,6 +62,7 @@ class ConnectionSearchResult(BaseModel):
     connections: list[Connection] = Field(default_factory=list)
     candidates: list[StopCandidate] = Field(default_factory=list)
     provenance: Provenance | None = None
+    sorted_by: str | None = None
 
 
 class StopEvent(BaseModel):
@@ -98,6 +99,7 @@ class FareSearchResult(BaseModel):
     booking_url: str | None = None
     candidates: list[StopCandidate] = Field(default_factory=list)
     provenance: Provenance | None = None
+    sorted_by: str | None = None
 
 
 class Disruption(BaseModel):
