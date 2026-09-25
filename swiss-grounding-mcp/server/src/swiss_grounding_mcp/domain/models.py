@@ -151,6 +151,7 @@ class Flight(BaseModel):
     departure: FlightEndpoint
     arrival: FlightEndpoint
     flight_status: str | None = None
+    booking_url: str | None = None
 
 
 class AviationProvenance(BaseModel):

@@ -73,7 +73,10 @@ _SYSTEM_PROMPT_TEMPLATE = (
     "BOOKING LINK: check_public_transport_fares returns a booking_url -- "
     "the official SBB purchase link for the journey. The fares card shows "
     "a 'Book on SBB' button that opens it in a new tab; point the user to "
-    "that button in one short sentence whenever a fares result is shown."
+    "that button in one short sentence whenever a fares result is shown. "
+    "Likewise, flight tools return a booking_url per flight, shown as a "
+    "'Book flight' link on the flight card; mention it in one short "
+    "sentence whenever a flight result is displayed."
 )
 
 _VOICE_PROMPT_ADDON = (
@@ -82,7 +85,9 @@ _VOICE_PROMPT_ADDON = (
     "answers short and never read URLs aloud. When a fares result "
     "includes a booking_url, always say explicitly that you have left "
     "the official SBB purchase link on their screen so they can "
-    "complete the purchase securely."
+    "complete the purchase securely. Do the same when a flight result "
+    "includes a booking_url: say the official airline booking link is "
+    "on their screen."
 )
 
 _MAX_TOOL_ROUNDS = 4

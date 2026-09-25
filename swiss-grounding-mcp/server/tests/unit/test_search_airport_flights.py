@@ -131,6 +131,34 @@ def test_destination_airport_filter_excludes_non_matching_flights():
     assert result.flights[0].arrival.airport.iata == "JFK"
 
 
+def test_answered_flights_include_https_booking_urls():
+    client = StubAerodataboxClient(windows=[_TWO_FLIGHTS_WINDOW_1, _EMPTY_WINDOW])
+
+    result = search_airport_flights(
+        "departure", "2026-09-25", "JFK", None, None, 10, client=client, settings=_settings()
+    )
+
+    assert result.status == "answered"
+    assert result.flights[0].booking_url == (
+        "https://www.swiss.com/us/en/Book/ZRH-JFK/from-2026-09-25"
+    )
+
+
+def test_easyjet_flight_gets_easyjet_booking_portal():
+    windows = [
+        {"departures": [_departure_item("U2456", "LGW", airline_iata="U2")], "arrivals": []},
+        _EMPTY_WINDOW,
+    ]
+    client = StubAerodataboxClient(windows=windows)
+
+    result = search_airport_flights(
+        "departure", "2026-09-25", "LGW", None, None, 10, client=client, settings=_settings()
+    )
+
+    assert result.status == "answered"
+    assert result.flights[0].booking_url == "https://www.easyjet.com"
+
+
 def test_no_matching_flights_returns_insufficient_evidence():
     client = StubAerodataboxClient(windows=[_EMPTY_WINDOW, _EMPTY_WINDOW])
 
