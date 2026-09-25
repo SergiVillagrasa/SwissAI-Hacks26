@@ -213,5 +213,7 @@ class FlightToTrainResult(BaseModel):
     message: str | None = None
     flight: Flight | None = None
     train_connections: list[Connection] = Field(default_factory=list)
+    train_booking_url: str | None = None
+    train_price_chf: float | None = None
     flight_provenance: AviationProvenance | None = None
     rail_provenance: Provenance | None = None

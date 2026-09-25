@@ -1,5 +1,5 @@
 from swiss_grounding_mcp.config.settings import Settings
-from swiss_grounding_mcp.domain.models import Connection, StopCandidate
+from swiss_grounding_mcp.domain.models import Connection, FareProduct, StopCandidate
 from swiss_grounding_mcp.sources.aerodatabox.client import AerodataboxSourceError
 from swiss_grounding_mcp.tools.connect_flight_to_train import connect_flight_to_train
 
@@ -40,8 +40,9 @@ class StubAerodataboxClient:
 
 
 class StubOjpClient:
-    def __init__(self):
+    def __init__(self, fares=None):
         self.trip_calls = []
+        self.fares = fares if fares is not None else []
 
     def location_information(self, name):
         return [StopCandidate(name=name, stop_ref=f"ch:1:sloid:{abs(hash(name)) % 9999}", probability=1.0)]
@@ -57,6 +58,9 @@ class StubOjpClient:
                 legs=[],
             )
         ]
+
+    def fare_request(self, origin_ref, destination_ref, **kwargs):
+        return self.fares
 
 
 def _settings() -> Settings:
@@ -116,6 +120,42 @@ def test_flight_lookup_success_computes_buffered_departure_and_calls_ojp():
     assert result.rail_provenance is not None
     assert result.rail_provenance is not result.flight_provenance
     assert ojp_client.trip_calls[0]["departure_time"] == "2026-09-25T23:10:00+00:00"
+
+
+def test_answered_result_includes_sbb_booking_link_and_cheapest_fare():
+    ojp_client = StubOjpClient(
+        fares=[
+            FareProduct(product="Single ticket 1st", price_chf=51.0, class_of_travel="1"),
+            FareProduct(product="Single ticket 2nd", price_chf=31.0, class_of_travel="2"),
+        ]
+    )
+    result = connect_flight_to_train(
+        "LX15", "2026-09-25", None, "Bern", 60, 3,
+        aviation_client=StubAerodataboxClient(items=_LX15_ARRIVAL_ITEMS),
+        ojp_client=ojp_client,
+        settings=_settings(),
+    )
+
+    assert result.status == "answered"
+    assert result.train_booking_url is not None
+    assert result.train_booking_url.startswith("https://sbb.ch/en?")
+    assert "nach=Bern" in result.train_booking_url
+    assert "date=2026-09-25" in result.train_booking_url
+    assert result.train_price_chf == 31.0
+
+
+def test_unavailable_fares_still_include_sbb_booking_link_without_price():
+    result = connect_flight_to_train(
+        "LX15", "2026-09-25", None, "Bern", 60, 3,
+        aviation_client=StubAerodataboxClient(items=_LX15_ARRIVAL_ITEMS),
+        ojp_client=StubOjpClient(fares=[]),
+        settings=_settings(),
+    )
+
+    assert result.status == "answered"
+    assert result.train_booking_url is not None
+    assert result.train_booking_url.startswith("https://sbb.ch/en?")
+    assert result.train_price_chf is None
 
 
 def test_confirmed_arrival_time_skips_flight_lookup():

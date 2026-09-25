@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from swiss_grounding_mcp.config.settings import Settings
 from swiss_grounding_mcp.domain.models import FlightToTrainResult
 from swiss_grounding_mcp.evidence.provenance import build_provenance
+from swiss_grounding_mcp.tools.fares import build_sbb_deep_link, check_public_transport_fares
 from swiss_grounding_mcp.tools.find_connections import find_train_connections
 from swiss_grounding_mcp.tools.find_flight_by_number import find_flight_by_number
 
@@ -104,6 +105,23 @@ def connect_flight_to_train(
             flight_provenance=flight_provenance,
         )
 
+    train_booking_url = build_sbb_deep_link(
+        _ZRH_STATION_NAME, destination_station, train_departure_time[:10]
+    )
+    train_price_chf = None
+    if hasattr(ojp_client, "fare_request"):
+        fare_result = check_public_transport_fares(
+            _ZRH_STATION_NAME,
+            destination_station,
+            train_departure_time,
+            client=ojp_client,
+            settings=settings,
+        )
+        if fare_result.status == "success" and fare_result.fares:
+            train_price_chf = min(fare.price_chf for fare in fare_result.fares)
+            if fare_result.booking_url:
+                train_booking_url = fare_result.booking_url
+
     return FlightToTrainResult(
         status="answered",
         message=(
@@ -112,6 +130,8 @@ def connect_flight_to_train(
         ),
         flight=flight,
         train_connections=train_result.connections,
+        train_booking_url=train_booking_url,
+        train_price_chf=train_price_chf,
         flight_provenance=flight_provenance,
         rail_provenance=train_result.provenance or build_provenance(settings),
     )
