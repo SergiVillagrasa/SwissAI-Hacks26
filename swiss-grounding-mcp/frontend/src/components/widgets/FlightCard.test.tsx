@@ -9,7 +9,7 @@ const sampleFlight = {
   departure: { airport: { iata: "ZRH", icao: "LSZH", name: "Zurich Airport", timezone: null }, scheduled: "2026-09-25T10:20:00+02:00", estimated: null, actual: null, terminal: "1", gate: "A12", delay_minutes: 5 },
   arrival: { airport: { iata: "JFK", icao: "KJFK", name: "John F. Kennedy Intl", timezone: null }, scheduled: "2026-09-25T14:10:00-04:00", estimated: null, actual: null, terminal: "4", gate: null, delay_minutes: null },
   flight_status: "scheduled",
-  booking_url: "https://www.swiss.com/us/en/Book/ZRH-JFK/from-2026-09-25",
+  booking_url: "https://www.google.com/travel/flights?q=Flights+from+ZRH+to+JFK+on+2026-09-25",
 };
 
 describe("FlightCard", () => {
@@ -30,7 +30,7 @@ describe("FlightCard", () => {
     render(<FlightCard data={{ flight: sampleFlight, flights: [] }} onSelect={() => {}} />);
 
     const link = screen.getByRole("link", { name: /book flight lx14/i });
-    expect(link).toHaveAttribute("href", "https://www.swiss.com/us/en/Book/ZRH-JFK/from-2026-09-25");
+    expect(link).toHaveAttribute("href", "https://www.google.com/travel/flights?q=Flights+from+ZRH+to+JFK+on+2026-09-25");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noreferrer");
     expect(link).toHaveTextContent("Book on SWISS");
@@ -57,7 +57,7 @@ describe("FlightCard", () => {
     render(<FlightCard data={{ flight: null, flights: [sampleFlight] }} onSelect={onSelect} />);
 
     const link = screen.getByRole("link", { name: /book flight lx14/i });
-    expect(link).toHaveAttribute("href", "https://www.swiss.com/us/en/Book/ZRH-JFK/from-2026-09-25");
+    expect(link).toHaveAttribute("href", "https://www.google.com/travel/flights?q=Flights+from+ZRH+to+JFK+on+2026-09-25");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noreferrer");
 

@@ -15,7 +15,7 @@ describe("FlightToTrainCard", () => {
             departure: { airport: { iata: "JFK", icao: "KJFK", name: "JFK", timezone: null }, scheduled: null, estimated: null, actual: null, terminal: null, gate: null, delay_minutes: null },
             arrival: { airport: { iata: "ZRH", icao: "LSZH", name: "Zurich Airport", timezone: null }, scheduled: "2026-09-25T14:10:00+02:00", estimated: null, actual: null, terminal: "2", gate: null, delay_minutes: null },
             flight_status: "scheduled",
-            booking_url: "https://www.swiss.com/us/en/Book/JFK-ZRH/from-2026-09-25",
+            booking_url: "https://www.google.com/travel/flights?q=Flights+from+JFK+to+ZRH+on+2026-09-25",
           },
           train_connections: [
             { departure: "2026-09-25T15:10:00+02:00", arrival: "2026-09-25T16:00:00+02:00", duration_minutes: 50, changes: 0, legs: [] },
@@ -30,7 +30,7 @@ describe("FlightToTrainCard", () => {
     expect(screen.getByText(/50 min/)).toBeInTheDocument();
 
     const link = screen.getByRole("link", { name: /book flight lx14/i });
-    expect(link).toHaveAttribute("href", "https://www.swiss.com/us/en/Book/JFK-ZRH/from-2026-09-25");
+    expect(link).toHaveAttribute("href", "https://www.google.com/travel/flights?q=Flights+from+JFK+to+ZRH+on+2026-09-25");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noreferrer");
   });

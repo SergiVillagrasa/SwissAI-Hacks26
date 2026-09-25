@@ -140,11 +140,11 @@ def test_answered_flights_include_https_booking_urls():
 
     assert result.status == "answered"
     assert result.flights[0].booking_url == (
-        "https://www.swiss.com/us/en/Book/ZRH-JFK/from-2026-09-25"
+        "https://www.google.com/travel/flights?q=Flights+from+ZRH+to+JFK+on+2026-09-25"
     )
 
 
-def test_easyjet_flight_gets_easyjet_booking_portal():
+def test_easyjet_flight_gets_prefilled_booking_url():
     windows = [
         {"departures": [_departure_item("U2456", "LGW", airline_iata="U2")], "arrivals": []},
         _EMPTY_WINDOW,
@@ -156,7 +156,9 @@ def test_easyjet_flight_gets_easyjet_booking_portal():
     )
 
     assert result.status == "answered"
-    assert result.flights[0].booking_url == "https://www.easyjet.com"
+    assert result.flights[0].booking_url == (
+        "https://www.google.com/travel/flights?q=Flights+from+ZRH+to+LGW+on+2026-09-25"
+    )
 
 
 def test_no_matching_flights_returns_insufficient_evidence():
