@@ -57,11 +57,9 @@ body {
   padding: 0.6rem 0.75rem;
 }
 
-/* Every row (the brand mark, and each nav button) puts its icon in a
-   fixed-size slot of the same dimensions. Since every row also shares
-   the same padding, the slot always starts at the same x-offset from
-   the rail edge, so icons line up whether the row's actual glyph is
-   16px (nav-icon) or a 28px badge (app-nav__mark). */
+/* Every nav button puts its icon in a fixed-size slot of the same
+   dimensions. Since every row also shares the same padding, the slot
+   always starts at the same x-offset from the rail edge. */
 .nav-icon-slot {
   display: flex;
   align-items: center;
@@ -71,23 +69,22 @@ body {
   flex-shrink: 0;
 }
 
-.app-nav__mark {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 0.6rem;
-  background: rgba(10, 132, 255, 0.14);
-  color: #0a84ff;
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.app-nav__header strong {
+/* The wordmark grows from a small collapsed thumbnail to its full size
+   as the rail expands, mirroring the .nav-label treatment below. */
+.app-nav__logo {
+  height: 14px;
+  width: auto;
   flex: 1;
   min-width: 0;
-  font-size: 0.85rem;
+  object-fit: contain;
+  object-position: left center;
+  transition: height 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.app-nav:hover .app-nav__logo,
+.app-nav:focus-within .app-nav__logo,
+.app-nav[data-pinned="true"] .app-nav__logo {
+  height: 34px;
 }
 
 .app-nav__pin {
@@ -238,6 +235,10 @@ body {
 
   .app-nav__pin {
     display: none;
+  }
+
+  .app-nav__logo {
+    height: 26px;
   }
 
   .app-nav > div:not(.app-nav__header) {

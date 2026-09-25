@@ -1,6 +1,7 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import type { Page } from "../navigation/usePage";
 import { HomeIcon, SidebarPinIcon, WorkflowIcon } from "../workflow/icons";
+import swissTravelLogo from "../assets/swisstravel-logo.png";
 
 /**
  * A mouse click leaves the button focused, and :focus-within keeps the
@@ -46,8 +47,7 @@ export function AppShell({ page, onNavigate, children }: {
   return <div className={page === "workflow" ? "workflow-shell" : "home-shell"}>
     <nav className="app-nav" aria-label="Primary navigation" data-pinned={pinned}>
       <div className="app-nav__header">
-        <span className="nav-icon-slot"><span className="app-nav__mark" aria-hidden>S</span></span>
-        <strong className="nav-label">Swiss Grounding</strong>
+        <img className="app-nav__logo" src={swissTravelLogo} alt="SwissTravel by Swisscom" />
         <button
           type="button"
           className="app-nav__pin"

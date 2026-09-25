@@ -122,10 +122,16 @@ friendly labels and do not claim access to model thought:
 5. Prepare response
 
 Stages may be repeated or inserted for additional tool rounds. A model response
-that needs no tool marks tool-related stages as `skipped`. A clarification
-result marks the run `waiting_for_input`; the next Home submission starts a new
-execution under the existing conversation behavior. Durable LangGraph
-interrupt/resume semantics are deferred with persistence.
+that needs no tool marks tool-related stages as `skipped`. The labels used for
+a skipped stage depend on whether any tool has already run in an earlier
+round of the same request: the first round uses "Invoke Swiss tool" / "Verify
+result" (nothing was looked up at all), while later rounds use "Additional
+Swiss tool call" / "Additional verification" (a tool already ran earlier and
+this round simply didn't need another one) so the graph never implies that an
+already-completed lookup was skipped. A clarification result marks the run
+`waiting_for_input`; the next Home submission starts a new execution under the
+existing conversation behavior. Durable LangGraph interrupt/resume semantics
+are deferred with persistence.
 
 ## 5. Execution Event Contract
 
