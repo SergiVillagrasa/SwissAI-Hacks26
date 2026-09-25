@@ -8,9 +8,34 @@
   backdrop-filter: none;
 }
 
-.workflow-shell .app-nav button[aria-current="page"] {
+.workflow-shell .app-nav button[aria-current="page"] .nav-icon-slot {
+  background: #f0f4f1;
+  border-radius: 0.6rem;
+  box-shadow: none;
+}
+
+.workflow-shell .app-nav:hover button[aria-current="page"] .nav-icon-slot,
+.workflow-shell .app-nav:focus-within button[aria-current="page"] .nav-icon-slot,
+.workflow-shell .app-nav[data-pinned="true"] button[aria-current="page"] .nav-icon-slot {
+  background: transparent;
+}
+
+.workflow-shell .app-nav:hover button[aria-current="page"],
+.workflow-shell .app-nav:focus-within button[aria-current="page"],
+.workflow-shell .app-nav[data-pinned="true"] button[aria-current="page"] {
   background: #f0f4f1;
   box-shadow: none;
+}
+
+@media (max-width: 700px) {
+  .workflow-shell .app-nav button[aria-current="page"] .nav-icon-slot {
+    background: transparent;
+  }
+
+  .workflow-shell .app-nav button[aria-current="page"] {
+    background: #f0f4f1;
+    box-shadow: none;
+  }
 }
 
 .workflow-page {

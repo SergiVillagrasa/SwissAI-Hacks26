@@ -13,23 +13,123 @@ body {
 
 .home-shell,
 .workflow-shell {
-  display: grid;
-  grid-template-columns: 184px minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
+  position: relative;
   height: 100dvh;
+  overflow: hidden;
 }
 
+/* Collapsed by default: a slim icon rail that overlays the content edge
+   (rather than reserving grid space) so expanding it never reflows the
+   chat/workflow area underneath — it just extends over it, like a
+   Finder/VS Code sidebar. Hover, keyboard focus, or the pin button
+   extend it; content keeps a fixed margin matching the collapsed width. */
 .app-nav {
+  position: absolute;
+  inset: 0 auto 0 0;
   z-index: 30;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  padding: 1.25rem 1rem;
+  gap: 1.5rem;
+  width: 72px;
+  padding: 1.25rem 0.75rem;
   border-right: 1px solid rgba(100, 116, 139, 0.16);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(18px);
+  overflow: hidden;
+  transition: width 200ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 200ms ease;
 }
 
-.app-nav > div {
+.app-nav:hover,
+.app-nav:focus-within,
+.app-nav[data-pinned="true"] {
+  width: 224px;
+  box-shadow: 16px 0 32px -8px rgba(15, 23, 42, 0.18);
+}
+
+.app-nav__header {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 28px;
+  flex-shrink: 0;
+  /* Match the buttons' own padding below so the icon slot lands at the
+     exact same inset from the rail edge in every row — see .nav-icon-slot. */
+  padding: 0.6rem 0.75rem;
+}
+
+/* Every row (the brand mark, and each nav button) puts its icon in a
+   fixed-size slot of the same dimensions. Since every row also shares
+   the same padding, the slot always starts at the same x-offset from
+   the rail edge, so icons line up whether the row's actual glyph is
+   16px (nav-icon) or a 28px badge (app-nav__mark). */
+.nav-icon-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.app-nav__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 0.6rem;
+  background: rgba(10, 132, 255, 0.14);
+  color: #0a84ff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.app-nav__header strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+
+.app-nav__pin {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 0;
+  height: 26px;
+  border-radius: 0.55rem;
+  color: #94a3b8;
+  opacity: 0;
+  overflow: hidden;
+  transition: width 200ms cubic-bezier(0.22, 1, 0.36, 1), opacity 140ms ease, color 160ms ease, background 160ms ease;
+}
+
+/* Collapsed by default, the pin button takes up no width so the brand
+   mark stays centered on the same axis as the nav icons below it — it
+   only claims space once the header actually has room to show it. */
+.app-nav:hover .app-nav__pin,
+.app-nav:focus-within .app-nav__pin,
+.app-nav[data-pinned="true"] .app-nav__pin {
+  width: 26px;
+  opacity: 1;
+}
+
+.app-nav__pin:hover {
+  background: rgba(100, 116, 139, 0.14);
+  color: #334155;
+}
+
+.app-nav__pin[aria-pressed="true"] {
+  color: #0a84ff;
+  background: rgba(10, 132, 255, 0.14);
+}
+
+.pin-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.app-nav > div:not(.app-nav__header) {
   display: grid;
   gap: 0.35rem;
 }
@@ -52,14 +152,55 @@ body {
 
 .app-nav button[aria-current="page"] {
   color: #0f172a;
+}
+
+/* Collapsed: the selected highlight is a small square sitting right on
+   the icon slot (matching the brand mark above it), not a bar spanning
+   the whole rail. Expanded: the highlight moves to the full button so
+   it reads as one pill around the icon + label, like before. */
+.app-nav button[aria-current="page"] .nav-icon-slot {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 0.6rem;
+  box-shadow: 0 3px 14px rgba(30, 64, 175, 0.09);
+}
+
+.app-nav:hover button[aria-current="page"] .nav-icon-slot,
+.app-nav:focus-within button[aria-current="page"] .nav-icon-slot,
+.app-nav[data-pinned="true"] button[aria-current="page"] .nav-icon-slot {
+  background: transparent;
+  box-shadow: none;
+}
+
+.app-nav:hover button[aria-current="page"],
+.app-nav:focus-within button[aria-current="page"],
+.app-nav[data-pinned="true"] button[aria-current="page"] {
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 3px 14px rgba(30, 64, 175, 0.09);
 }
 
+/* Labels stay mounted (so keyboard focus can still reach/expand the rail)
+   but collapse to nothing visually until the rail is expanded. */
+.nav-label {
+  display: inline-block;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity 140ms ease, max-width 200ms ease;
+}
+
+.app-nav:hover .nav-label,
+.app-nav:focus-within .nav-label,
+.app-nav[data-pinned="true"] .nav-label {
+  max-width: 140px;
+  opacity: 1;
+}
+
 .app-content {
+  height: 100%;
   min-width: 0;
   min-height: 0;
-  height: 100%;
+  margin-left: 72px;
   overflow: hidden;
 }
 
@@ -70,21 +211,60 @@ body {
 @media (max-width: 700px) {
   .home-shell,
   .workflow-shell {
+    display: grid;
     grid-template-columns: 1fr;
     grid-template-rows: auto minmax(0, 1fr);
+    height: 100dvh;
   }
 
+  /* No hover on touch: the rail becomes a static, always-expanded top bar
+     instead of a collapse/expand affordance. */
   .app-nav {
+    position: static;
+    width: auto;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+    gap: 1rem;
     padding: 0.75rem 1rem;
     border-right: 0;
     border-bottom: 1px solid rgba(100, 116, 139, 0.16);
+    overflow: visible;
   }
 
-  .app-nav > div {
+  .app-nav__header {
+    flex: 0 0 auto;
+  }
+
+  .app-nav__pin {
+    display: none;
+  }
+
+  .app-nav > div:not(.app-nav__header) {
     display: flex;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .nav-label {
+    max-width: none;
+    opacity: 1;
+  }
+
+  /* No hover/pin concept on the mobile top bar — the selected highlight
+     always reads as the full icon+label pill, never the collapsed square. */
+  .app-nav button[aria-current="page"] .nav-icon-slot {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .app-nav button[aria-current="page"] {
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 3px 14px rgba(30, 64, 175, 0.09);
+  }
+
+  .app-content {
+    margin-left: 0;
   }
 }
 
@@ -377,6 +557,13 @@ body {
   .newtons-cradle__dot:first-child,
   .newtons-cradle__dot:last-child {
     animation: none;
+  }
+
+  /* Sidebar still expands/collapses, just without the animated width tween. */
+  .app-nav,
+  .nav-label,
+  .app-nav__pin {
+    transition: none;
   }
 
   /* !important needed to override the Tailwind `animate-rise` utility, which
