@@ -36,6 +36,7 @@ def dispatch(
             arguments.get("departure_time"),
             arguments.get("arrival_time"),
             arguments.get("results", 3),
+            arguments.get("sort_by"),
             client=ojp_client,
             settings=settings,
         )
@@ -59,6 +60,7 @@ def dispatch(
             departure_time=arguments.get("departure_time"),
             travel_class=arguments.get("travel_class", "2"),
             discount_card=arguments.get("discount_card"),
+            sort_by=arguments.get("sort_by"),
             client=ojp_client,
             settings=settings,
         )

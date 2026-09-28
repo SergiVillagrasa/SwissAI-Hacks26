@@ -24,6 +24,8 @@ interface Flight {
   departure: FlightEndpoint;
   arrival: FlightEndpoint;
   flight_status: string | null;
+  booking_url?: string | null;
+  price_chf?: number | null;
 }
 
 export interface FlightSearchData {
@@ -36,20 +38,68 @@ function fieldOrNotReported(value: string | null | undefined): string {
   return value ?? "not reported by source";
 }
 
-function FlightSummary({ flight, nested = false }: { flight: Flight; nested?: boolean }) {
+function airlineLabel(flight: Flight): string {
+  return flight.airline.name ?? flight.airline.iata ?? "the airline";
+}
+
+function airportCode(airport: AirportInfo): string {
+  return airport.iata ?? airport.icao ?? "not reported by source";
+}
+
+// booking_url is a Google Flights search link for any flight with distinct
+// origin/destination airports; it only lands on the airline's own portal
+// when the route is unknown. Label and announce it accordingly instead of
+// always claiming it's the airline's official booking page.
+function isGoogleFlightsUrl(url: string): boolean {
+  return url.startsWith("https://www.google.com/travel/flights");
+}
+
+function BookFlightButton({ flight, compact = false }: { flight: Flight; compact?: boolean }) {
+  if (!flight.booking_url) return null;
+  const airline = airlineLabel(flight);
+  const onGoogleFlights = isGoogleFlightsUrl(flight.booking_url);
+  const fullLabel = onGoogleFlights ? "Search on Google Flights" : `Book on ${airline}`;
+  const ariaSite = onGoogleFlights ? "Google Flights" : `the ${airline} website`;
   return (
-    <div className={nested ? `p-3.5 ${glassRowInteractive}` : "space-y-1"}>
+    <a
+      href={flight.booking_url}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={`Book flight ${flight.flight_number}, opens ${ariaSite} in a new tab`}
+      className={
+        compact
+          ? "inline-block shrink-0 cursor-pointer rounded-full bg-accent px-3 py-1.5 text-xs font-medium text-white shadow-glass-sm transition duration-200 hover:bg-accent-dim"
+          : "mt-3 inline-block cursor-pointer rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-glass-sm transition duration-200 hover:bg-accent-dim"
+      }
+    >
+      {compact ? "Book" : fullLabel}
+    </a>
+  );
+}
+
+function FlightSummary({ flight }: { flight: Flight }) {
+  return (
+    <div className="space-y-1">
       <div className="flex items-center justify-between text-sm font-semibold text-neutral-800">
         <span>{flight.flight_number}</span>
         <span className="text-accent-ink">{fieldOrNotReported(flight.airline.name)}</span>
       </div>
       <div className="mt-1 text-xs font-medium tracking-wide text-neutral-600">
-        {fieldOrNotReported(flight.departure.airport.iata)} → {fieldOrNotReported(flight.arrival.airport.iata)}
+        {airportCode(flight.departure.airport)} → {airportCode(flight.arrival.airport)}
       </div>
       <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-600">
         <span>Gate: {fieldOrNotReported(flight.departure.gate)}</span>
         <span>Terminal: {fieldOrNotReported(flight.departure.terminal)}</span>
         <span>Arrival gate: {fieldOrNotReported(flight.arrival.gate)}</span>
+      </div>
+      <div className="mt-1 text-xs">
+        {flight.price_chf != null ? (
+          <span className="tabular font-semibold text-accent-ink">
+            From CHF {flight.price_chf.toFixed(2)}
+          </span>
+        ) : (
+          <span className="text-neutral-500">Check live fares on booking</span>
+        )}
       </div>
     </div>
   );
@@ -60,6 +110,7 @@ export function FlightCard({ data, onSelect }: { data: FlightSearchData; onSelec
     return (
       <GlassTile className="p-4">
         <FlightSummary flight={data.flight} />
+        <BookFlightButton flight={data.flight} />
       </GlassTile>
     );
   }
@@ -67,9 +118,16 @@ export function FlightCard({ data, onSelect }: { data: FlightSearchData; onSelec
   return (
     <GlassTile className="space-y-2 p-4">
       {(data.flights ?? []).map((flight, index) => (
-        <button key={index} type="button" onClick={() => onSelect(flight)} className="block w-full text-left">
-          <FlightSummary flight={flight} nested />
-        </button>
+        <div key={index} className={`flex items-center gap-3 p-3.5 ${glassRowInteractive}`}>
+          <button
+            type="button"
+            onClick={() => onSelect(flight)}
+            className="min-w-0 flex-1 cursor-pointer text-left"
+          >
+            <FlightSummary flight={flight} />
+          </button>
+          <BookFlightButton flight={flight} compact />
+        </div>
       ))}
     </GlassTile>
   );

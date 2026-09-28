@@ -61,6 +61,7 @@ class ChatMessage(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: list[ChatMessage]
+    channel: str | None = None
 
 
 class SpeakRequest(BaseModel):
@@ -105,6 +106,7 @@ def chat(request: ChatRequest) -> StreamingResponse:
         for event in run_chat(
             messages,
             run_id=run_id,
+            channel=request.channel,
             openai_client=_openai_client,
             ojp_client=_ojp_client,
             aviation_client=_aviation_client,

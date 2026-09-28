@@ -62,6 +62,7 @@ class ConnectionSearchResult(BaseModel):
     connections: list[Connection] = Field(default_factory=list)
     candidates: list[StopCandidate] = Field(default_factory=list)
     provenance: Provenance | None = None
+    sorted_by: str | None = None
 
 
 class StopEvent(BaseModel):
@@ -98,6 +99,7 @@ class FareSearchResult(BaseModel):
     booking_url: str | None = None
     candidates: list[StopCandidate] = Field(default_factory=list)
     provenance: Provenance | None = None
+    sorted_by: str | None = None
 
 
 class Disruption(BaseModel):
@@ -155,6 +157,8 @@ class Flight(BaseModel):
     departure: FlightEndpoint
     arrival: FlightEndpoint
     flight_status: str | None = None
+    booking_url: str | None = None
+    price_chf: float | None = None
 
 
 class AviationProvenance(BaseModel):
@@ -216,5 +220,7 @@ class FlightToTrainResult(BaseModel):
     message: str | None = None
     flight: Flight | None = None
     train_connections: list[Connection] = Field(default_factory=list)
+    train_booking_url: str | None = None
+    train_price_chf: float | None = None
     flight_provenance: AviationProvenance | None = None
     rail_provenance: Provenance | None = None

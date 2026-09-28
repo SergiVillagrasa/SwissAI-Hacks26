@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from swiss_grounding_mcp.domain.booking_links import build_flight_booking_url
 from swiss_grounding_mcp.domain.models import AirlineInfo, AirportInfo, Flight, FlightEndpoint
 
 _ADB_UTC_FORMAT = "%Y-%m-%d %H:%MZ"
@@ -30,6 +31,13 @@ def _time_field_utc(endpoint_json: dict, field_name: str) -> str | None:
     if not field:
         return None
     return field.get("utc")
+
+
+def _time_field_local(endpoint_json: dict, field_name: str) -> str | None:
+    field = endpoint_json.get(field_name)
+    if not field:
+        return None
+    return field.get("local")
 
 
 def _delay_minutes(endpoint_json: dict) -> int | None:
@@ -70,10 +78,14 @@ def _parse_endpoint(endpoint_json: dict | None) -> FlightEndpoint:
 
 
 def _flight_date_from_item(item: dict) -> str:
-    departure_scheduled = _time_field_utc(item.get("departure") or {}, "scheduledTime")
-    normalized = _normalize_utc(departure_scheduled)
-    if normalized:
-        return normalized.split("T")[0]
+    # Booking sites key their date search on the departure airport's local
+    # calendar day, not the UTC day. Near midnight local time these can
+    # differ (e.g. a 00:30 ZRH departure is still the previous day in UTC),
+    # so derive the date from departure.scheduledTime.local rather than
+    # departure.scheduledTime.utc.
+    departure_scheduled_local = _time_field_local(item.get("departure") or {}, "scheduledTime")
+    if departure_scheduled_local:
+        return departure_scheduled_local.split(" ")[0]
     return ""
 
 
@@ -82,18 +94,31 @@ def parse_flight_items(items: list[dict]) -> list[Flight]:
     for item in items:
         airline_json = item.get("airline") or {}
         raw_number = item.get("number") or item.get("callSign") or ""
+        airline = AirlineInfo(
+            name=airline_json.get("name"),
+            iata=airline_json.get("iata"),
+            icao=airline_json.get("icao"),
+        )
+        departure = _parse_endpoint(item.get("departure"))
+        arrival = _parse_endpoint(item.get("arrival"))
+        flight_date = _flight_date_from_item(item)
         flights.append(
             Flight(
                 flight_number=_normalize_flight_number(raw_number),
-                flight_date=_flight_date_from_item(item),
-                airline=AirlineInfo(
-                    name=airline_json.get("name"),
-                    iata=airline_json.get("iata"),
-                    icao=airline_json.get("icao"),
-                ),
-                departure=_parse_endpoint(item.get("departure")),
-                arrival=_parse_endpoint(item.get("arrival")),
+                flight_date=flight_date,
+                airline=airline,
+                departure=departure,
+                arrival=arrival,
                 flight_status=item.get("status"),
+                booking_url=build_flight_booking_url(
+                    airline.iata,
+                    airline.icao,
+                    departure.airport.iata,
+                    arrival.airport.iata,
+                    flight_date or None,
+                    origin_icao=departure.airport.icao,
+                    destination_icao=arrival.airport.icao,
+                ),
             )
         )
     return flights

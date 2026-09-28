@@ -10,7 +10,7 @@ def _departure_item(number, arr_iata, arr_icao="XXXX", airline_iata="LX"):
         "airline": {"name": "Swiss", "iata": airline_iata, "icao": "SWR"},
         "departure": {
             "airport": {"iata": "ZRH", "icao": "LSZH", "name": "Zurich"},
-            "scheduledTime": {"utc": "2026-09-25 10:20Z"},
+            "scheduledTime": {"utc": "2026-09-25 10:20Z", "local": "2026-09-25 12:20+02:00"},
             "revisedTime": None,
             "runwayTime": None,
             "terminal": "1",
@@ -129,6 +129,36 @@ def test_destination_airport_filter_excludes_non_matching_flights():
     assert result.status == "answered"
     assert len(result.flights) == 1
     assert result.flights[0].arrival.airport.iata == "JFK"
+
+
+def test_answered_flights_include_https_booking_urls():
+    client = StubAerodataboxClient(windows=[_TWO_FLIGHTS_WINDOW_1, _EMPTY_WINDOW])
+
+    result = search_airport_flights(
+        "departure", "2026-09-25", "JFK", None, None, 10, client=client, settings=_settings()
+    )
+
+    assert result.status == "answered"
+    assert result.flights[0].booking_url == (
+        "https://www.google.com/travel/flights?q=Flights+from+ZRH+to+JFK+on+2026-09-25"
+    )
+
+
+def test_easyjet_flight_gets_prefilled_booking_url():
+    windows = [
+        {"departures": [_departure_item("U2456", "LGW", airline_iata="U2")], "arrivals": []},
+        _EMPTY_WINDOW,
+    ]
+    client = StubAerodataboxClient(windows=windows)
+
+    result = search_airport_flights(
+        "departure", "2026-09-25", "LGW", None, None, 10, client=client, settings=_settings()
+    )
+
+    assert result.status == "answered"
+    assert result.flights[0].booking_url == (
+        "https://www.google.com/travel/flights?q=Flights+from+ZRH+to+LGW+on+2026-09-25"
+    )
 
 
 def test_no_matching_flights_returns_insufficient_evidence():

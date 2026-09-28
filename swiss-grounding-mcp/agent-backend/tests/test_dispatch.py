@@ -11,10 +11,10 @@ class _Sentinel:
 def test_find_connections_forwards_arguments_and_clients(monkeypatch):
     captured = {}
 
-    def fake_find_train_connections(origin, destination, departure_time, arrival_time, results, *, client, settings):
+    def fake_find_train_connections(origin, destination, departure_time, arrival_time, results, sort_by=None, *, client, settings):
         captured.update(
             origin=origin, destination=destination, departure_time=departure_time,
-            arrival_time=arrival_time, results=results, client=client, settings=settings,
+            arrival_time=arrival_time, results=results, sort_by=sort_by, client=client, settings=settings,
         )
         return "connections-result"
 
@@ -33,8 +33,46 @@ def test_find_connections_forwards_arguments_and_clients(monkeypatch):
     assert captured["departure_time"] is None
     assert captured["arrival_time"] is None
     assert captured["results"] == 2
+    assert captured["sort_by"] is None
     assert captured["client"] is ojp_client
     assert captured["settings"] is settings
+
+
+def test_find_connections_forwards_sort_by(monkeypatch):
+    captured = {}
+
+    def fake_find_train_connections(origin, destination, departure_time, arrival_time, results, sort_by=None, *, client, settings):
+        captured["sort_by"] = sort_by
+        return "connections-result"
+
+    monkeypatch.setattr(dispatch_module, "find_train_connections", fake_find_train_connections)
+
+    dispatch(
+        "find_connections",
+        {"origin": "Bern", "destination": "Zürich HB", "sort_by": "departure"},
+        ojp_client=_Sentinel(), aviation_client=_Sentinel(), settings=_Sentinel(),
+    )
+
+    assert captured["sort_by"] == "departure"
+
+
+def test_check_public_transport_fares_forwards_sort_by(monkeypatch):
+    captured = {}
+
+    def fake_check_fares(origin, destination, departure_time=None, travel_class="2", discount_card=None, sort_by=None, *, client, settings):
+        captured.update(origin=origin, destination=destination, sort_by=sort_by)
+        return "fares-result"
+
+    monkeypatch.setattr(dispatch_module, "check_public_transport_fares", fake_check_fares)
+
+    result = dispatch(
+        "check_public_transport_fares",
+        {"origin": "Bern", "destination": "Zürich HB", "sort_by": "price"},
+        ojp_client=_Sentinel(), aviation_client=_Sentinel(), settings=_Sentinel(),
+    )
+
+    assert result == "fares-result"
+    assert captured["sort_by"] == "price"
 
 
 def test_find_flight_by_number_uses_aviation_client(monkeypatch):

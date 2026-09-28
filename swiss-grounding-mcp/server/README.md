@@ -142,11 +142,16 @@ at 18:01), the tool retries once with a small margin
 (`TRIP_TIME_MARGIN_MINUTES`, default 10 minutes, configurable) before
 reporting `not_found`, and says so in `message` when the margin was used.
 
+`sort_by` (optional) accepts `"departure"` to order the returned
+connections by soonest departure / shortest wait; the applied criterion is
+echoed back in the `sorted_by` field (`null` when the source ordering was
+kept).
+
 Output: a structured object with a `status` of `ok`, `needs_clarification`,
 `not_found`, `out_of_scope`, or `source_error`; a human-readable `message`;
 `connections` (only for `ok`); `candidates` (only for `needs_clarification`);
-and a `provenance` block with source name, URL, retrieval timestamp, and
-`timezone` (always `"UTC"`) (only for `ok`).
+`sorted_by`; and a `provenance` block with source name, URL, retrieval
+timestamp, and `timezone` (always `"UTC"`) (only for `ok`).
 
 ## The `get_station_board` tool
 
@@ -165,15 +170,19 @@ departure boards exist only for the Swiss network.
 
 Input: `origin` (str), `destination` (str), `departure_time` (ISO 8601,
 optional — defaults to "now"), `travel_class` (str, default `"2"`),
-`discount_card` (str, optional — e.g. `"Halbtax"`).
+`discount_card` (str, optional — e.g. `"Halbtax"`), and `sort_by`
+(optional — `"price"` orders fares from cheapest to most expensive; the
+applied criterion is echoed back in `sorted_by`).
 
 Output: `status` of `success`, `fallback_link`, `out_of_scope`,
 `needs_clarification`, or `source_error`; a human-readable `message`;
 `fares` (only for `success`) as a list of `FareProduct` objects with
-`product`, `price_chf`, `class_of_travel`, and `discount`; and a
-`booking_url` with an SBB timetable deep link for the requested journey
-whenever a price cannot be returned. International routes are refused as
-`out_of_scope` and return the SBB deep link without a guessed fare.
+`product`, `price_chf`, `class_of_travel`, and `discount`; `sorted_by`;
+and a `booking_url` with a pre-populated SBB deep link for the requested
+journey (origin, destination, and travel date when known) — the official
+purchase entry point, returned on every outcome. International routes are
+refused as `out_of_scope` and return the SBB deep link without a guessed
+fare.
 
 ## The `find_disruptions` tool
 

@@ -41,7 +41,7 @@ function AppContent() {
     node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
   }, [turns]);
 
-  async function handleSubmit(text: string): Promise<string> {
+  async function handleSubmit(text: string, channel: "text" | "voice" = "text"): Promise<string> {
     const userTurn: Turn = { id: makeId(), role: "user", text, widgets: [] };
     const assistantTurn: Turn = { id: makeId(), role: "assistant", text: "", widgets: [] };
     const nextHistory: ChatMessage[] = [...history, { role: "user", content: text }];
@@ -53,7 +53,7 @@ function AppContent() {
 
     let assistantText = "";
     try {
-      for await (const event of streamChat(BACKEND_URL, nextHistory)) {
+      for await (const event of streamChat(BACKEND_URL, nextHistory, channel)) {
         if (isExecutionEvent(event)) {
           acceptEvent(event);
         } else if (event.type === "token") {
@@ -88,7 +88,7 @@ function AppContent() {
     }
   }
 
-  const voice = useVoiceAgent(BACKEND_URL, handleSubmit);
+  const voice = useVoiceAgent(BACKEND_URL, (text) => handleSubmit(text, "voice"));
   const voiceActive = voice.state !== "idle";
 
   function handleMicClick() {

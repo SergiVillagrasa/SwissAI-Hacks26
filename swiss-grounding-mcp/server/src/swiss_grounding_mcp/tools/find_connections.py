@@ -43,6 +43,7 @@ def find_train_connections(
     departure_time: str | None,
     arrival_time: str | None,
     results: int,
+    sort_by: str | None = None,
     *,
     client,
     settings: Settings,
@@ -178,9 +179,18 @@ def find_train_connections(
         connection.destination_latitude = resolved_destination.latitude
         connection.destination_longitude = resolved_destination.longitude
 
+    sorted_by = None
+    if sort_by == "departure":
+        connections = sorted(
+            connections,
+            key=lambda c: (c.departure, c.duration_minutes, c.changes),
+        )
+        sorted_by = "departure"
+
     return ConnectionSearchResult(
         status="ok",
         message=("Connections found." + time_note) if time_note else None,
         connections=connections[:clamped_results],
         provenance=build_provenance(settings),
+        sorted_by=sorted_by,
     )

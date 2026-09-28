@@ -9,6 +9,7 @@ const sampleFlight = {
   departure: { airport: { iata: "ZRH", icao: "LSZH", name: "Zurich Airport", timezone: null }, scheduled: "2026-09-25T10:20:00+02:00", estimated: null, actual: null, terminal: "1", gate: "A12", delay_minutes: 5 },
   arrival: { airport: { iata: "JFK", icao: "KJFK", name: "John F. Kennedy Intl", timezone: null }, scheduled: "2026-09-25T14:10:00-04:00", estimated: null, actual: null, terminal: "4", gate: null, delay_minutes: null },
   flight_status: "scheduled",
+  booking_url: "https://www.google.com/travel/flights?q=Flights+from+ZRH+to+JFK+on+2026-09-25",
 };
 
 describe("FlightCard", () => {
@@ -25,12 +26,66 @@ describe("FlightCard", () => {
     expect(screen.getAllByText(/not reported by source/i).length).toBeGreaterThan(0);
   });
 
+  it("renders the booking link as an accessible new-tab anchor for a single flight", () => {
+    render(<FlightCard data={{ flight: sampleFlight, flights: [] }} onSelect={() => {}} />);
+
+    const link = screen.getByRole("link", { name: /book flight lx14/i });
+    expect(link).toHaveAttribute("href", "https://www.google.com/travel/flights?q=Flights+from+ZRH+to+JFK+on+2026-09-25");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noreferrer");
+    expect(link).toHaveTextContent("Search on Google Flights");
+  });
+
+  it("labels the booking link with the airline when it is not a Google Flights link", () => {
+    const portalFlight = { ...sampleFlight, booking_url: "https://www.swiss.com/ch/en/book-flights" };
+    render(<FlightCard data={{ flight: portalFlight, flights: [] }} onSelect={() => {}} />);
+
+    const link = screen.getByRole("link", { name: /book flight lx14/i });
+    expect(link).toHaveTextContent("Book on SWISS");
+  });
+
+  it("shows the live-fares hint when the flight has no price", () => {
+    render(<FlightCard data={{ flight: sampleFlight, flights: [] }} onSelect={() => {}} />);
+
+    expect(screen.getByText(/check live fares on booking/i)).toBeInTheDocument();
+    expect(screen.queryByText(/CHF/)).not.toBeInTheDocument();
+  });
+
+  it("shows the price when the flight payload includes one", () => {
+    render(
+      <FlightCard data={{ flight: { ...sampleFlight, price_chf: 189.5 }, flights: [] }} onSelect={() => {}} />
+    );
+
+    expect(screen.getByText(/CHF 189\.50/)).toBeInTheDocument();
+    expect(screen.queryByText(/check live fares/i)).not.toBeInTheDocument();
+  });
+
+  it("renders no booking link when booking_url is absent", () => {
+    const { booking_url: _omit, ...flightWithoutUrl } = sampleFlight;
+    render(<FlightCard data={{ flight: flightWithoutUrl, flights: [] }} onSelect={() => {}} />);
+
+    expect(screen.queryByRole("link", { name: /book/i })).not.toBeInTheDocument();
+  });
+
   it("renders a selectable list for a flight search result", () => {
     const onSelect = vi.fn();
     render(<FlightCard data={{ flight: null, flights: [sampleFlight], fields_missing: [] }} onSelect={onSelect} />);
 
     fireEvent.click(screen.getByRole("button", { name: /LX14/ }));
 
+    expect(onSelect).toHaveBeenCalledWith(sampleFlight);
+  });
+
+  it("renders a per-flight booking link in the search list without hijacking selection", () => {
+    const onSelect = vi.fn();
+    render(<FlightCard data={{ flight: null, flights: [sampleFlight] }} onSelect={onSelect} />);
+
+    const link = screen.getByRole("link", { name: /book flight lx14/i });
+    expect(link).toHaveAttribute("href", "https://www.google.com/travel/flights?q=Flights+from+ZRH+to+JFK+on+2026-09-25");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noreferrer");
+
+    fireEvent.click(screen.getByRole("button", { name: /LX14/ }));
     expect(onSelect).toHaveBeenCalledWith(sampleFlight);
   });
 });
