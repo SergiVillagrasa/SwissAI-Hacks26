@@ -10,7 +10,7 @@ _LX15_ARRIVAL_ITEMS = [
         "airline": {"name": "Swiss", "iata": "LX", "icao": "SWR"},
         "departure": {
             "airport": {"iata": "JFK", "icao": "KJFK", "name": "JFK"},
-            "scheduledTime": {"utc": "2026-09-25 09:00Z"},
+            "scheduledTime": {"utc": "2026-09-25 09:00Z", "local": "2026-09-25 05:00-04:00"},
             "revisedTime": None,
             "runwayTime": None,
             "terminal": None,

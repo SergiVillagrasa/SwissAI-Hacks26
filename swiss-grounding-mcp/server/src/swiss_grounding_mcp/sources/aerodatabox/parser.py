@@ -33,6 +33,13 @@ def _time_field_utc(endpoint_json: dict, field_name: str) -> str | None:
     return field.get("utc")
 
 
+def _time_field_local(endpoint_json: dict, field_name: str) -> str | None:
+    field = endpoint_json.get(field_name)
+    if not field:
+        return None
+    return field.get("local")
+
+
 def _delay_minutes(endpoint_json: dict) -> int | None:
     scheduled = _time_field_utc(endpoint_json, "scheduledTime")
     revised = _time_field_utc(endpoint_json, "revisedTime")
@@ -71,10 +78,14 @@ def _parse_endpoint(endpoint_json: dict | None) -> FlightEndpoint:
 
 
 def _flight_date_from_item(item: dict) -> str:
-    departure_scheduled = _time_field_utc(item.get("departure") or {}, "scheduledTime")
-    normalized = _normalize_utc(departure_scheduled)
-    if normalized:
-        return normalized.split("T")[0]
+    # Booking sites key their date search on the departure airport's local
+    # calendar day, not the UTC day. Near midnight local time these can
+    # differ (e.g. a 00:30 ZRH departure is still the previous day in UTC),
+    # so derive the date from departure.scheduledTime.local rather than
+    # departure.scheduledTime.utc.
+    departure_scheduled_local = _time_field_local(item.get("departure") or {}, "scheduledTime")
+    if departure_scheduled_local:
+        return departure_scheduled_local.split(" ")[0]
     return ""
 
 

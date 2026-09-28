@@ -10,7 +10,7 @@ def _departure_item(number, arr_iata, arr_icao="XXXX", airline_iata="LX"):
         "airline": {"name": "Swiss", "iata": airline_iata, "icao": "SWR"},
         "departure": {
             "airport": {"iata": "ZRH", "icao": "LSZH", "name": "Zurich"},
-            "scheduledTime": {"utc": "2026-09-25 10:20Z"},
+            "scheduledTime": {"utc": "2026-09-25 10:20Z", "local": "2026-09-25 12:20+02:00"},
             "revisedTime": None,
             "runwayTime": None,
             "terminal": "1",

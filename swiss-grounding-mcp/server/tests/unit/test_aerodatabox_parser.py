@@ -36,6 +36,50 @@ def test_parse_flight_items_maps_core_fields_and_normalizes_timestamps():
     assert flight.flight_status == "Scheduled"
 
 
+def test_parse_flight_items_uses_departure_local_date_across_utc_day_boundary():
+    # A 00:30 local departure from ZRH (UTC+2) lands on the previous UTC
+    # calendar day. The booking link must still search for the departure
+    # airport's local date, not the UTC date.
+    items = [
+        {
+            "number": "LX 999",
+            "status": "Scheduled",
+            "airline": {"name": "Swiss", "iata": "LX", "icao": "SWR"},
+            "departure": {
+                "airport": {"iata": "ZRH", "icao": "LSZH", "name": "Zurich"},
+                "scheduledTime": {
+                    "utc": "2026-09-24 22:30Z",
+                    "local": "2026-09-25 00:30+02:00",
+                },
+                "revisedTime": None,
+                "runwayTime": None,
+                "terminal": "1",
+                "gate": "A12",
+            },
+            "arrival": {
+                "airport": {"iata": "JFK", "icao": "KJFK", "name": "John F Kennedy Intl"},
+                "scheduledTime": {
+                    "utc": "2026-09-25 01:30Z",
+                    "local": "2026-09-24 21:30-04:00",
+                },
+                "revisedTime": None,
+                "runwayTime": None,
+                "terminal": "4",
+                "gate": None,
+            },
+        }
+    ]
+
+    flights = parse_flight_items(items)
+
+    assert len(flights) == 1
+    flight = flights[0]
+    assert flight.flight_date == "2026-09-25"
+    assert flight.booking_url == (
+        "https://www.google.com/travel/flights?q=Flights+from+ZRH+to+JFK+on+2026-09-25"
+    )
+
+
 def test_parse_flight_items_returns_empty_list_for_empty_array():
     items = _read_json("empty_by_number.json")
 
