@@ -258,10 +258,21 @@ def search_airport_flights(
 ) -> FlightSearchResult:
     """Search ZRH arrivals or departures for a date.
 
-    direction is 'arrival' or 'departure'. Filter by the exact IATA/ICAO
-    code of the other airport (a city or country name is not accepted;
-    the tool will ask for the precise airport code) and/or an airline
-    IATA code. Data via AeroDataBox (aerodatabox.com).
+    direction is 'arrival' or 'departure'. airport_iata, airport_icao, and
+    airline_iata are all optional — leave them all unset for generic
+    queries like "which flights depart from Zurich today", which returns
+    every matching ZRH flight for that direction/date (subject to limit).
+    For "which flights depart/arrive now" style questions, pass today's
+    date: results are sorted chronologically and flights that have
+    already departed/arrived are dropped, so you get the next upcoming
+    flights rather than everything since midnight. This only applies
+    when flight_date is today (ZRH local calendar day); other dates are
+    returned in full. If given, airport_iata/airport_icao must be the
+    *other* airport on the route (the origin for arrivals, the
+    destination for departures) — never ZRH/LSZH itself, since every
+    result already touches ZRH and that filter would match nothing. A
+    city or country name is not accepted either; the tool will ask for
+    the precise airport code. Data via AeroDataBox (aerodatabox.com).
     """
     return _search_airport_flights(
         direction,
