@@ -368,8 +368,12 @@ Add any one to `.env`; the active brain is printed at startup.
    `provenance.source_url` under `aerodatabox.com`.
 7. Call `get_airport_guidance` with `topic="transfers"`; confirm the
    `source_url` is under `flughafen-zuerich.ch`.
-8. Call `search_airport_flights` with `direction="departure"` and no
-   `airport_iata`/`airport_icao`/`airline_iata`; confirm `needs_context`.
+8. Call `search_airport_flights` with `direction="departure"`, today's
+   ZRH-local date, and no `airport_iata`/`airport_icao`/`airline_iata`;
+   confirm an `answered` response containing up to `limit` upcoming flights,
+   ordered chronologically with already-departed flights excluded. Repeat with
+   a non-current date and confirm the full schedule is eligible. Passing
+   `ZRH`/`LSZH` as the counterpart airport filter should return `needs_context`.
 9. Call `find_flight_by_number` with a nonexistent flight number;
    confirm `insufficient_evidence`, not a guessed answer.
 10. Temporarily set `AERODATABOX_API_KEY` to an empty value and call
