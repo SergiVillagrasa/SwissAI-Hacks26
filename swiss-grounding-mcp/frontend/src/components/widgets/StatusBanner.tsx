@@ -1,4 +1,5 @@
 import { GlassTile } from "../GlassTile";
+import { MarkdownText } from "../MarkdownText";
 
 interface StopCandidate {
   name: string;
@@ -19,7 +20,7 @@ export function StatusBanner({
 }) {
   return (
     <GlassTile className="p-4 text-sm text-neutral-700">
-      <p>{message ?? "This could not be answered."}</p>
+      <MarkdownText>{message ?? "This could not be answered."}</MarkdownText>
       {status === "needs_clarification" && candidates.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
           {candidates.map((candidate) => (

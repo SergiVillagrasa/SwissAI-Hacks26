@@ -1,6 +1,7 @@
 import type { Turn } from "../App";
 import { StatusBanner } from "./widgets/StatusBanner";
 import { NewtonsCradle } from "./NewtonsCradle";
+import { MarkdownText } from "./MarkdownText";
 import {
   DISPLAYABLE_STATUSES,
   WIDGET_COMPONENTS,
@@ -21,7 +22,9 @@ export function AssistantTurn({ turn, isPending = false, onClarify }: AssistantT
     <div className="space-y-3">
       {isWaiting && <NewtonsCradle />}
       {turn.text && (
-        <p className="max-w-2xl text-[15px] leading-relaxed text-neutral-700">{turn.text}</p>
+        <MarkdownText className="max-w-2xl text-[15px] leading-relaxed text-neutral-700">
+          {turn.text}
+        </MarkdownText>
       )}
       {turn.widgets.length > 0 && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
