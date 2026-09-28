@@ -46,22 +46,33 @@ function airportCode(airport: AirportInfo): string {
   return airport.iata ?? airport.icao ?? "not reported by source";
 }
 
+// booking_url is a Google Flights search link for any flight with distinct
+// origin/destination airports; it only lands on the airline's own portal
+// when the route is unknown. Label and announce it accordingly instead of
+// always claiming it's the airline's official booking page.
+function isGoogleFlightsUrl(url: string): boolean {
+  return url.startsWith("https://www.google.com/travel/flights");
+}
+
 function BookFlightButton({ flight, compact = false }: { flight: Flight; compact?: boolean }) {
   if (!flight.booking_url) return null;
   const airline = airlineLabel(flight);
+  const onGoogleFlights = isGoogleFlightsUrl(flight.booking_url);
+  const fullLabel = onGoogleFlights ? "Search on Google Flights" : `Book on ${airline}`;
+  const ariaSite = onGoogleFlights ? "Google Flights" : `the ${airline} website`;
   return (
     <a
       href={flight.booking_url}
       target="_blank"
       rel="noreferrer"
-      aria-label={`Book flight ${flight.flight_number} on ${airline}, opens the official booking site in a new tab`}
+      aria-label={`Book flight ${flight.flight_number}, opens ${ariaSite} in a new tab`}
       className={
         compact
           ? "inline-block shrink-0 cursor-pointer rounded-full bg-accent px-3 py-1.5 text-xs font-medium text-white shadow-glass-sm transition duration-200 hover:bg-accent-dim"
           : "mt-3 inline-block cursor-pointer rounded-full bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-glass-sm transition duration-200 hover:bg-accent-dim"
       }
     >
-      {compact ? "Book" : `Book on ${airline}`}
+      {compact ? "Book" : fullLabel}
     </a>
   );
 }

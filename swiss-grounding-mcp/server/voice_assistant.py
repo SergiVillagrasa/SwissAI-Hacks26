@@ -441,8 +441,7 @@ def _say(result: object) -> str:
         if result.booking_url:
             parts.append(
                 "I've left the official SBB booking link on your screen "
-                "so you can complete the purchase securely: "
-                f"{result.booking_url}"
+                "so you can complete the purchase securely."
             )
         return " ".join(parts) or _fallback(result.status, result.message, [])
 

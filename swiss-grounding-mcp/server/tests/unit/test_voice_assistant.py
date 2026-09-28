@@ -178,9 +178,12 @@ def test_routes_to_fares_sorted_when_user_says_cheapest():
     assert tools.calls[0][3] == "price"
 
 
-def test_fare_rendered_for_speech_mentions_sbb_link_on_screen():
+def test_fare_rendered_for_speech_mentions_sbb_link_on_screen_without_reading_url():
     text = va._say(StubTools().check_public_transport_fares("Bern", "Zurich"))
-    assert "SBB" in text and "screen" in text and "sbb.ch" in text
+    assert "SBB" in text and "screen" in text
+    # The link stays on-screen only; TTS must never read the URL aloud.
+    assert "sbb.ch" not in text
+    assert "https://" not in text
 
 
 def test_dispatch_tool_runs_check_public_transport_fares():

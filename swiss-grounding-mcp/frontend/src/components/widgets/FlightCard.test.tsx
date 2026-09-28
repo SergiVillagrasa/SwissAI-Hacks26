@@ -33,6 +33,14 @@ describe("FlightCard", () => {
     expect(link).toHaveAttribute("href", "https://www.google.com/travel/flights?q=Flights+from+ZRH+to+JFK+on+2026-09-25");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noreferrer");
+    expect(link).toHaveTextContent("Search on Google Flights");
+  });
+
+  it("labels the booking link with the airline when it is not a Google Flights link", () => {
+    const portalFlight = { ...sampleFlight, booking_url: "https://www.swiss.com/ch/en/book-flights" };
+    render(<FlightCard data={{ flight: portalFlight, flights: [] }} onSelect={() => {}} />);
+
+    const link = screen.getByRole("link", { name: /book flight lx14/i });
     expect(link).toHaveTextContent("Book on SWISS");
   });
 
