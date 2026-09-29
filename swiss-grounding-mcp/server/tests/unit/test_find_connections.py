@@ -497,6 +497,97 @@ def test_no_time_given_does_not_retry_on_empty_results():
     assert len(client.trip_calls) == 1
 
 
+def test_via_station_is_resolved_and_forwarded_to_trip_request():
+    client = StubOjpClient(
+        candidates_by_name={
+            "Geneve": [StopCandidate(name="Genève", stop_ref="ch:1:sloid:9000", probability=1.0)],
+            "Zürich HB": [
+                StopCandidate(name="Zürich HB", stop_ref="ch:1:sloid:8503000", probability=1.0)
+            ],
+            "Bern": [StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=1.0)],
+        },
+        connections=[_connection()],
+    )
+
+    result = find_train_connections(
+        "Geneve", "Zürich HB", None, None, 3, None, "Bern",
+        client=client, settings=_settings(),
+    )
+
+    assert result.status == "ok"
+    assert result.via_stop_name == "Bern"
+    assert client.trip_calls[0]["via_ref"] == "ch:1:sloid:7000"
+    assert client.trip_calls[0]["via_name"] == "Bern"
+
+
+def test_no_via_station_leaves_via_fields_unset():
+    client = StubOjpClient(
+        candidates_by_name={
+            "Bern": [StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=1.0)],
+            "Zürich HB": [
+                StopCandidate(name="Zürich HB", stop_ref="ch:1:sloid:8503000", probability=1.0)
+            ],
+        },
+        connections=[_connection()],
+    )
+
+    result = find_train_connections(
+        "Bern", "Zürich HB", None, None, 3, client=client, settings=_settings()
+    )
+
+    assert result.status == "ok"
+    assert result.via_stop_name is None
+    assert client.trip_calls[0]["via_ref"] is None
+    assert client.trip_calls[0]["via_name"] == ""
+
+
+def test_ambiguous_via_station_returns_needs_clarification():
+    client = StubOjpClient(
+        candidates_by_name={
+            "Geneve": [StopCandidate(name="Genève", stop_ref="ch:1:sloid:9000", probability=1.0)],
+            "Zürich HB": [
+                StopCandidate(name="Zürich HB", stop_ref="ch:1:sloid:8503000", probability=1.0)
+            ],
+            "Fribourg": [
+                StopCandidate(name="Fribourg/Freiburg", stop_ref="ch:1:sloid:7100", probability=0.62),
+                StopCandidate(
+                    name="Freiburg(Breisgau) Hbf", stop_ref="de:1:sloid:1", probability=0.58
+                ),
+            ],
+        },
+        connections=[_connection()],
+    )
+
+    result = find_train_connections(
+        "Geneve", "Zürich HB", None, None, 3, None, "Fribourg",
+        client=client, settings=_settings(),
+    )
+
+    assert result.status == "needs_clarification"
+    assert len(result.candidates) == 2
+    assert client.trip_calls == []
+
+
+def test_unresolvable_via_station_returns_not_found_without_trip_request():
+    client = StubOjpClient(
+        candidates_by_name={
+            "Geneve": [StopCandidate(name="Genève", stop_ref="ch:1:sloid:9000", probability=1.0)],
+            "Zürich HB": [
+                StopCandidate(name="Zürich HB", stop_ref="ch:1:sloid:8503000", probability=1.0)
+            ],
+            "Atlantis": [],
+        },
+    )
+
+    result = find_train_connections(
+        "Geneve", "Zürich HB", None, None, 3, None, "Atlantis",
+        client=client, settings=_settings(),
+    )
+
+    assert result.status == "not_found"
+    assert client.trip_calls == []
+
+
 def test_source_error_from_location_information_returns_source_error_status():
     client = StubOjpClient(
         raise_on_location=OjpSourceError("OJP returned HTTP 403"),

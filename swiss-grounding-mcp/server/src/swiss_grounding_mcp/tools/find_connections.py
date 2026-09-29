@@ -9,7 +9,7 @@ from swiss_grounding_mcp.evidence.provenance import build_provenance
 from swiss_grounding_mcp.sources.ojp.client import OjpSourceError
 from swiss_grounding_mcp.tools.resolution import is_swiss_stop, resolve_station
 
-_LIR_POOL = ThreadPoolExecutor(max_workers=2, thread_name_prefix="ojp-lir")
+_LIR_POOL = ThreadPoolExecutor(max_workers=3, thread_name_prefix="ojp-lir")
 
 _OUT_OF_SCOPE_MESSAGE = (
     "This service covers Swiss public transport and cross-border journeys "
@@ -44,6 +44,7 @@ def find_train_connections(
     arrival_time: str | None,
     results: int,
     sort_by: str | None = None,
+    via: str | None = None,
     *,
     client,
     settings: Settings,
@@ -58,9 +59,11 @@ def find_train_connections(
         )
 
     clamped_results = max(1, min(5, results))
+    via = via.strip() if via else None
 
     origin_future = _LIR_POOL.submit(client.location_information, origin)
     destination_future = _LIR_POOL.submit(client.location_information, destination)
+    via_future = _LIR_POOL.submit(client.location_information, via) if via else None
 
     try:
         origin_candidates = origin_future.result()
@@ -76,6 +79,18 @@ def find_train_connections(
         destination_candidates = destination_future.result()
     except OjpSourceError as exc:
         return ConnectionSearchResult(status="source_error", message=str(exc))
+
+    resolved_via = None
+    if via_future is not None:
+        try:
+            via_candidates = via_future.result()
+        except OjpSourceError as exc:
+            return ConnectionSearchResult(status="source_error", message=str(exc))
+
+        resolved_via, via_failure = resolve_station(via, via_candidates, "via station")
+        if via_failure is not None:
+            via_failure.provenance = build_provenance(settings)
+            return via_failure
 
     # Fast scope check before any disambiguation: if neither side could
     # possibly resolve to a Swiss stop (resolved stop or any LIR
@@ -127,6 +142,8 @@ def find_train_connections(
             departure_time=dep_time,
             arrival_time=arr_time,
             number_of_results=clamped_results,
+            via_ref=resolved_via.stop_ref if resolved_via else None,
+            via_name=resolved_via.name if resolved_via else "",
         )
 
     try:
@@ -161,11 +178,12 @@ def find_train_connections(
                     return ConnectionSearchResult(status="source_error", message=str(exc))
 
     if not connections:
+        via_note = f" via '{resolved_via.name}'" if resolved_via else ""
         return ConnectionSearchResult(
             status="not_found",
             message=(
                 f"No connections found between '{resolved_origin.name}' and "
-                f"'{resolved_destination.name}' for the requested time."
+                f"'{resolved_destination.name}'{via_note} for the requested time."
             ),
             provenance=build_provenance(settings),
         )
@@ -193,4 +211,5 @@ def find_train_connections(
         connections=connections[:clamped_results],
         provenance=build_provenance(settings),
         sorted_by=sorted_by,
+        via_stop_name=resolved_via.name if resolved_via else None,
     )

@@ -1,4 +1,6 @@
-import { GlassTile, glassRowInteractive } from "../GlassTile";
+import { useState } from "react";
+import { GlassTile, glassRowInteractive, glassRowSelected } from "../GlassTile";
+import { ExpandChevron } from "./ExpandChevron";
 
 interface AirportInfo {
   iata: string | null;
@@ -105,7 +107,33 @@ function FlightSummary({ flight }: { flight: Flight }) {
   );
 }
 
+function statusLabel(flight: Flight): string {
+  return flight.flight_status ? flight.flight_status.replace(/_/g, " ") : "not reported by source";
+}
+
+function FlightDetail({ flight }: { flight: Flight }) {
+  return (
+    <div className="space-y-2 border-t border-blue-200/70 bg-blue-50/40 p-3.5 text-xs text-neutral-700">
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        <span><span className="font-semibold text-neutral-600">Airline:</span> {fieldOrNotReported(flight.airline.name)}</span>
+        <span><span className="font-semibold text-neutral-600">Status:</span> {statusLabel(flight)}</span>
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        <span><span className="font-semibold text-neutral-600">Departure terminal:</span> {fieldOrNotReported(flight.departure.terminal)}</span>
+        <span><span className="font-semibold text-neutral-600">Departure gate:</span> {fieldOrNotReported(flight.departure.gate)}</span>
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1">
+        <span><span className="font-semibold text-neutral-600">Arrival terminal:</span> {fieldOrNotReported(flight.arrival.terminal)}</span>
+        <span><span className="font-semibold text-neutral-600">Arrival gate:</span> {fieldOrNotReported(flight.arrival.gate)}</span>
+      </div>
+      <BookFlightButton flight={flight} />
+    </div>
+  );
+}
+
 export function FlightCard({ data, onSelect }: { data: FlightSearchData; onSelect: (flight: Flight) => void }) {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
   if (data.flight) {
     return (
       <GlassTile className="p-4">
@@ -115,20 +143,38 @@ export function FlightCard({ data, onSelect }: { data: FlightSearchData; onSelec
     );
   }
 
+  function handleSelect(index: number, flight: Flight) {
+    setSelectedIndex((current) => (current === index ? null : index));
+    onSelect(flight);
+  }
+
   return (
     <GlassTile className="space-y-2 p-4">
-      {(data.flights ?? []).map((flight, index) => (
-        <div key={index} className={`flex items-center gap-3 p-3.5 ${glassRowInteractive}`}>
-          <button
-            type="button"
-            onClick={() => onSelect(flight)}
-            className="min-w-0 flex-1 cursor-pointer text-left"
+      {(data.flights ?? []).map((flight, index) => {
+        const isSelected = selectedIndex === index;
+        return (
+          <div
+            key={index}
+            className={`overflow-hidden ${glassRowInteractive} ${isSelected ? glassRowSelected : ""}`}
           >
-            <FlightSummary flight={flight} />
-          </button>
-          <BookFlightButton flight={flight} compact />
-        </div>
-      ))}
+            <div className="flex items-center gap-3 p-3.5">
+              <button
+                type="button"
+                onClick={() => handleSelect(index, flight)}
+                aria-expanded={isSelected}
+                className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left hover:bg-blue-50/60"
+              >
+                <div className="min-w-0 flex-1">
+                  <FlightSummary flight={flight} />
+                </div>
+                <ExpandChevron expanded={isSelected} />
+              </button>
+              <BookFlightButton flight={flight} compact />
+            </div>
+            {isSelected && <FlightDetail flight={flight} />}
+          </div>
+        );
+      })}
     </GlassTile>
   );
 }
