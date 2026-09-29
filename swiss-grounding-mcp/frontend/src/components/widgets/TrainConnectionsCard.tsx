@@ -1,8 +1,9 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { GlassTile, glassRowInteractive, glassRowSelected } from "../GlassTile";
 import { SortBadge } from "./SortBadge";
 import { ViaBadge } from "./ViaBadge";
 import { ExpandChevron } from "./ExpandChevron";
+import { useRouteWaypoints } from "../../lib/useRouteWaypoints";
 
 const RouteMap = lazy(() => import("./RouteMap").then((m) => ({ default: m.RouteMap })));
 
@@ -70,21 +71,11 @@ function transferStations(connection: Connection): string[] {
   return railLegs.slice(0, -1).map((leg) => leg.to_name);
 }
 
-/** Stable lat/lng pair for a numeric coordinate, memoized by value so a
- * parent re-render (e.g. while assistant text is still streaming) doesn't
- * hand RouteMap a brand-new object on every render. RouteMap's effect keys
- * off this reference to decide whether to rebuild its map, so a fresh
- * object each render would tear down and recreate the map continuously. */
-function useStableCoords(lat: number | null, lng: number | null): { lat: number; lng: number } | null {
-  return useMemo(() => (lat !== null && lng !== null ? { lat, lng } : null), [lat, lng]);
-}
-
 function ConnectionDetail({ connection }: { connection: Connection }) {
   const legs = connection.legs ?? [];
   const transfers = transferStations(connection);
   const bookingUrl = sbbDeepLink(connection);
-  const originCoords = useStableCoords(connection.origin_latitude, connection.origin_longitude);
-  const destinationCoords = useStableCoords(connection.destination_latitude, connection.destination_longitude);
+  const { waypoints, isResolving } = useRouteWaypoints(connection);
 
   return (
     <div className="space-y-3 border-t border-blue-200/70 bg-blue-50/40 p-3.5">
@@ -111,12 +102,7 @@ function ConnectionDetail({ connection }: { connection: Connection }) {
       {legs.length > 0 && (
         <div className="overflow-hidden rounded-2xl border border-white/50">
           <Suspense fallback={null}>
-            <RouteMap
-              origin={legs[0].from_name}
-              destination={legs[legs.length - 1].to_name}
-              originCoords={originCoords}
-              destinationCoords={destinationCoords}
-            />
+            <RouteMap waypoints={waypoints} isResolving={isResolving} />
           </Suspense>
         </div>
       )}
