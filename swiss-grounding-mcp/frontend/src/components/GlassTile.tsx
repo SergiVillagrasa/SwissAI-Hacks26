@@ -9,6 +9,9 @@ export const glassRow =
 export const glassRowInteractive =
   "rounded-2xl border border-white/50 bg-white/45 backdrop-blur-md transition duration-200 ease-out hover:-translate-y-0.5 hover:bg-white/70 hover:shadow-glass-pop";
 
+/** Applied to a selectable row's interactive classes when it is the active/expanded choice. */
+export const glassRowSelected = "border-blue-500 ring-2 ring-blue-400 bg-blue-50/40";
+
 export const glassPill =
   "rounded-full border border-white/60 bg-white/55 backdrop-blur-xl shadow-glass";
 

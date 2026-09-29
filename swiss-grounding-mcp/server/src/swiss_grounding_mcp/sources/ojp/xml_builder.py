@@ -77,6 +77,8 @@ def build_trip_request(
     departure_time: str | None = None,
     arrival_time: str | None = None,
     number_of_results: int = 3,
+    via_ref: str | None = None,
+    via_name: str = "",
     message_identifier: str | None = None,
     timestamp: str | None = None,
 ) -> bytes:
@@ -106,6 +108,21 @@ def build_trip_request(
     ).text = (destination_name or destination_ref)
     if departure_time is None and arrival_time is not None:
         ET.SubElement(destination, _ojp("DepArrTime")).text = arrival_time
+
+    # OJP 2.0's TripRequest schema (TripRequestGroup -> TripViaStructure)
+    # requires Via *after* Destination in element order (Origin,
+    # Destination, Via, ViaSystem, NotVia, NoChangeAt, Params -- a strict
+    # xs:sequence). ViaPoint's type is PlaceRefStructure itself (the same
+    # group Origin/Destination use inside their own PlaceRef element), so
+    # StopPointRef/Name sit directly inside <ViaPoint>, with no nested
+    # <PlaceRef> wrapper.
+    if via_ref:
+        via = ET.SubElement(trip_request, _ojp("Via"))
+        via_point = ET.SubElement(via, _ojp("ViaPoint"))
+        ET.SubElement(via_point, _siri("StopPointRef")).text = via_ref
+        ET.SubElement(
+            ET.SubElement(via_point, _ojp("Name")), _ojp("Text")
+        ).text = (via_name or via_ref)
 
     params = ET.SubElement(trip_request, _ojp("Params"))
     ET.SubElement(params, _ojp("NumberOfResults")).text = str(number_of_results)

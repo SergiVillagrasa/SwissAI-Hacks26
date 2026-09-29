@@ -9,52 +9,57 @@ export function RouteMap({ origin, destination, originCoords, destinationCoords,
   const [unavailable, setUnavailable] = useState(false);
 
   useEffect(() => {
-    if (!originCoords || !destinationCoords || !containerRef.current) {
+    if (!originCoords || !destinationCoords || !containerRef.current || !mapboxgl.accessToken) {
       setUnavailable(true);
       return;
     }
 
     setUnavailable(false);
 
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: "mapbox://styles/mapbox/light-v11",
-      center: [originCoords.lng, originCoords.lat],
-      zoom: 7,
-    });
-
-    map.on("load", () => {
-      const bounds = new mapboxgl.LngLatBounds();
-
-      bounds.extend([originCoords.lng, originCoords.lat]);
-      bounds.extend([destinationCoords.lng, destinationCoords.lat]);
-
-      map.fitBounds(bounds, {
-        padding: 50,
-        maxZoom: 12,
+    // Guard the whole SDK interaction: an invalid/expired token or any
+    // other mapbox-gl failure must degrade to the "unavailable" message
+    // instead of throwing inside an effect, which would otherwise crash
+    // the widget tree with no error boundary to catch it.
+    let map: mapboxgl.Map | null = null;
+    try {
+      map = new mapboxgl.Map({
+        container: containerRef.current,
+        style: "mapbox://styles/mapbox/light-v11",
+        center: [originCoords.lng, originCoords.lat],
+        zoom: 7,
       });
 
-      console.log("Adding origin marker:", [
-        originCoords.lng,
-        originCoords.lat,
-      ]);
+      map.on("error", (event) => {
+        console.error("RouteMap: mapbox-gl reported an error", event.error);
+        setUnavailable(true);
+      });
 
-      console.log("Adding destination marker:", [
-        destinationCoords.lng,
-        destinationCoords.lat,
-      ]);
+      map.on("load", () => {
+        if (!map) return;
+        const bounds = new mapboxgl.LngLatBounds();
 
-      new mapboxgl.Marker()
-        .setLngLat([originCoords.lng, originCoords.lat])
-        .addTo(map);
+        bounds.extend([originCoords.lng, originCoords.lat]);
+        bounds.extend([destinationCoords.lng, destinationCoords.lat]);
 
-      new mapboxgl.Marker()
-        .setLngLat([destinationCoords.lng, destinationCoords.lat])
-        .addTo(map);
-    });
+        map.fitBounds(bounds, {
+          padding: 50,
+          maxZoom: 12,
+        });
+
+        new mapboxgl.Marker().setLngLat([originCoords.lng, originCoords.lat]).addTo(map);
+        new mapboxgl.Marker().setLngLat([destinationCoords.lng, destinationCoords.lat]).addTo(map);
+      });
+    } catch (error) {
+      console.error("RouteMap: failed to initialize mapbox-gl", error);
+      setUnavailable(true);
+    }
 
     return () => {
-      map.remove();
+      try {
+        map?.remove();
+      } catch (error) {
+        console.error("RouteMap: failed to tear down mapbox-gl", error);
+      }
     };
   }, [originCoords, destinationCoords]);
 

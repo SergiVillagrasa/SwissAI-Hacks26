@@ -37,6 +37,7 @@ def dispatch(
             arguments.get("arrival_time"),
             arguments.get("results", 3),
             arguments.get("sort_by"),
+            arguments.get("via"),
             client=ojp_client,
             settings=settings,
         )

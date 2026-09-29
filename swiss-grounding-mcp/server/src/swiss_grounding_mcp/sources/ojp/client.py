@@ -78,6 +78,8 @@ class OjpClient:
         departure_time: str | None = None,
         arrival_time: str | None = None,
         number_of_results: int = 3,
+        via_ref: str | None = None,
+        via_name: str = "",
     ) -> list[Connection]:
         request_body = build_trip_request(
             origin_ref,
@@ -88,6 +90,8 @@ class OjpClient:
             departure_time=departure_time,
             arrival_time=arrival_time,
             number_of_results=number_of_results,
+            via_ref=via_ref,
+            via_name=via_name,
         )
         response_body = self._post(request_body)
         return parse_trip_response(response_body)

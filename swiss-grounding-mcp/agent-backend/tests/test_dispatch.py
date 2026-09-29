@@ -11,10 +11,10 @@ class _Sentinel:
 def test_find_connections_forwards_arguments_and_clients(monkeypatch):
     captured = {}
 
-    def fake_find_train_connections(origin, destination, departure_time, arrival_time, results, sort_by=None, *, client, settings):
+    def fake_find_train_connections(origin, destination, departure_time, arrival_time, results, sort_by=None, via=None, *, client, settings):
         captured.update(
             origin=origin, destination=destination, departure_time=departure_time,
-            arrival_time=arrival_time, results=results, sort_by=sort_by, client=client, settings=settings,
+            arrival_time=arrival_time, results=results, sort_by=sort_by, via=via, client=client, settings=settings,
         )
         return "connections-result"
 
@@ -34,6 +34,7 @@ def test_find_connections_forwards_arguments_and_clients(monkeypatch):
     assert captured["arrival_time"] is None
     assert captured["results"] == 2
     assert captured["sort_by"] is None
+    assert captured["via"] is None
     assert captured["client"] is ojp_client
     assert captured["settings"] is settings
 
@@ -41,7 +42,7 @@ def test_find_connections_forwards_arguments_and_clients(monkeypatch):
 def test_find_connections_forwards_sort_by(monkeypatch):
     captured = {}
 
-    def fake_find_train_connections(origin, destination, departure_time, arrival_time, results, sort_by=None, *, client, settings):
+    def fake_find_train_connections(origin, destination, departure_time, arrival_time, results, sort_by=None, via=None, *, client, settings):
         captured["sort_by"] = sort_by
         return "connections-result"
 
@@ -54,6 +55,24 @@ def test_find_connections_forwards_sort_by(monkeypatch):
     )
 
     assert captured["sort_by"] == "departure"
+
+
+def test_find_connections_forwards_via(monkeypatch):
+    captured = {}
+
+    def fake_find_train_connections(origin, destination, departure_time, arrival_time, results, sort_by=None, via=None, *, client, settings):
+        captured["via"] = via
+        return "connections-result"
+
+    monkeypatch.setattr(dispatch_module, "find_train_connections", fake_find_train_connections)
+
+    dispatch(
+        "find_connections",
+        {"origin": "Geneve", "destination": "Zürich HB", "via": "Bern"},
+        ojp_client=_Sentinel(), aviation_client=_Sentinel(), settings=_Sentinel(),
+    )
+
+    assert captured["via"] == "Bern"
 
 
 def test_check_public_transport_fares_forwards_sort_by(monkeypatch):

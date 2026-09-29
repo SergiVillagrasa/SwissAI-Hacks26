@@ -76,6 +76,32 @@ describe("FlightCard", () => {
     expect(onSelect).toHaveBeenCalledWith(sampleFlight);
   });
 
+  it("highlights the selected flight and expands terminal, gate, airline, and status detail", () => {
+    render(<FlightCard data={{ flight: null, flights: [sampleFlight] }} onSelect={() => {}} />);
+
+    const row = screen.getByRole("button", { name: /LX14/ });
+    expect(row).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(row);
+
+    expect(row).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/Status:/)).toBeInTheDocument();
+    expect(screen.getByText(/scheduled/)).toBeInTheDocument();
+    expect(screen.getByText(/Departure terminal:/)).toBeInTheDocument();
+    expect(screen.getByText(/Arrival terminal:/)).toBeInTheDocument();
+  });
+
+  it("collapses the flight detail when the same row is selected again", () => {
+    render(<FlightCard data={{ flight: null, flights: [sampleFlight] }} onSelect={() => {}} />);
+
+    const row = screen.getByRole("button", { name: /LX14/ });
+    fireEvent.click(row);
+    expect(screen.getByText(/Status:/)).toBeInTheDocument();
+
+    fireEvent.click(row);
+    expect(screen.queryByText(/Status:/)).not.toBeInTheDocument();
+  });
+
   it("renders a per-flight booking link in the search list without hijacking selection", () => {
     const onSelect = vi.fn();
     render(<FlightCard data={{ flight: null, flights: [sampleFlight] }} onSelect={onSelect} />);
