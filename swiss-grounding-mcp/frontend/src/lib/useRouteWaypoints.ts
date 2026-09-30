@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { geocodeCached, type Coordinates } from "./geocode";
+import { geocodeCached, isPlausibleCoordinate, type Coordinates } from "./geocode";
 import type { RouteWaypoint, WaypointKind } from "../components/widgets/RouteMap";
 
 interface RouteLeg {
@@ -111,7 +111,15 @@ export function useRouteWaypoints(connection: RouteConnection): {
     unresolved.forEach((draft) => {
       geocodeCached(draft.name).then((coords) => {
         if (cancelled) return;
-        setResolved((current) => ({ ...current, [draft.id]: coords }));
+        // Only guards against a wildly wrong match (a different continent);
+        // legitimate cross-border stations (Barcelona, Lyon, Milano, ...)
+        // must still resolve, so this is intentionally not restricted to
+        // Switzerland alone.
+        const safeCoords = coords && isPlausibleCoordinate(coords) ? coords : null;
+        if (coords && !safeCoords) {
+          console.warn(`useRouteWaypoints: discarding implausible geocode result for "${draft.name}"`, coords);
+        }
+        setResolved((current) => ({ ...current, [draft.id]: safeCoords }));
         setResolvingIds((current) => {
           const next = new Set(current);
           next.delete(draft.id);
@@ -127,16 +135,27 @@ export function useRouteWaypoints(connection: RouteConnection): {
 
   const waypoints = useMemo<RouteWaypoint[]>(
     () =>
-      drafts.map((draft) => ({
-        id: draft.id,
-        name: draft.name,
-        kind: draft.kind,
-        time: draft.time,
-        detail: draft.detail,
-        coords: draft.lat !== null && draft.lng !== null ? { lat: draft.lat, lng: draft.lng } : resolved[draft.id] ?? null,
-      })),
+      drafts.map((draft) => {
+        // Origin/destination coordinates come straight from the server's
+        // own station resolution and are always trusted, even abroad
+        // (Barcelona Sants, Paris Gare de Lyon, ...); only the free-text
+        // geocoded via-stops (in `resolved`) were sanity-checked above.
+        const apiCoords = draft.lat !== null && draft.lng !== null ? { lat: draft.lat, lng: draft.lng } : null;
+        return {
+          id: draft.id,
+          name: draft.name,
+          kind: draft.kind,
+          time: draft.time,
+          detail: draft.detail,
+          coords: apiCoords ?? resolved[draft.id] ?? null,
+        };
+      }),
     [drafts, resolved]
   );
+
+  if (import.meta.env.DEV) {
+    console.log("WAYPOINTS:", waypoints);
+  }
 
   return { waypoints, isResolving: resolvingIds.size > 0 };
 }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
+import { isWithinSwitzerland } from "../../lib/geocode";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN ?? "";
 
@@ -77,21 +78,35 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
   const [mapReady, setMapReady] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
 
+  // Itineraries may legitimately start or transfer abroad (Barcelona
+  // Sants, Lyon, Milano, ...) on a Swiss-connected route, so this only
+  // drops waypoints without any coordinates - it does not restrict to
+  // Switzerland. Coordinate plausibility is already checked upstream in
+  // useRouteWaypoints/geocode.
   const located = useMemo(
     () => waypoints.filter((w): w is RouteWaypoint & { coords: { lat: number; lng: number } } => w.coords !== null),
     [waypoints]
   );
 
+  // Business rule: this app is scoped to Swiss and Swiss-connected travel.
+  // A route where every located point falls outside Switzerland (e.g. a
+  // purely foreign Madrid -> Barcelona hop) isn't something this map should
+  // render, even if we happen to have coordinates for it. Only decide this
+  // once resolving has finished, so an in-scope via-stop that's still being
+  // geocoded doesn't cause a premature "out of scope" flash.
+  const outOfScope = !isResolving && located.length > 0 && !located.some((w) => isWithinSwitzerland(w.coords));
+  const mapWaypoints = useMemo(() => (outOfScope ? [] : located), [outOfScope, located]);
+
   function fitRoute() {
     const map = mapRef.current;
-    if (!map || located.length === 0) return;
-    if (located.length === 1) {
-      map.flyTo({ center: [located[0].coords.lng, located[0].coords.lat], zoom: 11 });
+    if (!map || mapWaypoints.length === 0) return;
+    if (mapWaypoints.length === 1) {
+      map.flyTo({ center: [mapWaypoints[0].coords.lng, mapWaypoints[0].coords.lat], zoom: 11 });
       return;
     }
     const bounds = new mapboxgl.LngLatBounds();
-    located.forEach((waypoint) => bounds.extend([waypoint.coords.lng, waypoint.coords.lat]));
-    map.fitBounds(bounds, { padding: 56, maxZoom: 13, duration: 500 });
+    mapWaypoints.forEach((waypoint) => bounds.extend([waypoint.coords.lng, waypoint.coords.lat]));
+    map.fitBounds(bounds, { padding: 40, maxZoom: 13, duration: 500 });
   }
 
   // Mount once: create the map, its navigation controls, and the (initially
@@ -111,6 +126,9 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
         style: "mapbox://styles/mapbox/light-v11",
         center: [8.2275, 46.8182], // Switzerland, used until waypoints resolve
         zoom: 6,
+        // Newer Mapbox styles default to the 3D "globe" projection; force
+        // the flat Mercator projection so the map reads as a normal 2D map.
+        projection: { name: "mercator" },
       });
       mapRef.current = map;
       map.addControl(new mapboxgl.NavigationControl({ showCompass: true }), "top-right");
@@ -159,7 +177,7 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
     if (!map || !mapReady) return;
 
     markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = located.map((waypoint) =>
+    markersRef.current = mapWaypoints.map((waypoint) =>
       new mapboxgl.Marker({ color: MARKER_COLOR[waypoint.kind] })
         .setLngLat([waypoint.coords.lng, waypoint.coords.lat])
         .setPopup(new mapboxgl.Popup({ offset: 18 }).setHTML(popupHtml(waypoint)))
@@ -172,17 +190,17 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
       properties: {},
       geometry: {
         type: "LineString",
-        coordinates: located.map((waypoint) => [waypoint.coords.lng, waypoint.coords.lat]),
+        coordinates: mapWaypoints.map((waypoint) => [waypoint.coords.lng, waypoint.coords.lat]),
       },
     });
 
     fitRoute();
-    // fitRoute reads mapRef/located by closure; re-running this effect on
-    // waypoint/readiness changes is the intended trigger.
+    // fitRoute reads mapRef/mapWaypoints by closure; re-running this effect
+    // on waypoint/readiness changes is the intended trigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [located, mapReady]);
+  }, [mapWaypoints, mapReady]);
 
-  const hasLocatedWaypoint = located.length > 0;
+  const hasLocatedWaypoint = mapWaypoints.length > 0;
 
   return (
     <div className="relative h-64 w-full overflow-hidden">
@@ -195,7 +213,15 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
           Map unavailable for this location.
         </div>
       )}
-      {!mapFailed && !hasLocatedWaypoint && !isResolving && (
+      {!mapFailed && outOfScope && (
+        <div
+          data-testid="route-map-out-of-scope"
+          className="absolute inset-0 flex items-center justify-center bg-white/75 p-4 text-center text-xs text-neutral-500"
+        >
+          Ruta fora de l'àmbit suís.
+        </div>
+      )}
+      {!mapFailed && !outOfScope && !hasLocatedWaypoint && !isResolving && (
         <div
           data-testid="route-map-no-data"
           className="absolute inset-0 flex items-center justify-center bg-white/75 p-4 text-center text-xs text-neutral-500"
