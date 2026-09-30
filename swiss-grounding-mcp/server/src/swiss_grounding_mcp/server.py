@@ -81,6 +81,7 @@ def find_connections(
     arrival_time: str | None = None,
     results: int = 3,
     sort_by: str | None = None,
+    via: str | None = None,
 ) -> ConnectionSearchResult:
     """Find Swiss passenger-train connections between two stations.
 
@@ -102,7 +103,11 @@ def find_connections(
     "not found". All returned times are UTC (trailing "Z"), not local
     Swiss time. `sort_by` accepts "departure" to order the returned
     connections by soonest departure (shortest wait); the applied
-    criterion is echoed back in the `sorted_by` field.
+    criterion is echoed back in the `sorted_by` field. `via` is an
+    optional intermediate station name the trip must pass through (e.g.
+    the user wants to stop in or change at a specific city on the way);
+    it is resolved the same way as origin/destination and echoed back in
+    the `via_stop_name` field.
     """
     return find_train_connections(
         origin,
@@ -111,6 +116,7 @@ def find_connections(
         arrival_time,
         results,
         sort_by,
+        via,
         client=get_client(),
         settings=settings,
     )

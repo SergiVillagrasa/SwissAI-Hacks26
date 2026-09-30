@@ -21,6 +21,7 @@ TOOL_SCHEMAS: list[dict] = [
                     "arrival_time": {"type": "string", "description": "ISO 8601 arrival time; ignored if departure_time is also given."},
                     "results": {"type": "integer", "description": "Number of connections to return (max 5).", "default": 3},
                     "sort_by": {"type": "string", "enum": ["departure"], "description": "Order results by soonest departure (shortest wait)."},
+                    "via": {"type": "string", "description": "Optional intermediate station name the trip must pass through on the way from origin to destination."},
                 },
                 "required": ["origin", "destination"],
             },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { FaresCard } from "./FaresCard";
 
 const fares = [
@@ -49,5 +49,28 @@ describe("FaresCard", () => {
     render(<FaresCard data={{ fares, booking_url: bookingUrl }} />);
 
     expect(screen.queryByTestId("sort-badge")).not.toBeInTheDocument();
+  });
+
+  it("highlights the selected fare and expands its class-of-travel detail", () => {
+    render(<FaresCard data={{ fares, booking_url: bookingUrl }} />);
+
+    const row = screen.getByRole("button", { name: /Supersaver ticket/ });
+    expect(row).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(row);
+
+    expect(row).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/Class of travel:/)).toBeInTheDocument();
+  });
+
+  it("collapses the fare detail when selected again", () => {
+    render(<FaresCard data={{ fares, booking_url: bookingUrl }} />);
+
+    const row = screen.getByRole("button", { name: /Supersaver ticket/ });
+    fireEvent.click(row);
+    expect(screen.getByText(/Class of travel:/)).toBeInTheDocument();
+
+    fireEvent.click(row);
+    expect(screen.queryByText(/Class of travel:/)).not.toBeInTheDocument();
   });
 });

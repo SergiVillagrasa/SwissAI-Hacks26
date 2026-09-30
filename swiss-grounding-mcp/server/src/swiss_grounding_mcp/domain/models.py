@@ -63,6 +63,7 @@ class ConnectionSearchResult(BaseModel):
     candidates: list[StopCandidate] = Field(default_factory=list)
     provenance: Provenance | None = None
     sorted_by: str | None = None
+    via_stop_name: str | None = None
 
 
 class StopEvent(BaseModel):

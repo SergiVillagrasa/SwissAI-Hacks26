@@ -51,6 +51,27 @@ def test_trip_request_returns_parsed_connections():
     assert len(connections) == 2
 
 
+def test_trip_request_forwards_via_ref_in_request_body():
+    captured = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = request.content
+        return httpx.Response(200, content=_read("trip_response_two_trips.xml"))
+
+    client = _client_with_transport(handler)
+
+    client.trip_request(
+        "ch:1:sloid:9000",
+        "ch:1:sloid:8503000",
+        via_ref="ch:1:sloid:7000",
+        via_name="Bern",
+    )
+
+    assert b"<Via>" in captured["body"]
+    assert b"ch:1:sloid:7000" in captured["body"]
+    assert b"Bern" in captured["body"]
+
+
 def test_non_2xx_response_raises_source_error():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(503, content=b"service unavailable")

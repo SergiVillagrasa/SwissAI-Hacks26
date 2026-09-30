@@ -69,6 +69,51 @@ def test_trip_request_contains_origin_destination_and_departure_time():
     assert number_of_results.text == "3"
 
 
+def test_trip_request_with_via_adds_via_point_between_origin_and_destination():
+    xml_bytes = build_trip_request(
+        "ch:1:sloid:9000",
+        "ch:1:sloid:8503000",
+        "swiss-grounding-mcp",
+        origin_name="Genève",
+        destination_name="Zürich HB",
+        via_ref="ch:1:sloid:7000",
+        via_name="Bern",
+        timestamp="2026-09-24T12:00:00Z",
+    )
+
+    root = ET.fromstring(xml_bytes)
+    trip_request = root.find(".//ojp:OJPTripRequest", NS)
+    assert trip_request is not None
+
+    via_ref = trip_request.find("ojp:Via/ojp:ViaPoint/siri:StopPointRef", NS)
+    assert via_ref is not None
+    assert via_ref.text == "ch:1:sloid:7000"
+
+    via_name = trip_request.find(
+        "ojp:Via/ojp:ViaPoint/ojp:Name/ojp:Text", NS
+    )
+    assert via_name.text == "Bern"
+
+    # Via must sit after Destination (and before Params), per the OJP 2.0
+    # TripRequestGroup schema's strict element sequence.
+    children = list(trip_request)
+    tags = [child.tag.rsplit("}", 1)[-1] for child in children]
+    assert tags.index("Origin") < tags.index("Destination") < tags.index("Via") < tags.index("Params")
+
+
+def test_trip_request_without_via_omits_via_element():
+    xml_bytes = build_trip_request(
+        "ch:1:sloid:7000",
+        "ch:1:sloid:8503000",
+        "swiss-grounding-mcp",
+        timestamp="2026-09-24T12:00:00Z",
+    )
+
+    root = ET.fromstring(xml_bytes)
+    via = root.find(".//ojp:OJPTripRequest/ojp:Via", NS)
+    assert via is None
+
+
 def test_trip_request_with_arrival_time_omits_dep_arr_time_on_origin():
     xml_bytes = build_trip_request(
         "ch:1:sloid:7000",

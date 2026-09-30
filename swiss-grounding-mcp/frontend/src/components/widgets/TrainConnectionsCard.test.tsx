@@ -66,4 +66,49 @@ describe("TrainConnectionsCard", () => {
 
     expect(screen.queryByTestId("sort-badge")).not.toBeInTheDocument();
   });
+
+  it("shows the via badge when the trip passes through an intermediate station", () => {
+    render(<TrainConnectionsCard data={{ ...sampleData, via_stop_name: "Bern" }} onSelect={() => {}} />);
+
+    expect(screen.getByTestId("via-badge")).toHaveTextContent("Via Bern");
+  });
+
+  it("renders no via badge when no intermediate station was requested", () => {
+    render(<TrainConnectionsCard data={sampleData} onSelect={() => {}} />);
+
+    expect(screen.queryByTestId("via-badge")).not.toBeInTheDocument();
+  });
+
+  it("uses a real space between 'Via' and the station name", () => {
+    render(<TrainConnectionsCard data={{ ...sampleData, via_stop_name: "Bern" }} onSelect={() => {}} />);
+
+    expect(screen.getByTestId("via-badge").textContent).toBe("Via Bern");
+  });
+
+  it("expands the leg detail, transfer stations, and SBB booking link on selection", () => {
+    render(<TrainConnectionsCard data={sampleData} onSelect={() => {}} />);
+
+    const row = screen.getByRole("button", { name: /103 min/ });
+    expect(row).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(row);
+
+    expect(row).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(/IC 8/)).toBeInTheDocument();
+    const bookLink = screen.getByRole("link", { name: /book on sbb/i });
+    expect(bookLink).toHaveAttribute("href", expect.stringContaining("von=Bern"));
+    expect(bookLink).toHaveAttribute("href", expect.stringContaining("nach=Z%C3%BCrich+HB"));
+  });
+
+  it("collapses the detail when the same connection is selected again", () => {
+    render(<TrainConnectionsCard data={sampleData} onSelect={() => {}} />);
+
+    const row = screen.getByRole("button", { name: /103 min/ });
+    fireEvent.click(row);
+    expect(row).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(row);
+    expect(row).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("link", { name: /book on sbb/i })).not.toBeInTheDocument();
+  });
 });
