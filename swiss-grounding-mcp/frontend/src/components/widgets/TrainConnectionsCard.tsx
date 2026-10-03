@@ -71,11 +71,17 @@ function transferStations(connection: Connection): string[] {
   return railLegs.slice(0, -1).map((leg) => leg.to_name);
 }
 
-function ConnectionDetail({ connection }: { connection: Connection }) {
+function ConnectionDetail({
+  connection,
+  viaStopName,
+}: {
+  connection: Connection;
+  viaStopName?: string | null;
+}) {
   const legs = connection.legs ?? [];
   const transfers = transferStations(connection);
   const bookingUrl = sbbDeepLink(connection);
-  const { waypoints, isResolving } = useRouteWaypoints(connection);
+  const { waypoints, isResolving } = useRouteWaypoints(connection, viaStopName);
 
   return (
     <div className="space-y-3 border-t border-blue-200/70 bg-blue-50/40 p-3.5">
@@ -161,7 +167,7 @@ export function TrainConnectionsCard({ data, onSelect }: TrainConnectionsCardPro
               </div>
               <ExpandChevron expanded={isSelected} />
             </button>
-            {isSelected && <ConnectionDetail connection={connection} />}
+            {isSelected && <ConnectionDetail connection={connection} viaStopName={data.via_stop_name} />}
           </div>
         );
       })}

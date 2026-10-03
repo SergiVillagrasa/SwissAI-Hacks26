@@ -197,6 +197,9 @@ describe("RouteMap", () => {
     render(<RouteMap waypoints={[madridOriginWaypoint, barcelonaDestinationWaypoint]} />);
 
     await waitFor(() => expect(screen.getByTestId("route-map-out-of-scope")).toBeInTheDocument());
+    expect(screen.getByTestId("route-map-out-of-scope")).toHaveTextContent(
+      "This route is outside the Swiss transport network."
+    );
     expect(addedMarkers).toHaveLength(0);
     expect(screen.queryByTestId("route-map-fit")).not.toBeInTheDocument();
     expect(screen.queryByTestId("route-map-no-data")).not.toBeInTheDocument();

@@ -66,7 +66,11 @@ export function geocodeCached(placeName: string): Promise<Coordinates | null> {
   const key = placeName.trim().toLowerCase();
   let pending = geocodeCache.get(key);
   if (!pending) {
-    pending = geocode(placeName);
+    pending = geocode(placeName).catch((error) => {
+      console.warn(`geocodeCached: lookup failed for "${placeName}"`, error);
+      geocodeCache.delete(key);
+      return null;
+    });
     geocodeCache.set(key, pending);
   }
   return pending;

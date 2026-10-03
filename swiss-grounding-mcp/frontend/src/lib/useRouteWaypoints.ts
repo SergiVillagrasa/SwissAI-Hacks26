@@ -34,12 +34,20 @@ function legLabel(leg: RouteLeg): string {
   return leg.line ?? leg.mode;
 }
 
+function normalizeStationName(name: string): string {
+  return name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 /** Builds an ordered origin -> via* -> destination waypoint list from a
  * connection's legs. Walking legs are collapsed (a walk to/from a platform
  * isn't a distinct point of interest); every remaining leg boundary becomes
  * a "via" transfer waypoint carrying the incoming line's arrival and the
- * outgoing line's departure, so the popup can describe the actual change. */
-export function buildRouteWaypointDrafts(connection: RouteConnection): WaypointDraft[] {
+ * outgoing line's departure, so the popup can describe the actual change.
+ * Requested via stops are included even when they aren't a leg boundary. */
+export function buildRouteWaypointDrafts(
+  connection: RouteConnection,
+  viaStopName?: string | null
+): WaypointDraft[] {
   const legs = connection.legs ?? [];
   if (legs.length === 0) return [];
 
@@ -85,6 +93,21 @@ export function buildRouteWaypointDrafts(connection: RouteConnection): WaypointD
     lng: connection.destination_longitude,
   });
 
+  if (
+    viaStopName?.trim() &&
+    !drafts.some((draft) => normalizeStationName(draft.name) === normalizeStationName(viaStopName))
+  ) {
+    drafts.splice(drafts.length - 1, 0, {
+      id: `via-requested:${viaStopName}`,
+      name: viaStopName,
+      kind: "via",
+      time: null,
+      detail: "Requested stop on the way",
+      lat: null,
+      lng: null,
+    });
+  }
+
   return drafts;
 }
 
@@ -93,11 +116,11 @@ export function buildRouteWaypointDrafts(connection: RouteConnection): WaypointD
  * today that's every intermediate/transfer stop, since the API only
  * resolves the overall origin and destination. Returns `isResolving: true`
  * while any of those lookups are still in flight. */
-export function useRouteWaypoints(connection: RouteConnection): {
+export function useRouteWaypoints(connection: RouteConnection, viaStopName?: string | null): {
   waypoints: RouteWaypoint[];
   isResolving: boolean;
 } {
-  const drafts = useMemo(() => buildRouteWaypointDrafts(connection), [connection]);
+  const drafts = useMemo(() => buildRouteWaypointDrafts(connection, viaStopName), [connection, viaStopName]);
   const [resolved, setResolved] = useState<Record<string, Coordinates | null>>({});
   const [resolvingIds, setResolvingIds] = useState<ReadonlySet<string>>(new Set());
 
@@ -152,10 +175,6 @@ export function useRouteWaypoints(connection: RouteConnection): {
       }),
     [drafts, resolved]
   );
-
-  if (import.meta.env.DEV) {
-    console.log("WAYPOINTS:", waypoints);
-  }
 
   return { waypoints, isResolving: resolvingIds.size > 0 };
 }

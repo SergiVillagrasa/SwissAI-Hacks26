@@ -218,7 +218,7 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
           data-testid="route-map-out-of-scope"
           className="absolute inset-0 flex items-center justify-center bg-white/75 p-4 text-center text-xs text-neutral-500"
         >
-          Ruta fora de l'àmbit suís.
+          This route is outside the Swiss transport network.
         </div>
       )}
       {!mapFailed && !outOfScope && !hasLocatedWaypoint && !isResolving && (
