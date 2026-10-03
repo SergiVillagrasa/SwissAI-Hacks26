@@ -12,6 +12,11 @@ def test_defaults_when_env_empty():
     assert settings.respect_robots_txt is True
     assert settings.mcp_http_host == "127.0.0.1"
     assert settings.mcp_http_port == 8000
+    assert settings.mcp_auth_token == ""
+    assert settings.mcp_allow_unauthenticated is False
+    assert settings.mcp_rate_limit_per_minute == 60
+    assert settings.mcp_client_ip_header == ""
+    assert settings.mcp_allowed_hosts == ()
 
 
 def test_env_overrides_defaults():
@@ -24,6 +29,11 @@ def test_env_overrides_defaults():
         "RESPECT_ROBOTS_TXT": "false",
         "MCP_HTTP_HOST": "0.0.0.0",
         "MCP_HTTP_PORT": "9000",
+        "MCP_AUTH_TOKEN": "test-token",
+        "MCP_ALLOW_UNAUTHENTICATED": "true",
+        "MCP_RATE_LIMIT_PER_MINUTE": "12",
+        "MCP_CLIENT_IP_HEADER": "X-Real-IP",
+        "MCP_ALLOWED_HOSTS": "one.example, two.example",
     }
 
     settings = Settings.from_env(env)
@@ -36,6 +46,11 @@ def test_env_overrides_defaults():
     assert settings.respect_robots_txt is False
     assert settings.mcp_http_host == "0.0.0.0"
     assert settings.mcp_http_port == 9000
+    assert settings.mcp_auth_token == "test-token"
+    assert settings.mcp_allow_unauthenticated is True
+    assert settings.mcp_rate_limit_per_minute == 12
+    assert settings.mcp_client_ip_header == "X-Real-IP"
+    assert settings.mcp_allowed_hosts == ("one.example", "two.example")
 
 
 def test_respect_robots_txt_accepts_common_truthy_strings():

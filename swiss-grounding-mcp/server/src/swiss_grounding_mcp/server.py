@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import argparse
+import json
+from math import ceil
 
+import uvicorn
 from dotenv import load_dotenv
 from mcp.server.mcpserver import MCPServer
+from mcp.server.transport_security import TransportSecuritySettings
+from starlette.datastructures import Headers
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from swiss_grounding_mcp.config.settings import Settings
 from swiss_grounding_mcp.domain.models import (
@@ -17,6 +23,11 @@ from swiss_grounding_mcp.domain.models import (
     FlightToTrainResult,
     StationBoardResult,
 )
+from swiss_grounding_mcp.http_security import (
+    SlidingWindowRateLimiter,
+    bearer_token_matches,
+    client_ip,
+)
 from swiss_grounding_mcp.sources.aerodatabox.client import AerodataboxClient
 from swiss_grounding_mcp.sources.ojp.client import OjpClient
 from swiss_grounding_mcp.sources.serpapi.flight_client import SerpApiFlightClient
@@ -28,10 +39,10 @@ from swiss_grounding_mcp.tools.fares import (
 )
 from swiss_grounding_mcp.tools.find_connections import find_train_connections
 from swiss_grounding_mcp.tools.find_disruptions import find_station_disruptions
-from swiss_grounding_mcp.tools.flight_fares import get_flight_fares as _get_flight_fares
 from swiss_grounding_mcp.tools.find_flight_by_number import (
     find_flight_by_number as _find_flight_by_number,
 )
+from swiss_grounding_mcp.tools.flight_fares import get_flight_fares as _get_flight_fares
 from swiss_grounding_mcp.tools.get_airport_guidance import (
     get_airport_guidance as _get_airport_guidance,
 )
@@ -50,6 +61,100 @@ mcp = MCPServer("Swiss Grounding MCP")
 _client: OjpClient | None = None
 _aviation_client: AerodataboxClient | None = None
 _flight_fares_client: SerpApiFlightClient | None = None
+
+
+class _HttpGuard:
+    def __init__(self, app: ASGIApp, settings: Settings) -> None:
+        self.app = app
+        self.settings = settings
+        self.rate_limiter = SlidingWindowRateLimiter(
+            settings.mcp_rate_limit_per_minute, 60
+        )
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = Headers(scope=scope)
+        if self.settings.mcp_auth_token and not bearer_token_matches(
+            headers.get("authorization"), self.settings.mcp_auth_token
+        ):
+            await self._respond(
+                send,
+                401,
+                {"error": "unauthorized"},
+                [(b"www-authenticate", b"Bearer")],
+            )
+            return
+
+        peer = scope.get("client")
+        retry_after = self.rate_limiter.check(
+            client_ip(
+                headers,
+                peer[0] if peer else None,
+                self.settings.mcp_client_ip_header,
+            )
+        )
+        if retry_after is not None:
+            await self._respond(
+                send,
+                429,
+                {"error": "rate_limited"},
+                [(b"retry-after", str(ceil(retry_after)).encode())],
+            )
+            return
+
+        await self.app(scope, receive, send)
+
+    @staticmethod
+    async def _respond(
+        send: Send,
+        status: int,
+        payload: dict[str, str],
+        extra_headers: list[tuple[bytes, bytes]],
+    ) -> None:
+        body = json.dumps(payload).encode()
+        await send(
+            {
+                "type": "http.response.start",
+                "status": status,
+                "headers": [
+                    (b"content-type", b"application/json"),
+                    (b"content-length", str(len(body)).encode()),
+                    *extra_headers,
+                ],
+            }
+        )
+        await send({"type": "http.response.body", "body": body})
+
+
+def ensure_http_exposure_is_safe(host: str, settings: Settings) -> None:
+    if (
+        host.strip().lower() not in {"127.0.0.1", "localhost", "::1"}
+        and not settings.mcp_auth_token
+        and not settings.mcp_allow_unauthenticated
+    ):
+        raise SystemExit(
+            "Public HTTP binds require MCP_AUTH_TOKEN or explicit "
+            "MCP_ALLOW_UNAUTHENTICATED=true."
+        )
+
+
+def build_http_app(settings: Settings, host: str) -> ASGIApp:
+    transport_security = (
+        TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=list(settings.mcp_allowed_hosts),
+            allowed_origins=[],
+        )
+        if settings.mcp_allowed_hosts
+        else None
+    )
+    app = mcp.streamable_http_app(
+        host=host, transport_security=transport_security
+    )
+    return _HttpGuard(app, settings)
 
 
 def get_client() -> OjpClient:
@@ -338,7 +443,8 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.transport == "streamable-http":
-        mcp.run(transport="streamable-http", host=args.host, port=args.port)
+        ensure_http_exposure_is_safe(args.host, settings)
+        uvicorn.run(build_http_app(settings, args.host), host=args.host, port=args.port)
     else:
         mcp.run()
 

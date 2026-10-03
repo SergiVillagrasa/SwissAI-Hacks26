@@ -27,6 +27,11 @@ class Settings:
     respect_robots_txt: bool = True
     mcp_http_host: str = "127.0.0.1"
     mcp_http_port: int = 8000
+    mcp_auth_token: str = ""
+    mcp_allow_unauthenticated: bool = False
+    mcp_rate_limit_per_minute: int = 60
+    mcp_client_ip_header: str = ""
+    mcp_allowed_hosts: tuple[str, ...] = ()
     aerodatabox_api_key: str = ""
     aerodatabox_host: str = "aerodatabox.p.rapidapi.com"
     aerodatabox_base_url: str = "https://aerodatabox.p.rapidapi.com"
@@ -56,6 +61,28 @@ class Settings:
             ),
             mcp_http_host=source.get("MCP_HTTP_HOST", defaults.mcp_http_host),
             mcp_http_port=int(source.get("MCP_HTTP_PORT", defaults.mcp_http_port)),
+            mcp_auth_token=source.get("MCP_AUTH_TOKEN", defaults.mcp_auth_token),
+            mcp_allow_unauthenticated=_parse_bool(
+                source.get(
+                    "MCP_ALLOW_UNAUTHENTICATED",
+                    str(defaults.mcp_allow_unauthenticated),
+                ),
+                defaults.mcp_allow_unauthenticated,
+            ),
+            mcp_rate_limit_per_minute=int(
+                source.get(
+                    "MCP_RATE_LIMIT_PER_MINUTE",
+                    defaults.mcp_rate_limit_per_minute,
+                )
+            ),
+            mcp_client_ip_header=source.get(
+                "MCP_CLIENT_IP_HEADER", defaults.mcp_client_ip_header
+            ),
+            mcp_allowed_hosts=tuple(
+                host.strip()
+                for host in source.get("MCP_ALLOWED_HOSTS", "").split(",")
+                if host.strip()
+            ),
             aerodatabox_api_key=source.get(
                 "AERODATABOX_API_KEY", defaults.aerodatabox_api_key
             ),
