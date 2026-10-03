@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
 import time
 
 import httpx
 
 from swiss_grounding_mcp.config.settings import Settings
+from swiss_grounding_mcp.http_security import redact
+
+logger = logging.getLogger(__name__)
 
 
 class AerodataboxSourceError(Exception):
@@ -44,11 +48,23 @@ class AerodataboxClient:
         try:
             response = self._http.get(url, params=params, headers=self._headers())
         except httpx.HTTPError as exc:
-            raise AerodataboxSourceError(f"AeroDataBox request failed: {exc}") from exc
+            logger.warning(
+                "AeroDataBox request failed (%s): %s",
+                type(exc).__name__,
+                redact(str(exc), self._settings.aerodatabox_api_key),
+            )
+            raise AerodataboxSourceError(
+                f"AeroDataBox request failed ({type(exc).__name__})."
+            ) from exc
 
         if response.status_code < 200 or response.status_code >= 300:
+            logger.warning(
+                "AeroDataBox returned HTTP %s: %s",
+                response.status_code,
+                redact(response.text[:500], self._settings.aerodatabox_api_key),
+            )
             raise AerodataboxSourceError(
-                f"AeroDataBox returned HTTP {response.status_code}: {response.text[:200]}"
+                f"AeroDataBox returned HTTP {response.status_code}."
             )
 
         # AeroDataBox returns HTTP 204 with an empty body for "no matching
@@ -60,8 +76,12 @@ class AerodataboxClient:
             try:
                 body = response.json()
             except ValueError as exc:
+                logger.warning(
+                    "AeroDataBox returned an unparsable response: %s",
+                    redact(str(exc), self._settings.aerodatabox_api_key),
+                )
                 raise AerodataboxSourceError(
-                    f"AeroDataBox returned an unparsable response: {exc}"
+                    "AeroDataBox returned an unparsable response."
                 ) from exc
 
         self._cache[cache_key] = (time.monotonic(), body)

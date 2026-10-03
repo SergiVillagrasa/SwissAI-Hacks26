@@ -2,7 +2,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-
 from swiss_grounding_mcp.config.settings import Settings
 from swiss_grounding_mcp.sources.ojp.client import OjpClient, OjpSourceError
 
@@ -53,12 +52,15 @@ def test_trip_request_returns_parsed_connections():
 
 def test_non_2xx_response_raises_source_error():
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(503, content=b"service unavailable")
+        return httpx.Response(503, content=b"SECRET-BODY test-token")
 
     client = _client_with_transport(handler)
 
-    with pytest.raises(OjpSourceError):
+    with pytest.raises(OjpSourceError) as exc_info:
         client.location_information("Bern")
+    assert str(exc_info.value) == "OJP returned HTTP 503."
+    assert "SECRET-BODY" not in str(exc_info.value)
+    assert "test-token" not in str(exc_info.value)
 
 
 def test_embedded_service_delivery_error_raises_source_error():
@@ -67,8 +69,22 @@ def test_embedded_service_delivery_error_raises_source_error():
 
     client = _client_with_transport(handler)
 
-    with pytest.raises(OjpSourceError, match="Invalid API token"):
+    with pytest.raises(OjpSourceError, match="upstream error"):
         client.location_information("Bern")
+
+
+def test_parse_error_does_not_expose_response_body_or_token(monkeypatch):
+    client = _client_with_transport(
+        lambda request: httpx.Response(200, content=b"<OJPResponse/>")
+    )
+    monkeypatch.setattr(client, "_post", lambda *args, **kwargs: b"SECRET-BODY test-token")
+
+    with pytest.raises(OjpSourceError) as exc_info:
+        client.location_information("Bern")
+
+    assert str(exc_info.value) == "OJP response could not be parsed."
+    assert "SECRET-BODY" not in str(exc_info.value)
+    assert "test-token" not in str(exc_info.value)
 
 
 def test_network_error_raises_source_error():
@@ -77,5 +93,7 @@ def test_network_error_raises_source_error():
 
     client = _client_with_transport(handler)
 
-    with pytest.raises(OjpSourceError):
+    with pytest.raises(OjpSourceError) as exc_info:
         client.location_information("Bern")
+    assert str(exc_info.value) == "OJP request failed (ConnectError)."
+    assert "connection refused" not in str(exc_info.value)

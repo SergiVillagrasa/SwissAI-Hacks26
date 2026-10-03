@@ -3,7 +3,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-
 from swiss_grounding_mcp.config.settings import Settings
 from swiss_grounding_mcp.sources.aerodatabox.client import (
     AerodataboxClient,
@@ -96,12 +95,15 @@ def test_get_airport_flights_sends_correct_path_and_query():
 
 def test_non_2xx_response_raises_source_error():
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(403, text='{"message":"not subscribed"}')
+        return httpx.Response(403, text="SECRET-BODY test-key")
 
     client = _client_with_transport(handler)
 
-    with pytest.raises(AerodataboxSourceError):
+    with pytest.raises(AerodataboxSourceError) as exc_info:
         client.get_flight_by_number("LX14", "2026-09-25")
+    assert str(exc_info.value) == "AeroDataBox returned HTTP 403."
+    assert "SECRET-BODY" not in str(exc_info.value)
+    assert "test-key" not in str(exc_info.value)
 
 
 def test_network_error_raises_source_error():
@@ -110,8 +112,24 @@ def test_network_error_raises_source_error():
 
     client = _client_with_transport(handler)
 
-    with pytest.raises(AerodataboxSourceError):
+    with pytest.raises(AerodataboxSourceError) as exc_info:
         client.get_flight_by_number("LX14", "2026-09-25")
+    assert str(exc_info.value) == "AeroDataBox request failed (ConnectError)."
+    assert "connection refused" not in str(exc_info.value)
+
+
+def test_unparsable_response_error_does_not_expose_body_or_key():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b"SECRET-BODY test-key not-json")
+
+    client = _client_with_transport(handler)
+
+    with pytest.raises(AerodataboxSourceError) as exc_info:
+        client.get_flight_by_number("LX14", "2026-09-25")
+
+    assert str(exc_info.value) == "AeroDataBox returned an unparsable response."
+    assert "SECRET-BODY" not in str(exc_info.value)
+    assert "test-key" not in str(exc_info.value)
 
 
 def test_disabled_client_raises_source_error_without_http_call():

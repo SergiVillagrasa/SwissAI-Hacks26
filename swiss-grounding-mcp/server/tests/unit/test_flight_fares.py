@@ -1,11 +1,13 @@
 from datetime import date, timedelta
 
 import httpx
-
+import pytest
 from swiss_grounding_mcp.config.settings import Settings
-from swiss_grounding_mcp.sources.serpapi.flight_client import SerpApiFlightClient
+from swiss_grounding_mcp.sources.serpapi.flight_client import (
+    SerpApiFlightClient,
+    SerpApiSourceError,
+)
 from swiss_grounding_mcp.tools.flight_fares import get_flight_fares
-
 
 SERPAPI_RESPONSE = {
     "best_flights": [
@@ -85,6 +87,36 @@ def test_serpapi_client_sends_google_flights_query():
         "api_key": "test-key",
     }
     assert response == SERPAPI_RESPONSE
+
+
+def test_serpapi_http_failure_does_not_expose_body_or_api_key():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(500, text="SECRET-BODY test-key")
+
+    client = SerpApiFlightClient(_settings())
+    client._http = httpx.Client(transport=httpx.MockTransport(handler))
+
+    with pytest.raises(SerpApiSourceError) as exc_info:
+        client.search_flights("ZRH", "GVA", "2026-09-25", "CHF")
+
+    assert str(exc_info.value) == "SerpApi returned HTTP 500."
+    assert "SECRET-BODY" not in str(exc_info.value)
+    assert "test-key" not in str(exc_info.value)
+
+
+def test_serpapi_provider_error_does_not_expose_provider_message():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"error": "SECRET-BODY test-key"})
+
+    client = SerpApiFlightClient(_settings())
+    client._http = httpx.Client(transport=httpx.MockTransport(handler))
+
+    with pytest.raises(SerpApiSourceError) as exc_info:
+        client.search_flights("ZRH", "GVA", "2026-09-25", "CHF")
+
+    assert str(exc_info.value) == "SerpApi returned an error."
+    assert "SECRET-BODY" not in str(exc_info.value)
+    assert "test-key" not in str(exc_info.value)
 
 
 def test_mock_serpapi_response_is_parsed_to_essential_fields():

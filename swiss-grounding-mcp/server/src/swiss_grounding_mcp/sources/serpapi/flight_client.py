@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 import httpx
 
 from swiss_grounding_mcp.config.settings import Settings
+from swiss_grounding_mcp.http_security import redact
+
+logger = logging.getLogger(__name__)
 
 
 class SerpApiSourceError(Exception):
@@ -38,20 +43,42 @@ class SerpApiFlightClient:
         try:
             response = self._http.get(self._settings.serpapi_base_url, params=params)
         except httpx.HTTPError as exc:
-            raise SerpApiSourceError(f"SerpApi request failed: {exc}") from exc
+            logger.warning(
+                "SerpApi request failed (%s): %s",
+                type(exc).__name__,
+                redact(str(exc), self._settings.serpapi_api_key),
+            )
+            raise SerpApiSourceError(
+                f"SerpApi request failed ({type(exc).__name__})."
+            ) from exc
 
         if response.status_code < 200 or response.status_code >= 300:
-            raise SerpApiSourceError(
-                f"SerpApi returned HTTP {response.status_code}: {response.text[:200]}"
+            logger.warning(
+                "SerpApi returned HTTP %s: %s",
+                response.status_code,
+                redact(response.text[:500], self._settings.serpapi_api_key),
             )
+            raise SerpApiSourceError(f"SerpApi returned HTTP {response.status_code}.")
 
         try:
             body = response.json()
         except ValueError as exc:
-            raise SerpApiSourceError(f"SerpApi returned an unparsable response: {exc}") from exc
+            logger.warning(
+                "SerpApi response could not be parsed: %s",
+                redact(str(exc), self._settings.serpapi_api_key),
+            )
+            raise SerpApiSourceError("SerpApi response could not be parsed.") from exc
 
         if not isinstance(body, dict):
+            logger.warning(
+                "SerpApi returned an unexpected response format: %s",
+                redact(response.text[:500], self._settings.serpapi_api_key),
+            )
             raise SerpApiSourceError("SerpApi returned an unexpected response format.")
         if body.get("error"):
-            raise SerpApiSourceError(f"SerpApi returned an error: {body['error']}")
+            logger.warning(
+                "SerpApi returned an error: %s",
+                redact(response.text[:500], self._settings.serpapi_api_key),
+            )
+            raise SerpApiSourceError("SerpApi returned an error.")
         return body
