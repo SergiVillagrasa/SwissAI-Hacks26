@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { MAX_CHAT_MESSAGE_LENGTH } from "../lib/backend";
 import type { VoiceState } from "../lib/useVoiceAgent";
 
 interface ComposerProps {
@@ -61,6 +62,7 @@ export function Composer({ disabled, onSubmit, voiceState, onMicClick }: Compose
         <textarea
           ref={textareaRef}
           rows={1}
+          maxLength={MAX_CHAT_MESSAGE_LENGTH}
           className="quiet-focus-plain max-h-40 flex-1 resize-none bg-transparent py-1 text-base leading-6 text-neutral-800 outline-none placeholder:text-neutral-500 disabled:opacity-50"
           placeholder="Ask about your journey"
           value={value}

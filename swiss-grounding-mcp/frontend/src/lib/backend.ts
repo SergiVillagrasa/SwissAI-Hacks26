@@ -1,3 +1,5 @@
+export const MAX_CHAT_MESSAGE_LENGTH = 8000;
+
 export function backendHeaders(
   extra: Record<string, string> = {}
 ): Record<string, string> {

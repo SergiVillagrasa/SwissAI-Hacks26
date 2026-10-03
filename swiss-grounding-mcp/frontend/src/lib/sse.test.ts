@@ -77,6 +77,22 @@ describe("streamChat", () => {
     expect(JSON.parse(init.body as string).messages).toEqual(messages.slice(-20));
   });
 
+  it("clips each outgoing message to the backend content limit", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      fakeStreamResponse(['data: {"type": "done"}\n\n'])
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    for await (const _event of streamChat("http://backend", [
+      { role: "user", content: "x".repeat(9000) },
+    ])) {
+      void _event;
+    }
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
+    expect(body.messages[0].content).toHaveLength(8000);
+  });
+
   it("omits the channel field for typed requests", async () => {
     const fetchMock = vi.fn().mockResolvedValue(fakeStreamResponse(['data: {"type": "done"}\n\n']));
     vi.stubGlobal("fetch", fetchMock);

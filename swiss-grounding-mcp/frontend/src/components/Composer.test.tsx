@@ -47,4 +47,13 @@ describe("Composer", () => {
       "quiet-focus-plain"
     );
   });
+
+  it("limits text to the backend's maximum chat message length", () => {
+    render(<Composer disabled={false} onSubmit={vi.fn()} voiceState="idle" onMicClick={vi.fn()} />);
+
+    expect(screen.getByPlaceholderText(/ask about your journey/i)).toHaveProperty(
+      "maxLength",
+      8000
+    );
+  });
 });

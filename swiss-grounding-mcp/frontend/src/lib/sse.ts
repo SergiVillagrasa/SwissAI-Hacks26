@@ -1,5 +1,9 @@
 import type { AgentEvent, ChatMessage } from "./types";
-import { BackendError, backendHeaders } from "./backend";
+import {
+  BackendError,
+  backendHeaders,
+  MAX_CHAT_MESSAGE_LENGTH,
+} from "./backend";
 
 export async function* streamChat(
   backendUrl: string,
@@ -11,8 +15,17 @@ export async function* streamChat(
     headers: backendHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(
       channel
-        ? { messages: messages.slice(-20), channel }
-        : { messages: messages.slice(-20) }
+        ? {
+            messages: messages
+              .slice(-20)
+              .map((message) => clipMessageContent(message)),
+            channel,
+          }
+        : {
+            messages: messages
+              .slice(-20)
+              .map((message) => clipMessageContent(message)),
+          }
     ),
   });
 
@@ -43,4 +56,11 @@ export async function* streamChat(
       }
     }
   }
+}
+
+function clipMessageContent(message: ChatMessage): ChatMessage {
+  return {
+    ...message,
+    content: message.content.slice(0, MAX_CHAT_MESSAGE_LENGTH),
+  };
 }
