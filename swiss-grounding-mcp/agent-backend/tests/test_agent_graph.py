@@ -5,11 +5,14 @@ from agent_backend import agent_graph
 from agent_backend.agent_loop import run_chat
 
 
-def _response(content=None, tool_calls=None):
-    return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(
+def _response(content=None, tool_calls=None, finish_reason=None):
+    choice = SimpleNamespace(message=SimpleNamespace(
         content=content,
         tool_calls=tool_calls or [],
-    ))])
+    ))
+    if finish_reason is not None:
+        choice.finish_reason = finish_reason
+    return SimpleNamespace(choices=[choice])
 
 
 class _FakeOpenAI:
@@ -55,6 +58,56 @@ def test_model_output_token_limit_can_be_disabled():
     _run(client, max_output_tokens=0)
 
     assert "max_completion_tokens" not in client.calls[0]
+
+
+def test_truncated_tool_call_fails_without_executing_tool(monkeypatch):
+    tool_call = SimpleNamespace(
+        id="call-1",
+        function=SimpleNamespace(
+            name="find_connections",
+            arguments='{"origin":"Zurich","destination":',
+        ),
+    )
+    executed = []
+    monkeypatch.setattr(
+        agent_graph,
+        "dispatch",
+        lambda *args, **kwargs: executed.append((args, kwargs)),
+    )
+
+    events = _run(_FakeOpenAI([
+        _response(tool_calls=[tool_call], finish_reason="length"),
+    ]))
+
+    assert executed == []
+    assert any(event["type"] == "node_failed" for event in events)
+    source_error = next(
+        event for event in events
+        if event["type"] == "widget" and event["status"] == "source_error"
+    )
+    assert source_error["data"]["message"] == (
+        "The assistant's response hit the output limit before it could finish. "
+        "Please ask a more specific question."
+    )
+    assert next(event for event in events if event["type"] == "run_completed")[
+        "outcome"
+    ] == "failed"
+
+
+def test_truncated_text_reply_emits_cut_short_marker():
+    events = _run(_FakeOpenAI([
+        _response(content="Partial reply", finish_reason="length"),
+    ]))
+
+    assert [
+        event["text"] for event in events if event["type"] == "token"
+    ] == [
+        "Partial reply",
+        "\n\n(Response cut short: output limit reached.)",
+    ]
+    assert next(event for event in events if event["type"] == "run_completed")[
+        "outcome"
+    ] == "completed"
 
 
 def test_final_reply_after_tool_call_uses_additional_round_labels(monkeypatch):

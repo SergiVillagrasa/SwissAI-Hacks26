@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from time import perf_counter
 from typing import TypedDict
@@ -11,6 +12,8 @@ from agent_backend.dispatch import UnknownToolError, dispatch
 from agent_backend.execution_events import ExecutionEventEmitter
 from agent_backend.tools_registry import TOOL_SCHEMAS
 from agent_backend.widget_mapper import map_result
+
+logger = logging.getLogger(__name__)
 
 
 class AgentState(TypedDict):
@@ -73,9 +76,42 @@ def build_agent_graph(dependencies: AgentDependencies):
             ])
             return {"output_events": events, "pending_tool_calls": [], "round_count": round_number, "outcome": "failed"}
 
-        message = response.choices[0].message
+        choice = response.choices[0]
+        message = choice.message
         tool_calls = list(message.tool_calls or [])
-        if message.content:
+        if getattr(choice, "finish_reason", None) == "length":
+            logger.warning("Model response reached the output-token limit")
+            if tool_calls:
+                events.extend([
+                    emitter.emit(
+                        "node_failed",
+                        node_id=node_id,
+                        label="Assistant response",
+                        status="failed",
+                        summary="The assistant's response hit the output limit before it could finish",
+                    ),
+                    {
+                        "type": "widget",
+                        "tool": None,
+                        "status": "source_error",
+                        "data": {
+                            "message": "The assistant's response hit the output limit before it could finish. Please ask a more specific question."
+                        },
+                    },
+                ])
+                return {
+                    "output_events": events,
+                    "pending_tool_calls": [],
+                    "round_count": round_number,
+                    "outcome": "failed",
+                }
+            if message.content:
+                events.append({"type": "token", "text": message.content})
+            events.append({
+                "type": "token",
+                "text": "\n\n(Response cut short: output limit reached.)",
+            })
+        elif message.content:
             events.append({"type": "token", "text": message.content})
         events.append(emitter.emit(
             "node_completed",
