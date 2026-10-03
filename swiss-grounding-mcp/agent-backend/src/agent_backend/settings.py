@@ -41,6 +41,11 @@ class AgentSettings:
     cors_allowed_origins: list[str]
     cors_allow_any_local_port: bool
     mcp_settings: MCPSettings
+    agent_api_key: str = ""
+    rate_limit_per_minute: int = 30
+    daily_request_limit: int = 0
+    client_ip_header: str = ""
+    max_audio_upload_bytes: int = 10_485_760
 
     @classmethod
     def from_env(cls) -> "AgentSettings":
@@ -61,8 +66,21 @@ class AgentSettings:
             openai_tts_voice=os.environ.get("OPENAI_TTS_VOICE", "alloy"),
             host=os.environ.get("AGENT_BACKEND_HOST", "127.0.0.1"),
             port=int(os.environ.get("AGENT_BACKEND_PORT", "3001")),
+            agent_api_key=os.environ.get("AGENT_BACKEND_API_KEY", "").strip(),
+            rate_limit_per_minute=int(
+                os.environ.get("AGENT_RATE_LIMIT_PER_MINUTE", "30")
+            ),
+            daily_request_limit=int(
+                os.environ.get("AGENT_DAILY_REQUEST_LIMIT", "0")
+            ),
+            client_ip_header=os.environ.get("AGENT_CLIENT_IP_HEADER", ""),
+            max_audio_upload_bytes=int(
+                os.environ.get("MAX_AUDIO_UPLOAD_BYTES", "10485760")
+            ),
             cors_allowed_origin=cors_origins[0],
             cors_allowed_origins=cors_origins,
-            cors_allow_any_local_port=_parse_bool(os.environ.get("CORS_ALLOW_ANY_LOCAL_PORT", "true")),
+            cors_allow_any_local_port=_parse_bool(
+                os.environ.get("CORS_ALLOW_ANY_LOCAL_PORT", "false")
+            ),
             mcp_settings=MCPSettings.from_env(),
         )

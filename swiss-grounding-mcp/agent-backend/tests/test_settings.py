@@ -19,6 +19,11 @@ def test_from_env_reads_agent_specific_vars(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENAI_MODEL", "gpt-4o-mini")
     monkeypatch.setenv("AGENT_BACKEND_HOST", "0.0.0.0")
     monkeypatch.setenv("AGENT_BACKEND_PORT", "9090")
+    monkeypatch.setenv("AGENT_BACKEND_API_KEY", "backend-test-key")
+    monkeypatch.setenv("AGENT_RATE_LIMIT_PER_MINUTE", "12")
+    monkeypatch.setenv("AGENT_DAILY_REQUEST_LIMIT", "2000")
+    monkeypatch.setenv("AGENT_CLIENT_IP_HEADER", "X-Real-IP")
+    monkeypatch.setenv("MAX_AUDIO_UPLOAD_BYTES", "12345")
     monkeypatch.setenv("CORS_ALLOWED_ORIGIN", "http://localhost:5173")
 
     settings = AgentSettings.from_env()
@@ -27,6 +32,11 @@ def test_from_env_reads_agent_specific_vars(monkeypatch, tmp_path):
     assert settings.openai_model == "gpt-4o-mini"
     assert settings.host == "0.0.0.0"
     assert settings.port == 9090
+    assert settings.agent_api_key == "backend-test-key"
+    assert settings.rate_limit_per_minute == 12
+    assert settings.daily_request_limit == 2000
+    assert settings.client_ip_header == "X-Real-IP"
+    assert settings.max_audio_upload_bytes == 12345
     assert settings.cors_allowed_origin == "http://localhost:5173"
     assert settings.mcp_settings.ojp_api_token == ""
 
@@ -69,7 +79,7 @@ def test_from_env_defaults_cors_origins_to_common_local_dev_hosts(monkeypatch, t
     ]
 
 
-def test_from_env_defaults_cors_allow_any_local_port_to_true(monkeypatch, tmp_path):
+def test_from_env_defaults_cors_allow_any_local_port_to_false(monkeypatch, tmp_path):
     empty_env = tmp_path / "server.env"
     empty_env.write_text("")
     monkeypatch.setattr("agent_backend.settings._SERVER_ENV_PATH", empty_env)
@@ -80,7 +90,7 @@ def test_from_env_defaults_cors_allow_any_local_port_to_true(monkeypatch, tmp_pa
 
     settings = AgentSettings.from_env()
 
-    assert settings.cors_allow_any_local_port is True
+    assert settings.cors_allow_any_local_port is False
 
 
 def test_from_env_can_disable_cors_allow_any_local_port(monkeypatch, tmp_path):

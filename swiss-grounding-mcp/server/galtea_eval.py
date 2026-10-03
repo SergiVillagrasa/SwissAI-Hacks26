@@ -73,10 +73,15 @@ def _agent_backend(messages: list[dict]) -> str:
     """
     reply_parts: list[str] = []
     tool_results: list[dict] = []
+    headers = {}
+    api_key = os.environ.get("AGENT_BACKEND_API_KEY")
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
     with httpx.stream(
         "POST",
         f"{BACKEND_URL}/api/chat",
         json={"messages": messages},
+        headers=headers,
         timeout=httpx.Timeout(180.0, connect=10.0),
     ) as response:
         response.raise_for_status()
