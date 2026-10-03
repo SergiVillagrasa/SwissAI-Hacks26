@@ -40,8 +40,9 @@ full list; only set what the tools you need require):
   is the access control). When set, the MCP SDK rejects any request whose
   `Host` header is not listed, so confirm the Host your proxy forwards
   (e.g. the public Railway hostname) before enabling it.
-- `MCP_ALLOWED_ORIGINS` — comma-separated browser Origin allowlist used
-  with `MCP_ALLOWED_HOSTS`; requests from unlisted origins are rejected.
+- `MCP_ALLOWED_ORIGINS` — ignored unless `MCP_ALLOWED_HOSTS` is set.
+  When enabled, this is the comma-separated browser Origin allowlist;
+  requests from unlisted origins are rejected.
 - `MCP_CLIENT_IP_HEADER` — optional trusted client-IP header. Leave it
   empty to key limits on the TCP peer address. Set it only when every
   request reaches the service through a proxy that overwrites the header;

@@ -87,7 +87,7 @@ All other server environment settings are listed here; defaults come from [Setti
 | `MCP_RATE_LIMIT_PER_MINUTE` | `60` | Per-client HTTP request limit; `0` disables it |
 | `MCP_CLIENT_IP_HEADER` | empty | Optional trusted header for client IP attribution |
 | `MCP_ALLOWED_HOSTS` | empty | Comma-separated allowed HTTP Host values for DNS-rebinding protection |
-| `MCP_ALLOWED_ORIGINS` | empty | Comma-separated allowed browser Origin values used with `MCP_ALLOWED_HOSTS` |
+| `MCP_ALLOWED_ORIGINS` | empty | Ignored unless `MCP_ALLOWED_HOSTS` is set; otherwise comma-separated browser Origin allowlist |
 | `RESPECT_ROBOTS_TXT` | `true` | Reserved policy flag; current adapters do not consult it |
 
 For both `MCP_CLIENT_IP_HEADER` and `AGENT_CLIENT_IP_HEADER`, set the
