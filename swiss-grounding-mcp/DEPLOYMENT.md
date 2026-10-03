@@ -30,6 +30,16 @@ full list; only set what the tools you need require):
 - `OJP_API_TOKEN` — required for train tools.
 - `AERODATABOX_API_KEY` — required for the aviation tools.
 - `SERPAPI_API_KEY` — required for `get_flight_fares`.
+- `MCP_AUTH_TOKEN` — required for public binds. For an open judging
+  endpoint, set `MCP_ALLOW_UNAUTHENTICATED=true`; the request rate limit
+  still applies.
+- `MCP_RATE_LIMIT_PER_MINUTE` — per-client request limit (default `60`;
+  `0` disables it).
+- `MCP_ALLOWED_HOSTS` — comma-separated allowed `Host` values. Set this
+  to the public Railway hostname so the MCP SDK's DNS-rebinding check
+  accepts requests for the deployed service.
+- `MCP_CLIENT_IP_HEADER=X-Real-IP` — use on Railway, where the edge sets
+  `X-Real-IP` to the client IP for per-client rate limiting.
 - `OJP_BASE_URL`, `OJP_FARE_URL`, `RESPECT_ROBOTS_TXT`,
   `TRIP_TIME_MARGIN_MINUTES`, etc. — optional, defaults match
   `.env.example`.
@@ -44,15 +54,27 @@ Set:
 
 - `OPENAI_API_KEY` (required — without it `/api/chat` degrades to a
   clean "assistant unavailable" response instead of crashing).
+- `AGENT_BACKEND_API_KEY` — bearer key required for the three chat and
+  voice POST routes when configured; keep it the same as the frontend
+  build variable.
+- `AGENT_RATE_LIMIT_PER_MINUTE` — per-client request limit (default `30`;
+  `0` disables it).
+- `AGENT_DAILY_REQUEST_LIMIT` — global rolling daily cap; default `0`
+  disables it. A starting budget such as `2000` requests/day is
+  recommended.
+- `AGENT_CLIENT_IP_HEADER=X-Real-IP` — use on Railway to rate-limit by
+  the client IP supplied by the edge.
+- `MAX_AUDIO_UPLOAD_BYTES` — maximum uploaded audio bytes (default
+  `10485760`, or 10 MiB).
 - `OJP_API_TOKEN`, `AERODATABOX_API_KEY`, `SERPAPI_API_KEY` — same keys
   as the MCP server; this service loads `swiss_grounding_mcp` settings
   independently and does not read them from the other service.
 - `CORS_ALLOWED_ORIGIN` — set to the deployed frontend's public URL
   (e.g. `https://frontend-production-xxxx.up.railway.app`) once you know
   it. Comma-separate multiple origins.
-- `CORS_ALLOW_ANY_LOCAL_PORT=false` — the `true` default is meant for
-  local dev (it allow-lists any `localhost`/`127.0.0.1` port); turn it
-  off for a public deployment.
+- `CORS_ALLOW_ANY_LOCAL_PORT` defaults to `false`. Set it to `true` only
+  for local development when arbitrary `localhost`/`127.0.0.1` ports are
+  needed.
 - `OPENAI_MODEL`, `OPENAI_TRANSCRIBE_MODEL`, `OPENAI_TTS_MODEL`,
   `OPENAI_TTS_VOICE` — optional overrides.
 
@@ -63,12 +85,17 @@ Health check: `GET /api/health`.
 Vite inlines `VITE_*` variables at **build time**, so these must be set
 as service variables before the image is built (Railway forwards
 matching variables as Docker build args automatically since the
-Dockerfile declares `ARG VITE_AGENT_BACKEND_URL` / `ARG
-VITE_MAPBOX_TOKEN`):
+Dockerfile declares the corresponding `ARG` values):
 
 - `VITE_AGENT_BACKEND_URL` — the `agent-backend` service's public URL
   (e.g. `https://agent-backend-production-xxxx.up.railway.app`).
-- `VITE_MAPBOX_TOKEN` — a Mapbox access token for the route map widget.
+- `VITE_AGENT_BACKEND_API_KEY` — sent as a bearer key to the backend.
+  A key bundled into a public SPA is visible to every visitor, so it
+  deters drive-by use but is not a secret. Rate and daily request limits,
+  plus an OpenAI dashboard spend cap, are the actual cost controls.
+- `VITE_MAPBOX_TOKEN` — use a public `pk.` Mapbox token with URL
+  restrictions configured in the Mapbox dashboard. The build rejects
+  secret `sk.` tokens.
 
 ## Suggested deployment order
 

@@ -17,6 +17,7 @@ function fakeStreamResponse(frames: string[]): Response {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe("streamChat", () => {
@@ -55,6 +56,27 @@ describe("streamChat", () => {
     expect(body.messages).toEqual(messages);
   });
 
+  it("sends the backend key and trims history to the last 20 messages", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      fakeStreamResponse(['data: {"type": "done"}\n\n'])
+    );
+    vi.stubEnv("VITE_AGENT_BACKEND_API_KEY", "test-key");
+    vi.stubGlobal("fetch", fetchMock);
+    const messages: ChatMessage[] = Array.from({ length: 25 }, (_, index) => ({
+      role: "user",
+      content: `message ${index}`,
+    }));
+
+    for await (const _event of streamChat("http://backend", messages)) {
+      void _event;
+    }
+
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("http://backend/api/chat");
+    expect(init.headers).toMatchObject({ Authorization: "Bearer test-key" });
+    expect(JSON.parse(init.body as string).messages).toEqual(messages.slice(-20));
+  });
+
   it("omits the channel field for typed requests", async () => {
     const fetchMock = vi.fn().mockResolvedValue(fakeStreamResponse(['data: {"type": "done"}\n\n']));
     vi.stubGlobal("fetch", fetchMock);
@@ -75,6 +97,6 @@ describe("streamChat", () => {
 
     const generator = streamChat("http://backend", [{ role: "user", content: "hi" }]);
 
-    await expect(generator.next()).rejects.toThrow("Agent backend responded with 500");
+    await expect(generator.next()).rejects.toMatchObject({ status: 500 });
   });
 });

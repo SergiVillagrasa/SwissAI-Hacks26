@@ -3,6 +3,7 @@ import { synthesizeSpeech, transcribeAudio } from "./voice";
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe("transcribeAudio", () => {
@@ -24,9 +25,9 @@ describe("transcribeAudio", () => {
   it("throws when the backend responds with a non-OK status", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
 
-    await expect(transcribeAudio("http://backend", new Blob(["audio"]))).rejects.toThrow(
-      "Voice backend responded with 500"
-    );
+    await expect(
+      transcribeAudio("http://backend", new Blob(["audio"]))
+    ).rejects.toMatchObject({ status: 500 });
   });
 });
 
@@ -47,11 +48,24 @@ describe("synthesizeSpeech", () => {
     expect(JSON.parse(init.body)).toEqual({ text: "hello there" });
   });
 
+  it("clips speech text to 1500 characters", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(new Uint8Array([1]), { status: 200 })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await synthesizeSpeech("http://backend", "x".repeat(1501));
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      text: "x".repeat(1500),
+    });
+  });
+
   it("throws when the backend responds with a non-OK status", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
 
-    await expect(synthesizeSpeech("http://backend", "hello")).rejects.toThrow(
-      "Voice backend responded with 500"
-    );
+    await expect(synthesizeSpeech("http://backend", "hello")).rejects.toMatchObject({
+      status: 500,
+    });
   });
 });

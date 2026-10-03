@@ -56,4 +56,19 @@ describe("App", () => {
     );
     expect(input).not.toBeDisabled();
   });
+
+  it("shows a rate-limit message for a 429 response", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 429 })));
+
+    render(<App />);
+    const input = screen.getByPlaceholderText(/ask about your journey/i);
+    fireEvent.change(input, { target: { value: "hi" } });
+    fireEvent.submit(input.closest("form")!);
+
+    expect(
+      await screen.findByText(
+        "You're sending requests too quickly. Please wait a moment and try again."
+      )
+    ).toBeInTheDocument();
+  });
 });

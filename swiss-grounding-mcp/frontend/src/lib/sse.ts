@@ -1,4 +1,5 @@
 import type { AgentEvent, ChatMessage } from "./types";
+import { BackendError, backendHeaders } from "./backend";
 
 export async function* streamChat(
   backendUrl: string,
@@ -7,13 +8,16 @@ export async function* streamChat(
 ): AsyncGenerator<AgentEvent> {
   const response = await fetch(`${backendUrl}/api/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(channel ? { messages, channel } : { messages }),
+    headers: backendHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(
+      channel
+        ? { messages: messages.slice(-20), channel }
+        : { messages: messages.slice(-20) }
+    ),
   });
 
-  if (!response.ok || !response.body) {
-    throw new Error(`Agent backend responded with ${response.status}`);
-  }
+  if (!response.ok) throw new BackendError(response.status);
+  if (!response.body) throw new Error("Agent backend returned no response body");
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();

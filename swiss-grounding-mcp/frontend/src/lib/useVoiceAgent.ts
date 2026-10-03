@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { meterFromAudioElement, meterFromStream } from "./audioLevel";
+import { BackendError } from "./backend";
 import { synthesizeSpeech, transcribeAudio } from "./voice";
 
 export type VoiceState = "idle" | "listening" | "processing" | "speaking" | "error";
@@ -130,9 +131,13 @@ export function useVoiceAgent(
       const assistantText = await onTranscript(transcript);
       if (cancelledRef.current) return;
       await speak(assistantText);
-    } catch {
+    } catch (error) {
       if (cancelledRef.current) return;
-      setErrorMessage("Something went wrong reaching the assistant. Please try again.");
+      setErrorMessage(
+        error instanceof BackendError && error.status === 429
+          ? "You're sending requests too quickly. Please wait a moment and try again."
+          : "Something went wrong reaching the assistant. Please try again."
+      );
       setState("error");
     }
   }, [backendUrl, onTranscript, speak]);

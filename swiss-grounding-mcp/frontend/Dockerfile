@@ -12,8 +12,10 @@ COPY . .
 # Docker build args (Railway forwards service variables that match a
 # declared ARG automatically for Dockerfile builds).
 ARG VITE_AGENT_BACKEND_URL
+ARG VITE_AGENT_BACKEND_API_KEY
 ARG VITE_MAPBOX_TOKEN
 ENV VITE_AGENT_BACKEND_URL=${VITE_AGENT_BACKEND_URL}
+ENV VITE_AGENT_BACKEND_API_KEY=${VITE_AGENT_BACKEND_API_KEY}
 ENV VITE_MAPBOX_TOKEN=${VITE_MAPBOX_TOKEN}
 
 RUN npm run build

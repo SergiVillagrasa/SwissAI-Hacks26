@@ -82,11 +82,16 @@ All other server environment settings are listed here; defaults come from [Setti
 | `SERPAPI_TIMEOUT_SECONDS` | `10` | Flight-search HTTP timeout |
 | `MCP_HTTP_HOST` | `127.0.0.1` | HTTP bind address |
 | `MCP_HTTP_PORT` | `8000` | HTTP bind port |
+| `MCP_AUTH_TOKEN` | empty | Bearer token for HTTP; required for public binds unless unauthenticated access is explicitly allowed |
+| `MCP_ALLOW_UNAUTHENTICATED` | `false` | Explicitly permit a public HTTP bind without a bearer token |
+| `MCP_RATE_LIMIT_PER_MINUTE` | `60` | Per-client HTTP request limit; `0` disables it |
+| `MCP_CLIENT_IP_HEADER` | empty | Optional trusted header for client IP attribution |
+| `MCP_ALLOWED_HOSTS` | empty | Comma-separated allowed HTTP Host values for DNS-rebinding protection |
 | `RESPECT_ROBOTS_TXT` | `true` | Reserved policy flag; current adapters do not consult it |
 
 ### 8. Hosted endpoint
 
-**N/A (Local execution)** for this handoff. No public endpoint or hosted authentication credentials were verified. The local MCP application configures no authentication headers of its own. Keep the loopback binding for local evaluation; any public deployment needs independently configured access controls.
+**N/A (Local execution)** for this handoff; no public endpoint or hosted credentials were verified. Public HTTP binds now fail closed unless `MCP_AUTH_TOKEN` is set or `MCP_ALLOW_UNAUTHENTICATED=true` is explicitly configured. HTTP requests are rate-limited by client IP, and `MCP_ALLOWED_HOSTS` configures the MCP SDK's DNS-rebinding protection. Keep the loopback binding for local evaluation.
 
 ### 9. Declared scope
 
@@ -223,11 +228,11 @@ The server makes no generative LLM calls. Typed extraction, missing-field report
 
 AeroDataBox caches successful response bodies by request path and parameters for 60 seconds by default, using a monotonic clock. It also caches empty successful responses. The cache is process-local, has no explicit size bound, and is not shared across replicas. OJP and SerpApi have no application response cache. A full-day ZRH flight search uses two 12-hour API windows before filtering locally.
 
-All three provider adapters default to a 10-second HTTP timeout. HTTP and parsing failures handled by the adapters produce source errors; AeroDataBox HTTP 204 is treated as an empty result. There is no general retry/backoff or rate-limiting implementation. The rail time-margin retry handles an empty timetable result, not a failed network request. OJP Fare failures after station resolution return an SBB link without inventing a price. Failed flight lookup in a connection workflow can ask for a confirmed arrival time.
+All three provider adapters default to a 10-second HTTP timeout. HTTP and parsing failures handled by the adapters produce source errors; AeroDataBox HTTP 204 is treated as an empty result. Provider adapters have no general upstream retry/backoff or provider-specific rate limiting. MCP HTTP requests and agent-backend requests are rate-limited per client, with an optional global daily agent-backend cap. The rail time-margin retry handles an empty timetable result, not a failed network request. OJP Fare failures after station resolution return an SBB link without inventing a price. Failed flight lookup in a connection workflow can ask for a confirmed arrival time.
 
-MCP schemas validate typed arguments; domain code adds missing-context checks, scope checks, and result caps. OJP XML is built structurally and parsed with `defusedxml`. Validation is not comprehensive: for example, malformed airport-search dates can escape as exceptions. Provider exceptions may include response excerpts or request URLs; review diagnostic output before sharing it, especially for SerpApi, which passes its key as a query parameter.
+MCP schemas validate typed arguments; domain code adds missing-context checks, scope checks, and result caps. OJP XML is built structurally and parsed with `defusedxml`. Validation is not comprehensive: for example, malformed airport-search dates can escape as exceptions. Provider errors returned to callers are sanitized; server logs include bounded response excerpts with provider keys redacted. SerpApi passes its key as a query parameter, so avoid sharing raw request traces.
 
-This README contains no credentials and does not require committing `.env` files. That is not a repository-history secret audit. Tool instructions and returned source data are structurally separate, but the server does not implement a prompt-injection sanitizer or enforce how an assistant interprets returned text. Bind locally for evaluation; authentication, deployment hardening, distributed quotas, and robust multi-replica session routing are outside this implementation.
+This README contains no credentials and does not require committing `.env` files. That is not a repository-history secret audit. Tool instructions and returned source data are structurally separate, but the server does not implement a prompt-injection sanitizer or enforce how an assistant interprets returned text. Public HTTP deployments should configure a bearer token, allowed hosts, and an IP-header appropriate to their proxy. The in-process limits are not distributed across replicas, and robust multi-replica session routing is not implemented.
 
 ## Test suite and quality verification
 

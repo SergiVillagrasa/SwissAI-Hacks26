@@ -12,6 +12,7 @@ import { RunProvider } from "./workflow/RunProvider";
 import { useRun } from "./workflow/runContext";
 import { WorkflowPage } from "./pages/WorkflowPage";
 import { WorkflowBoundary } from "./workflow/WorkflowBoundary";
+import { BackendError } from "./lib/backend";
 
 export interface Turn {
   id: string;
@@ -75,9 +76,12 @@ function AppContent() {
       }
       setHistory((current) => [...current, { role: "assistant", content: assistantText }]);
       return assistantText;
-    } catch {
+    } catch (error) {
       markDisconnected();
-      const fallback = "Something went wrong reaching the assistant. Please try again.";
+      const fallback =
+        error instanceof BackendError && error.status === 429
+          ? "You're sending requests too quickly. Please wait a moment and try again."
+          : "Something went wrong reaching the assistant. Please try again.";
       setTurns((current) =>
         current.map((turn) => (turn.id === assistantTurn.id ? { ...turn, text: fallback } : turn))
       );
