@@ -90,6 +90,14 @@ def enforce_access(headers: Mapping[str, str], peer: str | None) -> None:
         )
 
 
+def _route_path(scope: Scope) -> str:
+    path = scope["path"]
+    root_path = scope.get("root_path", "")
+    if root_path and (path == root_path or path.startswith(root_path + "/")):
+        return path[len(root_path):]
+    return path
+
+
 class AccessGuardMiddleware:
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
@@ -98,7 +106,7 @@ class AccessGuardMiddleware:
         if (
             scope["type"] == "http"
             and scope["method"] == "POST"
-            and scope["path"]
+            and _route_path(scope)
             in {
                 "/api/chat",
                 "/api/voice/transcribe",

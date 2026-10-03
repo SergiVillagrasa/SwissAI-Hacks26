@@ -301,6 +301,28 @@ def test_api_key_protects_post_routes_but_not_health(monkeypatch):
     assert client.get("/api/health").status_code == 200
 
 
+def test_access_guard_protects_routes_with_root_path(monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "settings",
+        replace(main_module.settings, agent_api_key="required-key"),
+    )
+    client = TestClient(main_module.app, root_path="/prefix")
+
+    unauthenticated = client.post(
+        "/prefix/api/chat",
+        json={"messages": [{"role": "user", "content": "hello"}]},
+    )
+    authenticated = client.post(
+        "/prefix/api/chat",
+        json={"messages": [{"role": "user", "content": "hello"}]},
+        headers={"Authorization": "Bearer required-key"},
+    )
+
+    assert unauthenticated.status_code == 401
+    assert authenticated.status_code != 401
+
+
 def test_auth_rejection_has_cors_headers_and_preflight_needs_no_key(monkeypatch):
     monkeypatch.setattr(
         main_module,
