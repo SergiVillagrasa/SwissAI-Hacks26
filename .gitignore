@@ -2,3 +2,4 @@
 .env.*
 !.env.example
 swiss-grounding-mcp/server/.env.local
+.superpowers/
