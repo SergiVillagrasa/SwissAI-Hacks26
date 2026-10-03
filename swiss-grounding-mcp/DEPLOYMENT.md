@@ -35,9 +35,11 @@ full list; only set what the tools you need require):
   still applies.
 - `MCP_RATE_LIMIT_PER_MINUTE` — per-client request limit (default `60`;
   `0` disables it).
-- `MCP_ALLOWED_HOSTS` — comma-separated allowed `Host` values. Set this
-  to the public Railway hostname so the MCP SDK's DNS-rebinding check
-  accepts requests for the deployed service.
+- `MCP_ALLOWED_HOSTS` — optional, comma-separated allowed `Host` values.
+  When unset on a public bind, no Host check is applied (the bearer token
+  is the access control). When set, the MCP SDK rejects any request whose
+  `Host` header is not listed, so confirm the Host your proxy forwards
+  (e.g. the public Railway hostname) before enabling it.
 - `MCP_CLIENT_IP_HEADER=X-Real-IP` — use on Railway, where the edge sets
   `X-Real-IP` to the client IP for per-client rate limiting.
 - `OJP_BASE_URL`, `OJP_FARE_URL`, `RESPECT_ROBOTS_TXT`,
