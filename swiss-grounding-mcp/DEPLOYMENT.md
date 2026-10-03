@@ -40,8 +40,14 @@ full list; only set what the tools you need require):
   is the access control). When set, the MCP SDK rejects any request whose
   `Host` header is not listed, so confirm the Host your proxy forwards
   (e.g. the public Railway hostname) before enabling it.
-- `MCP_CLIENT_IP_HEADER=X-Real-IP` — use on Railway, where the edge sets
-  `X-Real-IP` to the client IP for per-client rate limiting.
+- `MCP_ALLOWED_ORIGINS` — comma-separated browser Origin allowlist used
+  with `MCP_ALLOWED_HOSTS`; requests from unlisted origins are rejected.
+- `MCP_CLIENT_IP_HEADER` — optional trusted client-IP header. Leave it
+  empty to key limits on the TCP peer address. Set it only when every
+  request reaches the service through a proxy that overwrites the header;
+  otherwise clients can spoof it to get around per-client limits. On
+  Railway, check that the edge overwrites a client-supplied `X-Real-IP`
+  before relying on it.
 - `OJP_BASE_URL`, `OJP_FARE_URL`, `RESPECT_ROBOTS_TXT`,
   `TRIP_TIME_MARGIN_MINUTES`, etc. — optional, defaults match
   `.env.example`.
@@ -64,8 +70,14 @@ Set:
 - `AGENT_DAILY_REQUEST_LIMIT` — global rolling daily cap; default `0`
   disables it. A starting budget such as `2000` requests/day is
   recommended.
-- `AGENT_CLIENT_IP_HEADER=X-Real-IP` — use on Railway to rate-limit by
-  the client IP supplied by the edge.
+- `AGENT_MAX_OUTPUT_TOKENS` — maximum completion tokens generated for a
+  model response (default `1024`); set to `0` or less to disable the cap.
+- `AGENT_CLIENT_IP_HEADER` — optional trusted client-IP header. Leave it
+  empty to key limits on the TCP peer address. Set it only when every
+  request reaches the service through a proxy that overwrites the header;
+  otherwise clients can spoof it to get around per-client limits. On
+  Railway, check that the edge overwrites a client-supplied `X-Real-IP`
+  before relying on it.
 - `MAX_AUDIO_UPLOAD_BYTES` — maximum uploaded audio bytes (default
   `10485760`, or 10 MiB).
 - `OJP_API_TOKEN`, `AERODATABOX_API_KEY`, `SERPAPI_API_KEY` — same keys

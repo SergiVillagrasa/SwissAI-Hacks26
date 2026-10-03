@@ -97,7 +97,7 @@ def test_ensure_http_exposure_is_safe(host, settings, raises):
         ensure_http_exposure_is_safe(host, settings)
 
 
-def _initialize(client, token=None):
+def _initialize(client, token=None, extra_headers=None):
     headers = {
         "accept": "application/json, text/event-stream",
         "content-type": "application/json",
@@ -105,6 +105,8 @@ def _initialize(client, token=None):
     }
     if token is not None:
         headers["authorization"] = f"Bearer {token}"
+    if extra_headers:
+        headers.update(extra_headers)
     return client.post(
         "/mcp",
         headers=headers,
@@ -145,3 +147,28 @@ def test_build_http_app_rate_limits_after_two_requests():
     assert blocked.status_code == 429
     assert blocked.json() == {"error": "rate_limited"}
     assert int(blocked.headers["retry-after"]) >= 1
+
+
+def test_build_http_app_allows_configured_browser_origins_only():
+    settings = Settings(
+        mcp_allowed_hosts=("example.com",),
+        mcp_allowed_origins=("https://example.com",),
+    )
+    with TestClient(build_http_app(settings, "127.0.0.1")) as client:
+        allowed = _initialize(
+            client,
+            extra_headers={
+                "host": "example.com",
+                "origin": "https://example.com",
+            },
+        )
+        unlisted = _initialize(
+            client,
+            extra_headers={
+                "host": "example.com",
+                "origin": "https://unlisted.example",
+            },
+        )
+
+    assert allowed.status_code == 200
+    assert unlisted.status_code == 403

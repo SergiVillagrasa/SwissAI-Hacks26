@@ -87,7 +87,21 @@ All other server environment settings are listed here; defaults come from [Setti
 | `MCP_RATE_LIMIT_PER_MINUTE` | `60` | Per-client HTTP request limit; `0` disables it |
 | `MCP_CLIENT_IP_HEADER` | empty | Optional trusted header for client IP attribution |
 | `MCP_ALLOWED_HOSTS` | empty | Comma-separated allowed HTTP Host values for DNS-rebinding protection |
+| `MCP_ALLOWED_ORIGINS` | empty | Comma-separated allowed browser Origin values used with `MCP_ALLOWED_HOSTS` |
 | `RESPECT_ROBOTS_TXT` | `true` | Reserved policy flag; current adapters do not consult it |
+
+For both `MCP_CLIENT_IP_HEADER` and `AGENT_CLIENT_IP_HEADER`, set the
+header only when every request reaches the service through a proxy that
+overwrites it; otherwise clients can spoof it to get around per-client
+limits. Leave it empty to key on the TCP peer address. On Railway, check
+that the edge overwrites a client-supplied `X-Real-IP` before relying on it.
+
+Agent-backend controls:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `AGENT_CLIENT_IP_HEADER` | empty | Optional trusted header for client IP attribution; use only behind a proxy that overwrites it |
+| `AGENT_MAX_OUTPUT_TOKENS` | `1024` | Maximum completion tokens per model response; `0` or less disables the cap |
 
 ### 8. Hosted endpoint
 

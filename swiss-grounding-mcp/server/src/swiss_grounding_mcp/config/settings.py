@@ -32,6 +32,7 @@ class Settings:
     mcp_rate_limit_per_minute: int = 60
     mcp_client_ip_header: str = ""
     mcp_allowed_hosts: tuple[str, ...] = ()
+    mcp_allowed_origins: tuple[str, ...] = ()
     aerodatabox_api_key: str = ""
     aerodatabox_host: str = "aerodatabox.p.rapidapi.com"
     aerodatabox_base_url: str = "https://aerodatabox.p.rapidapi.com"
@@ -82,6 +83,11 @@ class Settings:
                 host.strip()
                 for host in source.get("MCP_ALLOWED_HOSTS", "").split(",")
                 if host.strip()
+            ),
+            mcp_allowed_origins=tuple(
+                origin.strip()
+                for origin in source.get("MCP_ALLOWED_ORIGINS", "").split(",")
+                if origin.strip()
             ),
             aerodatabox_api_key=source.get(
                 "AERODATABOX_API_KEY", defaults.aerodatabox_api_key

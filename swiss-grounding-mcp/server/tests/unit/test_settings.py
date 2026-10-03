@@ -17,6 +17,7 @@ def test_defaults_when_env_empty():
     assert settings.mcp_rate_limit_per_minute == 60
     assert settings.mcp_client_ip_header == ""
     assert settings.mcp_allowed_hosts == ()
+    assert settings.mcp_allowed_origins == ()
 
 
 def test_env_overrides_defaults():
@@ -34,6 +35,7 @@ def test_env_overrides_defaults():
         "MCP_RATE_LIMIT_PER_MINUTE": "12",
         "MCP_CLIENT_IP_HEADER": "X-Real-IP",
         "MCP_ALLOWED_HOSTS": "one.example, two.example",
+        "MCP_ALLOWED_ORIGINS": "https://one.example, https://two.example",
     }
 
     settings = Settings.from_env(env)
@@ -51,6 +53,10 @@ def test_env_overrides_defaults():
     assert settings.mcp_rate_limit_per_minute == 12
     assert settings.mcp_client_ip_header == "X-Real-IP"
     assert settings.mcp_allowed_hosts == ("one.example", "two.example")
+    assert settings.mcp_allowed_origins == (
+        "https://one.example",
+        "https://two.example",
+    )
 
 
 def test_respect_robots_txt_accepts_common_truthy_strings():

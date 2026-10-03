@@ -146,7 +146,7 @@ def build_http_app(settings: Settings, host: str) -> ASGIApp:
         TransportSecuritySettings(
             enable_dns_rebinding_protection=True,
             allowed_hosts=list(settings.mcp_allowed_hosts),
-            allowed_origins=[],
+            allowed_origins=list(settings.mcp_allowed_origins),
         )
         if settings.mcp_allowed_hosts
         else None
