@@ -48,7 +48,9 @@ full list; only set what the tools you need require):
   request reaches the service through a proxy that overwrites the header;
   otherwise clients can spoof it to get around per-client limits. On
   Railway, check that the edge overwrites a client-supplied `X-Real-IP`
-  before relying on it.
+  before relying on it. Behind Railway's edge, leaving this empty makes
+  every client share the proxy IP, so the per-client limit becomes one
+  service-wide limit (60 requests per minute by default).
 - `OJP_BASE_URL`, `OJP_FARE_URL`, `RESPECT_ROBOTS_TXT`,
   `TRIP_TIME_MARGIN_MINUTES`, etc. — optional, defaults match
   `.env.example`.
@@ -78,7 +80,9 @@ Set:
   request reaches the service through a proxy that overwrites the header;
   otherwise clients can spoof it to get around per-client limits. On
   Railway, check that the edge overwrites a client-supplied `X-Real-IP`
-  before relying on it.
+  before relying on it. Behind Railway's edge, leaving this empty makes
+  every client share the proxy IP, so the per-client limit becomes one
+  service-wide limit (30 requests per minute by default).
 - `MAX_AUDIO_UPLOAD_BYTES` — maximum uploaded audio bytes (default
   `10485760`, or 10 MiB).
 - `OJP_API_TOKEN`, `AERODATABOX_API_KEY`, `SERPAPI_API_KEY` — same keys
