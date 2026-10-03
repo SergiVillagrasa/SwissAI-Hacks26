@@ -46,6 +46,7 @@ class AgentSettings:
     daily_request_limit: int = 0
     client_ip_header: str = ""
     max_audio_upload_bytes: int = 10_485_760
+    max_output_tokens: int = 1024
 
     @classmethod
     def from_env(cls) -> "AgentSettings":
@@ -76,6 +77,9 @@ class AgentSettings:
             client_ip_header=os.environ.get("AGENT_CLIENT_IP_HEADER", ""),
             max_audio_upload_bytes=int(
                 os.environ.get("MAX_AUDIO_UPLOAD_BYTES", "10485760")
+            ),
+            max_output_tokens=int(
+                os.environ.get("AGENT_MAX_OUTPUT_TOKENS", "1024")
             ),
             cors_allowed_origin=cors_origins[0],
             cors_allowed_origins=cors_origins,

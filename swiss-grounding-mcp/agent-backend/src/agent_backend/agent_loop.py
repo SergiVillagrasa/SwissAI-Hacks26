@@ -129,6 +129,7 @@ def run_chat(
     now: datetime | None = None,
     run_id: str | None = None,
     channel: str | None = None,
+    max_output_tokens: int = 1024,
 ) -> Iterator[dict]:
     current_time = now or datetime.now(timezone.utc)
     system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(now=current_time.strftime("%Y-%m-%dT%H:%M:%SZ"))
@@ -153,6 +154,7 @@ def run_chat(
         model=model,
         emitter=emitter,
         max_rounds=_MAX_TOOL_ROUNDS,
+        max_output_tokens=max_output_tokens,
     ))
     initial_state = {
         "chat_messages": [{"role": "system", "content": system_prompt}, *messages],

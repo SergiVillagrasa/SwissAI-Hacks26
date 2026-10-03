@@ -2,17 +2,20 @@ from __future__ import annotations
 
 import io
 import logging
+from collections.abc import Mapping
 from math import ceil
 from typing import Literal
 from uuid import uuid4
 
 import openai
-from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from mcp.server.transport_security import RequestBodyLimitMiddleware
 from openai import OpenAI
 from pydantic import BaseModel, Field
+from starlette.datastructures import Headers
+from starlette.types import ASGIApp, Receive, Scope, Send
 from swiss_grounding_mcp.http_security import (
     SlidingWindowRateLimiter,
     bearer_token_matches,
@@ -32,18 +35,8 @@ from agent_backend.sse import format_sse
 logger = logging.getLogger(__name__)
 settings = AgentSettings.from_env()
 app = FastAPI(title="Swiss Grounding MCP Agent Backend")
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_allowed_origins,
-    # Allow arbitrary local development ports only when explicitly enabled.
-    allow_origin_regex=LOCAL_DEV_ORIGIN_REGEX if settings.cors_allow_any_local_port else None,
-    allow_methods=["POST", "GET"],
-    allow_headers=["*"],
-)
-app.add_middleware(
-    RequestBodyLimitMiddleware,
-    max_body_size=settings.max_audio_upload_bytes + 65_536,
-)
+_rate_limiter = SlidingWindowRateLimiter(settings.rate_limit_per_minute, 60)
+_daily_limiter = SlidingWindowRateLimiter(settings.daily_request_limit, 86_400)
 
 def _build_openai_client(api_key: str) -> OpenAI | None:
     """Create the OpenAI client, or None when the key is missing/invalid.
@@ -68,13 +61,11 @@ _openai_client = _build_openai_client(settings.openai_api_key)
 _ojp_client = build_ojp_client(settings)
 _aviation_client = build_aviation_client(settings)
 _flight_fares_client = build_flight_fares_client(settings)
-_rate_limiter = SlidingWindowRateLimiter(settings.rate_limit_per_minute, 60)
-_daily_limiter = SlidingWindowRateLimiter(settings.daily_request_limit, 86_400)
 
 
-def enforce_access(request: Request) -> None:
+def enforce_access(headers: Mapping[str, str], peer: str | None) -> None:
     if settings.agent_api_key and not bearer_token_matches(
-        request.headers.get("authorization"), settings.agent_api_key
+        headers.get("authorization"), settings.agent_api_key
     ):
         raise HTTPException(
             status_code=401,
@@ -84,8 +75,8 @@ def enforce_access(request: Request) -> None:
 
     retry_after = _rate_limiter.check(
         client_ip(
-            request.headers,
-            request.client.host if request.client else None,
+            headers,
+            peer,
             settings.client_ip_header,
         )
     )
@@ -97,6 +88,54 @@ def enforce_access(request: Request) -> None:
             detail="Rate limit exceeded",
             headers={"Retry-After": str(ceil(retry_after))},
         )
+
+
+class AccessGuardMiddleware:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if (
+            scope["type"] == "http"
+            and scope["method"] == "POST"
+            and scope["path"]
+            in {
+                "/api/chat",
+                "/api/voice/transcribe",
+                "/api/voice/speak",
+            }
+        ):
+            client = scope.get("client")
+            try:
+                enforce_access(
+                    Headers(scope=scope),
+                    client[0] if client else None,
+                )
+            except HTTPException as exc:
+                response = JSONResponse(
+                    status_code=exc.status_code,
+                    content={"detail": exc.detail},
+                    headers=exc.headers,
+                )
+                await response(scope, receive, send)
+                return
+
+        await self.app(scope, receive, send)
+
+
+app.add_middleware(
+    RequestBodyLimitMiddleware,
+    max_body_size=settings.max_audio_upload_bytes + 65_536,
+)
+app.add_middleware(AccessGuardMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_allowed_origins,
+    # Allow arbitrary local development ports only when explicitly enabled.
+    allow_origin_regex=LOCAL_DEV_ORIGIN_REGEX if settings.cors_allow_any_local_port else None,
+    allow_methods=["POST", "GET"],
+    allow_headers=["*"],
+)
 
 
 class ChatMessage(BaseModel):
@@ -118,7 +157,7 @@ def health() -> dict:
     return {"status": "ok", "openai_configured": _openai_client is not None}
 
 
-@app.post("/api/chat", dependencies=[Depends(enforce_access)])
+@app.post("/api/chat")
 def chat(request: ChatRequest) -> StreamingResponse:
     def event_stream():
         run_id = str(uuid4())
@@ -158,15 +197,14 @@ def chat(request: ChatRequest) -> StreamingResponse:
             flight_fares_client=_flight_fares_client,
             settings=settings.mcp_settings,
             model=settings.openai_model,
+            max_output_tokens=settings.max_output_tokens,
         ):
             yield format_sse(event)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
 
-@app.post(
-    "/api/voice/transcribe", dependencies=[Depends(enforce_access)]
-)
+@app.post("/api/voice/transcribe")
 async def transcribe(audio: UploadFile = File(...)) -> dict:
     if _openai_client is None:
         raise HTTPException(status_code=503, detail=_OPENAI_MISSING_MESSAGE)
@@ -191,7 +229,7 @@ async def transcribe(audio: UploadFile = File(...)) -> dict:
     return {"text": (transcript.text or "").strip()}
 
 
-@app.post("/api/voice/speak", dependencies=[Depends(enforce_access)])
+@app.post("/api/voice/speak")
 def speak(request: SpeakRequest) -> Response:
     if _openai_client is None:
         raise HTTPException(status_code=503, detail=_OPENAI_MISSING_MESSAGE)

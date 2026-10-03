@@ -180,16 +180,42 @@ def test_transcribe_endpoint_rejects_oversized_upload(monkeypatch):
     monkeypatch.setattr(
         main_module,
         "settings",
-        replace(main_module.settings, max_audio_upload_bytes=4),
+        replace(
+            main_module.settings,
+            max_audio_upload_bytes=4,
+            agent_api_key="required-key",
+        ),
     )
     client = TestClient(main_module.app)
 
     response = client.post(
         "/api/voice/transcribe",
         files={"audio": ("utterance.webm", io.BytesIO(b"12345"), "audio/webm")},
+        headers={"Authorization": "Bearer required-key"},
     )
 
     assert response.status_code == 413
+
+
+def test_unauthenticated_oversized_content_length_is_rejected_before_body_limit(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        main_module,
+        "settings",
+        replace(main_module.settings, agent_api_key="required-key"),
+    )
+    client = TestClient(main_module.app)
+    content_length = main_module.settings.max_audio_upload_bytes + 65_537
+
+    response = client.post(
+        "/api/voice/transcribe",
+        content=b"",
+        headers={"Content-Length": str(content_length)},
+    )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Unauthorized"}
 
 
 def test_speak_endpoint_returns_mp3_audio_bytes(monkeypatch):
@@ -273,6 +299,34 @@ def test_api_key_protects_post_routes_but_not_health(monkeypatch):
     assert wrong.status_code == 401
     assert authorized.status_code == 200
     assert client.get("/api/health").status_code == 200
+
+
+def test_auth_rejection_has_cors_headers_and_preflight_needs_no_key(monkeypatch):
+    monkeypatch.setattr(
+        main_module,
+        "settings",
+        replace(main_module.settings, agent_api_key="key"),
+    )
+    client = TestClient(main_module.app)
+    origin = main_module.settings.cors_allowed_origins[0]
+
+    unauthorized = client.post(
+        "/api/voice/speak",
+        json={"text": "hello"},
+        headers={"Origin": origin},
+    )
+    preflight = client.options(
+        "/api/chat",
+        headers={
+            "Origin": origin,
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert unauthorized.status_code == 401
+    assert unauthorized.headers["access-control-allow-origin"] == origin
+    assert preflight.status_code == 200
+    assert preflight.headers["access-control-allow-origin"] == origin
 
 
 def test_per_ip_rate_limit_returns_retry_after():

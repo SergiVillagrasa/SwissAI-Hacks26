@@ -31,6 +31,7 @@ class AgentDependencies:
     model: str
     emitter: ExecutionEventEmitter
     max_rounds: int
+    max_output_tokens: int = 1024
 
 
 def build_agent_graph(dependencies: AgentDependencies):
@@ -48,12 +49,17 @@ def build_agent_graph(dependencies: AgentDependencies):
         )]
         started = perf_counter()
         try:
-            response = dependencies.openai_client.chat.completions.create(
-                model=dependencies.model,
-                messages=state["chat_messages"],
-                tools=TOOL_SCHEMAS,
-                temperature=0.2,
-            )
+            create_args = {
+                "model": dependencies.model,
+                "messages": state["chat_messages"],
+                "tools": TOOL_SCHEMAS,
+                "temperature": 0.2,
+            }
+            if dependencies.max_output_tokens > 0:
+                create_args["max_completion_tokens"] = (
+                    dependencies.max_output_tokens
+                )
+            response = dependencies.openai_client.chat.completions.create(**create_args)
         except Exception:
             events.extend([
                 emitter.emit(

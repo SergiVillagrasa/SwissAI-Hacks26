@@ -24,6 +24,7 @@ def test_from_env_reads_agent_specific_vars(monkeypatch, tmp_path):
     monkeypatch.setenv("AGENT_DAILY_REQUEST_LIMIT", "2000")
     monkeypatch.setenv("AGENT_CLIENT_IP_HEADER", "X-Real-IP")
     monkeypatch.setenv("MAX_AUDIO_UPLOAD_BYTES", "12345")
+    monkeypatch.setenv("AGENT_MAX_OUTPUT_TOKENS", "512")
     monkeypatch.setenv("CORS_ALLOWED_ORIGIN", "http://localhost:5173")
 
     settings = AgentSettings.from_env()
@@ -37,6 +38,7 @@ def test_from_env_reads_agent_specific_vars(monkeypatch, tmp_path):
     assert settings.daily_request_limit == 2000
     assert settings.client_ip_header == "X-Real-IP"
     assert settings.max_audio_upload_bytes == 12345
+    assert settings.max_output_tokens == 512
     assert settings.cors_allowed_origin == "http://localhost:5173"
     assert settings.mcp_settings.ojp_api_token == ""
 
@@ -114,8 +116,10 @@ def test_from_env_defaults_model_when_unset(monkeypatch, tmp_path):
     monkeypatch.setattr("agent_backend.settings._SERVER_LOCAL_ENV_PATH", empty_env)
     monkeypatch.setattr("agent_backend.settings._LOCAL_ENV_PATH", empty_env)
     monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    monkeypatch.delenv("AGENT_MAX_OUTPUT_TOKENS", raising=False)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
 
     settings = AgentSettings.from_env()
 
     assert settings.openai_model == "gpt-4o-mini"
+    assert settings.max_output_tokens == 1024

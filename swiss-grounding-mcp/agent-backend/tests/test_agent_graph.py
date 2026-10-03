@@ -15,9 +15,11 @@ def _response(content=None, tool_calls=None):
 class _FakeOpenAI:
     def __init__(self, responses):
         self.responses = iter(responses)
+        self.calls = []
         self.chat = SimpleNamespace(completions=SimpleNamespace(create=self.create))
 
     def create(self, **kwargs):
+        self.calls.append(kwargs)
         return next(self.responses)
 
 
@@ -36,13 +38,23 @@ def _run(client, **kwargs):
 
 
 def test_plain_reply_emits_graph_lifecycle_and_preserves_chat_events():
-    events = _run(_FakeOpenAI([_response(content="Hello")]))
+    client = _FakeOpenAI([_response(content="Hello")])
+    events = _run(client)
 
     assert events[0]["type"] == "run_started"
     assert [event["type"] for event in events if event["type"] in {"token", "widget", "done"}] == ["token", "done"]
     assert next(event for event in events if event["type"] == "run_completed")["outcome"] == "completed"
     assert [event["label"] for event in events if event["type"] == "node_skipped"] == ["Invoke Swiss tool", "Verify result"]
     assert events[-1] == {"type": "done"}
+    assert client.calls[0]["max_completion_tokens"] == 1024
+
+
+def test_model_output_token_limit_can_be_disabled():
+    client = _FakeOpenAI([_response(content="Hello")])
+
+    _run(client, max_output_tokens=0)
+
+    assert "max_completion_tokens" not in client.calls[0]
 
 
 def test_final_reply_after_tool_call_uses_additional_round_labels(monkeypatch):
