@@ -86,6 +86,18 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
   const [mapReady, setMapReady] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
 
+  // The accessible name should describe *this* route, not just "a map" --
+  // origin/destination come straight from the waypoints prop (not
+  // `located`/`mapWaypoints` below) so it still names the intended
+  // journey even while a station is still being geocoded or was dropped
+  // as out of scope.
+  const origin = waypoints[0]?.name;
+  const destination = waypoints[waypoints.length - 1]?.name;
+  const mapAriaLabel =
+    origin && destination && origin !== destination
+      ? `Interactive route map from ${origin} to ${destination}`
+      : "Interactive route map";
+
   // Itineraries may legitimately start or transfer abroad (Barcelona
   // Sants, Lyon, Milano, ...) on a Swiss-connected route, so this only
   // drops waypoints without any coordinates - it does not restrict to
@@ -145,14 +157,21 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
       map.on("error", (event) => {
         console.error("RouteMap: mapbox-gl reported an error", event.error);
         const resourceEvent = event as mapboxgl.ErrorEvent & { sourceId?: string; tile?: unknown };
-        // Only pre-load non-resource errors (e.g. a bad token or failed style)
-        // are fatal; a harmless failed tile/resource fetch after the map is
-        // already up must not nuke an otherwise-working map. A fatal error
-        // may still be followed by a successful "load" (e.g. after mapbox-gl
-        // retries internally), which clears this flag below -- so the map
-        // instance itself is deliberately left alone here rather than torn
-        // down; teardown still happens on unmount via the effect cleanup.
-        if (!loaded && !("sourceId" in resourceEvent || "tile" in resourceEvent)) {
+        // A tile/source fetch failure carries sourceId/tile; a sprite
+        // fetch failure doesn't (mapbox-gl has no dedicated field for it),
+        // but its message consistently mentions "sprite". Neither is fatal
+        // -- the map still renders and is usable without one icon sheet or
+        // a single missing tile -- only a genuine pre-load initialization
+        // failure (bad token, failed style) is. A fatal error may still be
+        // followed by a successful "load" (e.g. after mapbox-gl retries
+        // internally), which clears this flag below -- so the map instance
+        // itself is deliberately left alone here rather than torn down;
+        // teardown still happens on unmount via the effect cleanup.
+        const isResourceError =
+          "sourceId" in resourceEvent ||
+          "tile" in resourceEvent ||
+          /sprite/i.test(event.error?.message ?? "");
+        if (!loaded && !isResourceError) {
           setMapFailed(true);
         }
       });
@@ -230,7 +249,7 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
         data-testid="route-map"
         className="h-full w-full"
         role="region"
-        aria-label="Interactive route map"
+        aria-label={mapAriaLabel}
       />
       {mapFailed && (
         <div
@@ -245,7 +264,7 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
           data-testid="route-map-out-of-scope"
           className="absolute inset-0 flex items-center justify-center bg-white/75 p-4 text-center text-xs text-neutral-500"
         >
-          This route is outside the Swiss transport network.
+          This route is outside Swiss scope.
         </div>
       )}
       {!mapFailed && !outOfScope && !hasLocatedWaypoint && !isResolving && (

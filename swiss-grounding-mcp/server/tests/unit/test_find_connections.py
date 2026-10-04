@@ -49,6 +49,24 @@ def test_missing_origin_returns_needs_clarification():
     assert "origin" in result.message.lower()
 
 
+def test_non_string_origin_and_destination_return_needs_clarification_instead_of_crashing():
+    # Guard: an LLM-supplied tool argument is JSON, so origin/destination
+    # could in principle arrive as a non-string value (e.g. a number)
+    # rather than the declared str -- that must degrade to the normal
+    # "please provide a station" response instead of raising
+    # AttributeError from calling .strip() on it.
+    client = StubOjpClient()
+
+    result = find_train_connections(
+        12345, None, None, None, 3,  # type: ignore[arg-type]
+        client=client, settings=_settings(),
+    )
+
+    assert result.status == "needs_clarification"
+    assert "origin" in result.message.lower()
+    assert client.trip_calls == []
+
+
 def test_valid_stations_return_ok_with_provenance():
     client = StubOjpClient(
         candidates_by_name={
@@ -597,6 +615,31 @@ def test_no_via_station_leaves_via_fields_unset():
     assert result.via_stop_name is None
     assert client.trip_calls[0]["via_ref"] is None
     assert client.trip_calls[0]["via_name"] == ""
+
+
+def test_non_string_via_is_treated_as_unset_instead_of_crashing():
+    # Guard: an LLM-supplied tool argument is JSON, so `via` could in
+    # principle arrive as a non-string value (e.g. a number) rather than
+    # the declared str | None -- that must degrade to "no via requested"
+    # instead of raising AttributeError from calling .strip() on it.
+    client = StubOjpClient(
+        candidates_by_name={
+            "Bern": [StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=1.0)],
+            "Zürich HB": [
+                StopCandidate(name="Zürich HB", stop_ref="ch:1:sloid:8503000", probability=1.0)
+            ],
+        },
+        connections=[_connection()],
+    )
+
+    result = find_train_connections(
+        "Bern", "Zürich HB", None, None, 3, None, 12345,  # type: ignore[arg-type]
+        client=client, settings=_settings(),
+    )
+
+    assert result.status == "ok"
+    assert result.via_stop_name is None
+    assert client.trip_calls[0]["via_ref"] is None
 
 
 def test_ambiguous_via_station_returns_needs_clarification():

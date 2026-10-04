@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { geocodeCached, isPlausibleCoordinate, type Coordinates } from "./geocode";
+import { geocodeCached, isPlausibleCoordinate, isWithinCorridor, type Coordinates } from "./geocode";
 import type { RouteWaypoint, WaypointKind } from "../components/widgets/RouteMap";
 
 interface RouteLeg {
@@ -133,6 +133,25 @@ export function useRouteWaypoints(connection: RouteConnection, viaStopName?: str
   const [resolved, setResolved] = useState<Record<string, Coordinates | null>>({});
   const [resolvingIds, setResolvingIds] = useState<ReadonlySet<string>>(new Set());
 
+  // The server-resolved origin/destination coordinates define this
+  // itinerary's corridor; memoized on the primitive lat/lng values (not a
+  // fresh object each render) so the geocoding effect below doesn't
+  // re-fire every time this hook's own state updates.
+  const origin = useMemo<Coordinates | null>(
+    () =>
+      connection.origin_latitude !== null && connection.origin_longitude !== null
+        ? { lat: connection.origin_latitude, lng: connection.origin_longitude }
+        : null,
+    [connection.origin_latitude, connection.origin_longitude]
+  );
+  const destination = useMemo<Coordinates | null>(
+    () =>
+      connection.destination_latitude !== null && connection.destination_longitude !== null
+        ? { lat: connection.destination_latitude, lng: connection.destination_longitude }
+        : null,
+    [connection.destination_latitude, connection.destination_longitude]
+  );
+
   useEffect(() => {
     const unresolved = drafts.filter((draft) => draft.lat === null || draft.lng === null);
     if (unresolved.length === 0) {
@@ -152,19 +171,31 @@ export function useRouteWaypoints(connection: RouteConnection, viaStopName?: str
     // wait on one lookup before starting the next) rather than serializing
     // them one at a time. Each entry still updates `resolved`/
     // `resolvingIds` for its own draft.id as soon as it individually
-    // settles, so the UI reflects whichever stops resolve first.
+    // settles, so the UI reflects whichever stops resolve first. The known
+    // origin is still passed as a proximity hint for every lookup (biasing
+    // Mapbox toward the real corridor instead of a homonym elsewhere),
+    // just without chaining through each other's resolved coordinates.
     Promise.all(
       unresolved.map(async (draft) => {
-        const coords = await geocodeCached(draft.name);
+        const coords = await geocodeCached(draft.name, origin ? { proximity: origin } : undefined);
         if (cancelled) return;
-        // Only guards against a wildly wrong match (a different continent);
-        // legitimate cross-border stations (Barcelona, Lyon, Milano, ...)
-        // must still resolve, so this is intentionally not restricted to
-        // Switzerland alone.
-        const safeCoords = coords && isPlausibleCoordinate(coords) ? coords : null;
+
+        // Reject a match that's wildly off the known origin -> destination
+        // corridor (e.g. Mapbox resolving a bare "Valence" to a homonym on
+        // another continent) rather than plotting it in the wrong place or
+        // distorting the drawn route. Without both ends known, fall back
+        // to a loose continent-level sanity check.
+        const plausible =
+          coords == null
+            ? false
+            : origin && destination
+              ? isWithinCorridor(coords, origin, destination)
+              : isPlausibleCoordinate(coords);
+        const safeCoords = plausible ? coords : null;
         if (coords && !safeCoords) {
           console.warn(`useRouteWaypoints: discarding implausible geocode result for "${draft.name}"`, coords);
         }
+
         setResolved((current) => ({ ...current, [draft.id]: safeCoords }));
         setResolvingIds((current) => {
           const next = new Set(current);
@@ -177,7 +208,7 @@ export function useRouteWaypoints(connection: RouteConnection, viaStopName?: str
     return () => {
       cancelled = true;
     };
-  }, [drafts]);
+  }, [drafts, origin, destination]);
 
   const waypoints = useMemo<RouteWaypoint[]>(
     () =>

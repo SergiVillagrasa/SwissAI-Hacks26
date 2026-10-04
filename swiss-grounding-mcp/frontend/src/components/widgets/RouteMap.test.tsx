@@ -165,6 +165,18 @@ function renderWithUnloadedMap() {
 }
 
 describe("RouteMap", () => {
+  it("names the origin and destination in the map's accessible name", () => {
+    render(<RouteMap waypoints={[originWaypoint, viaWaypoint, destinationWaypoint]} />);
+
+    expect(screen.getByRole("region", { name: "Interactive route map from Bern to Zürich HB" })).toBeInTheDocument();
+  });
+
+  it("falls back to a generic accessible name when there's only one waypoint", () => {
+    render(<RouteMap waypoints={[originWaypoint]} />);
+
+    expect(screen.getByRole("region", { name: "Interactive route map" })).toBeInTheDocument();
+  });
+
   it("shows a no-data message without unmounting the map container when no waypoint has coordinates", async () => {
     render(<RouteMap waypoints={[{ ...originWaypoint, coords: null }]} />);
 
@@ -304,7 +316,7 @@ describe("RouteMap", () => {
 
     await waitFor(() => expect(screen.getByTestId("route-map-out-of-scope")).toBeInTheDocument());
     expect(screen.getByTestId("route-map-out-of-scope")).toHaveTextContent(
-      "This route is outside the Swiss transport network."
+      "This route is outside Swiss scope."
     );
     expect(addedMarkers).toHaveLength(0);
     expect(screen.queryByTestId("route-map-fit")).not.toBeInTheDocument();

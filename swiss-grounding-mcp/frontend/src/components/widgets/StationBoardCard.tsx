@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { GlassTile, glassRow, glassRowSelected } from "../GlassTile";
+import { ExpandChevron } from "./ExpandChevron";
 
 interface StopEvent {
   line: string | null;
@@ -21,8 +22,9 @@ function formatTime(iso: string): string {
   // An explicit locale (rather than [] -- the runtime's default) keeps the
   // output deterministic regardless of the browser/OS locale: some locales
   // render a 24-hour time differently (digits, separators) even with
-  // hour12 forced to false.
-  return new Date(iso).toLocaleTimeString("en-GB", {
+  // hour12 forced to false. "de-CH" matches the station board's Swiss
+  // context.
+  return new Date(iso).toLocaleTimeString("de-CH", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -59,6 +61,7 @@ export function StationBoardCard({ data }: { data: StationBoardData }) {
                 <span className="text-xs text-neutral-600">
                   {event.platform ? `Platform ${event.platform}` : "not reported by source"}
                 </span>
+                <ExpandChevron expanded={isSelected} />
               </button>
               {isSelected && (
                 <div className="mt-1 space-y-1 rounded-2xl border border-blue-200/70 bg-blue-50/40 p-3 text-xs text-neutral-600">
