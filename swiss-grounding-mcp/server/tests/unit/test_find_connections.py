@@ -49,6 +49,24 @@ def test_missing_origin_returns_needs_clarification():
     assert "origin" in result.message.lower()
 
 
+def test_non_string_origin_and_destination_return_needs_clarification_instead_of_crashing():
+    # Guard: an LLM-supplied tool argument is JSON, so origin/destination
+    # could in principle arrive as a non-string value (e.g. a number)
+    # rather than the declared str -- that must degrade to the normal
+    # "please provide a station" response instead of raising
+    # AttributeError from calling .strip() on it.
+    client = StubOjpClient()
+
+    result = find_train_connections(
+        12345, None, None, None, 3,  # type: ignore[arg-type]
+        client=client, settings=_settings(),
+    )
+
+    assert result.status == "needs_clarification"
+    assert "origin" in result.message.lower()
+    assert client.trip_calls == []
+
+
 def test_valid_stations_return_ok_with_provenance():
     client = StubOjpClient(
         candidates_by_name={

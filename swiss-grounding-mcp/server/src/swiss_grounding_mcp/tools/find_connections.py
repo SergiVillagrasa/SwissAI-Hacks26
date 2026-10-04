@@ -52,11 +52,19 @@ def find_train_connections(
     client,
     settings: Settings,
 ) -> ConnectionSearchResult:
-    if not origin.strip():
+    # Guard the type before calling .strip(): an LLM-supplied tool argument
+    # is JSON, so origin/destination could in principle arrive as a
+    # non-string (e.g. a number or bool) rather than the declared str,
+    # which would otherwise raise AttributeError here instead of
+    # degrading gracefully to the "please provide a station" message.
+    origin = origin.strip() if isinstance(origin, str) else ""
+    destination = destination.strip() if isinstance(destination, str) else ""
+
+    if not origin:
         return ConnectionSearchResult(
             status="needs_clarification", message="Please provide an origin station."
         )
-    if not destination.strip():
+    if not destination:
         return ConnectionSearchResult(
             status="needs_clarification", message="Please provide a destination station."
         )
