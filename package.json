@@ -8,7 +8,7 @@
     "dev:voice": "cd swiss-grounding-mcp/server && .venv\\Scripts\\python.exe voice_assistant.py",
     "test:server": "cd swiss-grounding-mcp/server && .venv\\Scripts\\python.exe -m pytest tests",
     "test:api": "cd swiss-grounding-mcp/agent-backend && .venv\\Scripts\\python.exe -m pytest tests",
-    "test:web": "npm --prefix swiss-grounding-mcp/frontend run test",
+    "test:web": "npm --prefix swiss-grounding-mcp/frontend run test && npm --prefix swiss-grounding-mcp/frontend run typecheck",
     "test:all": "npm run test:server && npm run test:api && npm run test:web"
   }
 }

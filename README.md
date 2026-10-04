@@ -96,7 +96,7 @@ Equivalent one-liners (`npm run dev:api` / `npm run dev:web`) are defined in the
 (cd swiss-grounding-mcp/frontend && npm test && npx tsc --noEmit)
 ```
 
-Or run everything in one go from the repo root: `npm run test:all` (wraps the three `pytest`/`npm test` commands above).
+Or run everything in one go from the repo root: `npm run test:all` — it chains `test:server`, `test:api`, and `test:web` (the latter runs `vitest` **and** `tsc --noEmit`, matching the commands above exactly).
 
 ## 📄 License
 
