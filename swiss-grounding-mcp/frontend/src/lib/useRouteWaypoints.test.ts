@@ -39,6 +39,25 @@ describe("buildRouteWaypointDrafts", () => {
     expect(drafts[1]).toMatchObject({ name: "Zürich HB", kind: "destination", lat: 47.3779, lng: 8.5403 });
   });
 
+  it("inserts a requested via stop on a direct connection", () => {
+    const connection = {
+      ...directConnection,
+      legs: [{ ...directConnection.legs[0], from_name: "Genève" }],
+      origin_latitude: 46.2044,
+      origin_longitude: 6.1432,
+    };
+    const drafts = buildRouteWaypointDrafts(connection, "Bern");
+
+    expect(drafts.map((draft) => draft.kind)).toEqual(["origin", "via", "destination"]);
+    expect(drafts[1]).toMatchObject({
+      name: "Bern",
+      time: null,
+      detail: "Requested stop on the way",
+      lat: null,
+      lng: null,
+    });
+  });
+
   it("inserts a via waypoint at the transfer station, without coordinates from the API", () => {
     const drafts = buildRouteWaypointDrafts(connectionWithTransfer);
 
@@ -47,6 +66,29 @@ describe("buildRouteWaypointDrafts", () => {
     expect(drafts[1]).toMatchObject({ name: "Bern", kind: "via", lat: null, lng: null });
     expect(drafts[1].detail).toBe("Change from IC 1 to IC 8");
     expect(drafts[2].kind).toBe("destination");
+  });
+
+  it("does not duplicate an existing via stop when the requested name differs by case or accents", () => {
+    const caseMatch = buildRouteWaypointDrafts(connectionWithTransfer, "bern");
+    const accentedConnection = {
+      ...connectionWithTransfer,
+      legs: [
+        { ...connectionWithTransfer.legs[0], to_name: "Genève" },
+        { ...connectionWithTransfer.legs[1], from_name: "Genève" },
+      ],
+    };
+    const accentMatch = buildRouteWaypointDrafts(accentedConnection, "Geneve");
+
+    expect(caseMatch.filter((draft) => draft.kind === "via")).toHaveLength(1);
+    expect(accentMatch.filter((draft) => draft.kind === "via")).toHaveLength(1);
+    expect(accentMatch[1].name).toBe("Genève");
+  });
+
+  it("leaves the drafts unchanged when the requested via stop is null or empty", () => {
+    const expected = buildRouteWaypointDrafts(directConnection);
+
+    expect(buildRouteWaypointDrafts(directConnection, null)).toEqual(expected);
+    expect(buildRouteWaypointDrafts(directConnection, "")).toEqual(expected);
   });
 
   it("returns no waypoints when the connection has no legs", () => {
@@ -85,5 +127,19 @@ describe("useRouteWaypoints", () => {
 
     const viaAfterResolve = result.current.waypoints.find((w) => w.kind === "via");
     expect(viaAfterResolve?.coords).toEqual({ lat: 46.9481, lng: 7.4474 });
+  });
+
+  it("settles a rejected via geocode with no coordinates", async () => {
+    vi.stubEnv("VITE_MAPBOX_TOKEN", "test-token");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network failed")));
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const { result } = renderHook(() => useRouteWaypoints(connectionWithTransfer));
+
+    await waitFor(() => expect(result.current.isResolving).toBe(false));
+    expect(result.current.waypoints.find((waypoint) => waypoint.kind === "via")).toMatchObject({
+      name: "Bern",
+      coords: null,
+    });
   });
 });

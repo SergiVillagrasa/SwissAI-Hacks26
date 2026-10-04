@@ -119,6 +119,7 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
       return;
     }
 
+    let loaded = false;
     let map: mapboxgl.Map | null = null;
     try {
       map = new mapboxgl.Map({
@@ -135,10 +136,15 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
 
       map.on("error", (event) => {
         console.error("RouteMap: mapbox-gl reported an error", event.error);
-        setMapFailed(true);
+        const resourceEvent = event as mapboxgl.ErrorEvent & { sourceId?: string; tile?: unknown };
+        // Only pre-load non-resource errors (e.g. a bad token or failed style) are fatal.
+        if (!loaded && !("sourceId" in resourceEvent || "tile" in resourceEvent)) {
+          setMapFailed(true);
+        }
       });
 
       map.on("load", () => {
+        loaded = true;
         if (!map) return;
         map.addSource(ROUTE_LINE_SOURCE_ID, {
           type: "geojson",
@@ -151,6 +157,7 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
           paint: { "line-color": "#2563eb", "line-width": 4, "line-opacity": 0.85 },
         });
         setMapReady(true);
+        setMapFailed(false);
       });
     } catch (error) {
       console.error("RouteMap: failed to initialize mapbox-gl", error);
@@ -218,7 +225,7 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
           data-testid="route-map-out-of-scope"
           className="absolute inset-0 flex items-center justify-center bg-white/75 p-4 text-center text-xs text-neutral-500"
         >
-          Ruta fora de l'àmbit suís.
+          This route is outside the Swiss transport network.
         </div>
       )}
       {!mapFailed && !outOfScope && !hasLocatedWaypoint && !isResolving && (
