@@ -89,12 +89,14 @@ def find_connections(
     (opentransportdata.swiss). Covers origin-to-destination connection
     search with an optional departure or arrival time, including
     cross-border/international journeys as long as at least one endpoint
-    is in Switzerland (e.g. Basel to Lyon, Zurich to Milan). Does not
-    cover fares, single-stop departure boards, disruption feeds, or
-    journeys that are purely outside Switzerland on both ends. If both the
-    origin and destination are outside Switzerland, neither is a
-    recognizable station, or the question is unrelated to travel, this
-    tool will say so rather than guess.
+    is in Switzerland (e.g. Basel to Lyon, Zurich to Milan) -- or, even
+    when both origin and destination are foreign, as long as the
+    requested `via` station is in Switzerland (e.g. Paris to Milan via
+    Bern). Does not cover fares, single-stop departure boards, or
+    disruption feeds. If origin, destination, and any requested via
+    station are all outside Switzerland, neither is a recognizable
+    station, or the question is unrelated to travel, this tool will say
+    so rather than guess.
 
     departure_time / arrival_time: ISO 8601, e.g. "2026-09-25T18:00:00Z".
     Leave unset for "now" — this tool fills in the current real date and

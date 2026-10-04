@@ -51,19 +51,28 @@ export function buildRouteWaypointDrafts(
   const legs = connection.legs ?? [];
   if (legs.length === 0) return [];
 
+  // The trip's overall origin/destination are its true first and last
+  // legs -- walk legs included. A walk to/from a platform is still part
+  // of getting from the real starting point to the real end point, so
+  // excluding it here (as the via-boundary filtering below intentionally
+  // does) would report the wrong origin/destination, e.g. the station
+  // walked to rather than where the journey actually began.
+  const firstLeg = legs[0];
+  const lastLeg = legs[legs.length - 1];
+
+  // Via (transfer) waypoints, on the other hand, are only derived from
+  // rail-leg boundaries: a walk to/from a platform isn't a distinct point
+  // of interest worth its own marker.
   const railLegs = legs.filter((leg) => leg.mode !== "walk" && leg.mode !== "foot");
   const effectiveLegs = railLegs.length > 0 ? railLegs : legs;
 
-  const originLeg = effectiveLegs[0];
-  const destinationLeg = effectiveLegs[effectiveLegs.length - 1];
-
   const drafts: WaypointDraft[] = [
     {
-      id: `origin:${originLeg.from_name}`,
-      name: originLeg.from_name,
+      id: `origin:${firstLeg.from_name}`,
+      name: firstLeg.from_name,
       kind: "origin",
-      time: originLeg.departure,
-      detail: legLabel(originLeg),
+      time: firstLeg.departure,
+      detail: legLabel(firstLeg),
       lat: connection.origin_latitude,
       lng: connection.origin_longitude,
     },
@@ -84,11 +93,11 @@ export function buildRouteWaypointDrafts(
   }
 
   drafts.push({
-    id: `destination:${destinationLeg.to_name}`,
-    name: destinationLeg.to_name,
+    id: `destination:${lastLeg.to_name}`,
+    name: lastLeg.to_name,
     kind: "destination",
-    time: destinationLeg.arrival,
-    detail: legLabel(destinationLeg),
+    time: lastLeg.arrival,
+    detail: legLabel(lastLeg),
     lat: connection.destination_latitude,
     lng: connection.destination_longitude,
   });
@@ -138,14 +147,14 @@ export function useRouteWaypoints(connection: RouteConnection, viaStopName?: str
     let cancelled = false;
     setResolvingIds(new Set(unresolved.map((draft) => draft.id)));
 
-    // Resolve one stop at a time, in itinerary order, instead of firing
-    // every lookup independently/in parallel: the via stops must keep
-    // their real sequential order (origin -> via1 -> via2 -> ... ->
-    // destination) as drafted, which a parallel race between lookups
-    // does not guarantee.
-    (async () => {
-      for (const draft of unresolved) {
-        if (cancelled) return;
+    // Resolve every unresolved stop concurrently (each waypoint's
+    // coordinates are independent of the others, so there's no reason to
+    // wait on one lookup before starting the next) rather than serializing
+    // them one at a time. Each entry still updates `resolved`/
+    // `resolvingIds` for its own draft.id as soon as it individually
+    // settles, so the UI reflects whichever stops resolve first.
+    Promise.all(
+      unresolved.map(async (draft) => {
         const coords = await geocodeCached(draft.name);
         if (cancelled) return;
         // Only guards against a wildly wrong match (a different continent);
@@ -162,8 +171,8 @@ export function useRouteWaypoints(connection: RouteConnection, viaStopName?: str
           next.delete(draft.id);
           return next;
         });
-      }
-    })();
+      })
+    );
 
     return () => {
       cancelled = true;

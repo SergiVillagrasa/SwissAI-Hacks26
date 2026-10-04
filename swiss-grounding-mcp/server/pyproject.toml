@@ -8,6 +8,12 @@ dependencies = [
     "httpx>=0.27",
     "defusedxml>=0.7.1",
     "python-dotenv>=1.0.1",
+    # zoneinfo (stdlib) relies on the OS's IANA tz database on Linux/macOS,
+    # but Windows ships none -- ZoneInfo("Europe/Zurich") raises
+    # ZoneInfoNotFoundError there unless the tzdata package provides it.
+    # Always installing it keeps Europe/Zurich lookups working on every
+    # platform without relying on what happens to be installed locally.
+    "tzdata>=2024.1",
 ]
 
 [project.scripts]

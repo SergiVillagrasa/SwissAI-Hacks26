@@ -221,6 +221,64 @@ def test_find_connections_falls_back_to_default_on_uncoercible_results(monkeypat
     assert captured["results"] == 3
 
 
+def test_get_station_board_coerces_string_results_to_int(monkeypatch):
+    captured = {}
+
+    def fake_get_station_board(station, mode, when, results, *, client, settings):
+        captured.update(station=station, mode=mode, when=when, results=results)
+        return "station-board-result"
+
+    monkeypatch.setattr(dispatch_module, "get_station_board", fake_get_station_board)
+
+    result = dispatch(
+        "get_station_board",
+        {"station": "Bern", "results": "3"},
+        ojp_client=_Sentinel(), aviation_client=_Sentinel(), settings=_Sentinel(),
+    )
+
+    assert result == "station-board-result"
+    assert captured["results"] == 3
+    assert isinstance(captured["results"], int)
+
+
+def test_get_station_board_falls_back_to_default_on_uncoercible_results(monkeypatch):
+    captured = {}
+
+    def fake_get_station_board(station, mode, when, results, *, client, settings):
+        captured["results"] = results
+        return "station-board-result"
+
+    monkeypatch.setattr(dispatch_module, "get_station_board", fake_get_station_board)
+
+    dispatch(
+        "get_station_board",
+        {"station": "Bern", "results": "a lot"},
+        ojp_client=_Sentinel(), aviation_client=_Sentinel(), settings=_Sentinel(),
+    )
+
+    assert captured["results"] == 5
+
+
+def test_find_connections_falls_back_to_default_on_non_finite_float_results(monkeypatch):
+    # int(float("inf")) raises OverflowError, not ValueError/TypeError --
+    # _coerce_int must catch that too instead of crashing the whole turn.
+    captured = {}
+
+    def fake_find_train_connections(origin, destination, departure_time, arrival_time, results, sort_by=None, via=None, *, client, settings):
+        captured["results"] = results
+        return "connections-result"
+
+    monkeypatch.setattr(dispatch_module, "find_train_connections", fake_find_train_connections)
+
+    dispatch(
+        "find_connections",
+        {"origin": "Bern", "destination": "Zürich HB", "results": float("inf")},
+        ojp_client=_Sentinel(), aviation_client=_Sentinel(), settings=_Sentinel(),
+    )
+
+    assert captured["results"] == 3
+
+
 def test_search_airport_flights_coerces_string_limit(monkeypatch):
     captured = {}
 

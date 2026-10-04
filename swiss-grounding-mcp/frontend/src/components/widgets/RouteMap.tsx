@@ -42,7 +42,15 @@ const ROUTE_LINE_LAYER_ID = "route-map-line-layer";
 
 function formatPopupTime(iso: string | null | undefined): string | null {
   if (!iso) return null;
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  // Matches TrainConnectionsCard/StationBoardCard: times must read in
+  // Swiss local time, not the browser/runtime's own timezone, and
+  // hour12: false keeps the format deterministic across locales.
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Europe/Zurich",
+  });
 }
 
 function escapeHtml(value: string): string {

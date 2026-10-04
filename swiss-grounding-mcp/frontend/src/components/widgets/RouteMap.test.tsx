@@ -227,6 +227,28 @@ describe("RouteMap", () => {
     expect(errorSpy).toHaveBeenCalledWith("RouteMap: mapbox-gl reported an error", expect.any(Error));
   });
 
+  it("calls map.remove() exactly once on unmount, without a render-time error prematurely destroying the instance", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mapMock.autoLoad = false;
+    const { unmount } = render(<RouteMap waypoints={[originWaypoint, destinationWaypoint]} />);
+    const map = mapMock.instances[0];
+    if (!map) throw new Error("Mapbox map was not initialized");
+
+    // A fatal pre-load error must not tear down the mapbox-gl instance
+    // itself: it may still recover via a later "load" (see the
+    // "clears a fatal pre-load error overlay..." test below), so the map
+    // is only ever removed on unmount, never as a side effect of an error.
+    act(() => map.fire("error", { error: new Error("style failed to load") }));
+    expect(map.remove).not.toHaveBeenCalled();
+
+    act(() => map.fire("load"));
+    expect(map.remove).not.toHaveBeenCalled();
+
+    unmount();
+
+    expect(map.remove).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps the map and markers after resource errors once loaded", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const map = renderWithUnloadedMap();

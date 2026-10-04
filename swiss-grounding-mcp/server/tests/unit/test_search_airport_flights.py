@@ -102,6 +102,23 @@ def test_malformed_flight_date_returns_needs_context_instead_of_crashing():
     assert client.calls == []
 
 
+def test_non_strict_iso_date_format_is_rejected():
+    # date.fromisoformat accepts non-YYYY-MM-DD ISO 8601 variants (e.g. the
+    # compact "20260905" form, accepted on Python 3.11+) that parse fine
+    # but don't round-trip back to the original string. Such a value would
+    # silently mismatch the literal flight_date string baked into the
+    # AeroDataBox window parameters below, so it must be rejected rather
+    # than "fixed up" silently.
+    client = StubAerodataboxClient(windows=[_TWO_FLIGHTS_WINDOW_1, _TWO_FLIGHTS_WINDOW_2])
+
+    result = search_airport_flights(
+        "departure", "20260905", None, None, None, 10, client=client, settings=_settings()
+    )
+
+    assert result.status == "needs_context"
+    assert client.calls == []
+
+
 def test_no_filters_lists_all_flights_for_the_direction():
     client = StubAerodataboxClient(windows=[_TWO_FLIGHTS_WINDOW_1, _TWO_FLIGHTS_WINDOW_2])
 

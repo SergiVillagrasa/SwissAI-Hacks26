@@ -92,6 +92,30 @@ describe("buildRouteWaypointDrafts", () => {
     expect(buildRouteWaypointDrafts(directConnection, "")).toEqual(expected);
   });
 
+  it("keeps a leading/trailing walk leg's endpoints as the true origin/destination", () => {
+    // Regression: origin/destination used to be taken from the first/last
+    // *rail* leg, so a walk leg to/from the actual start/end point (e.g.
+    // walking from home to the first station) was silently discarded and
+    // the wrong station was reported as the journey's origin/destination.
+    const connectionWithWalkEnds = {
+      legs: [
+        { mode: "walk", line: null, from_name: "Home", to_name: "Bern", departure: "2026-09-25T07:50:00Z", arrival: "2026-09-25T08:00:00Z" },
+        { mode: "rail", line: "IC 8", from_name: "Bern", to_name: "Zürich HB", departure: "2026-09-25T08:00:00Z", arrival: "2026-09-25T09:00:00Z" },
+        { mode: "walk", line: null, from_name: "Zürich HB", to_name: "Office", departure: "2026-09-25T09:00:00Z", arrival: "2026-09-25T09:10:00Z" },
+      ],
+      origin_latitude: 46.9481,
+      origin_longitude: 7.4474,
+      destination_latitude: 47.3779,
+      destination_longitude: 8.5403,
+    };
+
+    const drafts = buildRouteWaypointDrafts(connectionWithWalkEnds);
+
+    expect(drafts).toHaveLength(2);
+    expect(drafts[0]).toMatchObject({ name: "Home", kind: "origin" });
+    expect(drafts[1]).toMatchObject({ name: "Office", kind: "destination" });
+  });
+
   it("returns no waypoints when the connection has no legs", () => {
     expect(buildRouteWaypointDrafts({ legs: [], origin_latitude: null, origin_longitude: null, destination_latitude: null, destination_longitude: null })).toEqual([]);
   });
@@ -110,13 +134,11 @@ describe("useRouteWaypoints", () => {
 
   it("geocodes the via waypoint's coordinates and reports isResolving until it resolves", async () => {
     vi.stubEnv("VITE_MAPBOX_TOKEN", "test-token");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ features: [{ center: [7.4474, 46.9481] }] }),
-      })
-    );
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ features: [{ center: [7.4474, 46.9481] }] }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
     const { result } = renderHook(() => useRouteWaypoints(connectionWithTransfer));
 
@@ -128,6 +150,11 @@ describe("useRouteWaypoints", () => {
 
     const viaAfterResolve = result.current.waypoints.find((w) => w.kind === "via");
     expect(viaAfterResolve?.coords).toEqual({ lat: 46.9481, lng: 7.4474 });
+
+    // The geocoded place name ("Bern", the transfer station) must be the
+    // one actually looked up, not e.g. the origin or destination.
+    const requestedUrl = fetchMock.mock.calls[0][0] as string;
+    expect(decodeURIComponent(requestedUrl)).toContain("Bern");
   });
 
   it("clears isResolving when switching to a connection with nothing left to resolve", () => {

@@ -361,7 +361,6 @@ class TestCheckFaresOutOfScope:
         )
 
         assert result.status == "not_found"
-        assert result.status != "out_of_scope"
 
 
 # ── Guardrails: needs-clarification ─────────────────────────────────
