@@ -148,7 +148,7 @@ Provider access uses the configured account credentials and preserves source att
 
 Streamable HTTP can serve multiple MCP clients. The installed MCP SDK executes synchronous tools in worker threads. Domain calls carry their own arguments and no conversation history, but **HTTP transport is sessionful** (`stateless_http=False` by default); this application does not override that default. Do not treat requests as anonymous stateless HTTP calls.
 
-Clients share lazily created provider clients and the AeroDataBox cache within one process. `find_connections` resolves its two stations using a shared two-worker thread pool. stdio clients normally launch separate processes. There is no distributed cache, cache-miss coalescing, global rate limiter, or measured multi-client capacity guarantee.
+Clients share lazily created provider clients and the AeroDataBox cache within one process. `find_connections` resolves its origin, destination, and (when requested) via station using a shared eight-worker thread pool. stdio clients normally launch separate processes. There is no distributed cache, cache-miss coalescing, global rate limiter, or measured multi-client capacity guarantee.
 
 A fresh Python process importing the server and returning one static guidance result took **1.48 s**, with **79,588 KiB** peak RSS, on the verification machine. This measures local import plus a direct static-tool call, not an HTTP cold start or live-provider latency. Live first-call latency and sustained concurrent throughput remain unmeasured; each upstream request has a default 10-second timeout, and one tool call may make several requests.
 

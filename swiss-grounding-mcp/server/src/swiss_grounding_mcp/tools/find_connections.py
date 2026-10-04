@@ -9,10 +9,15 @@ from swiss_grounding_mcp.evidence.provenance import build_provenance
 from swiss_grounding_mcp.sources.ojp.client import OjpSourceError
 from swiss_grounding_mcp.tools.resolution import is_swiss_stop, resolve_station
 
-# 3 workers: one each for the concurrent origin, destination, and (when
-# requested) via LocationInformationRequest lookups below, so all three
-# can run in parallel instead of queuing behind each other.
-_LIR_POOL = ThreadPoolExecutor(max_workers=3, thread_name_prefix="ojp-lir")
+# A single find_train_connections call submits up to 3 concurrent
+# LocationInformationRequest lookups (origin, destination, and - when
+# requested - via). This pool is process-wide and shared across every
+# concurrent request the server handles, so sizing it to just 3 workers
+# meant two simultaneous calls already queued behind each other instead
+# of resolving in parallel. 8 workers give headroom for several
+# concurrent requests (e.g. multiple chat sessions) without each one
+# serializing station resolution behind the others.
+_LIR_POOL = ThreadPoolExecutor(max_workers=8, thread_name_prefix="ojp-lir")
 
 _OUT_OF_SCOPE_MESSAGE = (
     "This service covers Swiss public transport and cross-border journeys "
