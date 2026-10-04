@@ -33,10 +33,14 @@ describe("StationBoardCard", () => {
 
     const row = screen.getByRole("button", { name: /IC 8/ });
     expect(row).toHaveAttribute("aria-expanded", "false");
+    expect(row.className).not.toContain("ring-blue-400");
 
     fireEvent.click(row);
 
     expect(row).toHaveAttribute("aria-expanded", "true");
+    // "Highlights" the row visually (glassRowSelected), not just marking
+    // it expanded for assistive tech.
+    expect(row.className).toContain("ring-blue-400");
     expect(screen.getByText(/Mode:/)).toBeInTheDocument();
     expect(screen.getByText(/Delay:/)).toBeInTheDocument();
   });

@@ -74,6 +74,17 @@ class TestBuildSbbDeepLink:
         assert "Z%C3%BCrich" in url
         assert " " not in url.split("?", 1)[1]
 
+    def test_with_via_station(self):
+        url = build_sbb_deep_link("Bern", "Zürich HB", via="Olten")
+
+        assert "von=Bern" in url
+        assert "via=Olten" in url
+
+    def test_via_omitted_when_not_given(self):
+        url = build_sbb_deep_link("Bern", "Zürich HB")
+
+        assert "via=" not in url
+
 
 # ── Deep-link date extraction (UTC -> Europe/Zurich) ────────────────
 
@@ -350,7 +361,6 @@ class TestCheckFaresOutOfScope:
         )
 
         assert result.status == "not_found"
-        assert result.status != "out_of_scope"
 
 
 # ── Guardrails: needs-clarification ─────────────────────────────────

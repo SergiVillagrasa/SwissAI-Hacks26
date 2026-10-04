@@ -42,7 +42,15 @@ const ROUTE_LINE_LAYER_ID = "route-map-line-layer";
 
 function formatPopupTime(iso: string | null | undefined): string | null {
   if (!iso) return null;
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  // Matches TrainConnectionsCard/StationBoardCard: times must read in
+  // Swiss local time, not the browser/runtime's own timezone, and
+  // hour12: false keeps the format deterministic across locales.
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Europe/Zurich",
+  });
 }
 
 function escapeHtml(value: string): string {
@@ -119,6 +127,7 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
       return;
     }
 
+    let loaded = false;
     let map: mapboxgl.Map | null = null;
     try {
       map = new mapboxgl.Map({
@@ -135,10 +144,21 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
 
       map.on("error", (event) => {
         console.error("RouteMap: mapbox-gl reported an error", event.error);
-        setMapFailed(true);
+        const resourceEvent = event as mapboxgl.ErrorEvent & { sourceId?: string; tile?: unknown };
+        // Only pre-load non-resource errors (e.g. a bad token or failed style)
+        // are fatal; a harmless failed tile/resource fetch after the map is
+        // already up must not nuke an otherwise-working map. A fatal error
+        // may still be followed by a successful "load" (e.g. after mapbox-gl
+        // retries internally), which clears this flag below -- so the map
+        // instance itself is deliberately left alone here rather than torn
+        // down; teardown still happens on unmount via the effect cleanup.
+        if (!loaded && !("sourceId" in resourceEvent || "tile" in resourceEvent)) {
+          setMapFailed(true);
+        }
       });
 
       map.on("load", () => {
+        loaded = true;
         if (!map) return;
         map.addSource(ROUTE_LINE_SOURCE_ID, {
           type: "geojson",
@@ -151,6 +171,7 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
           paint: { "line-color": "#2563eb", "line-width": 4, "line-opacity": 0.85 },
         });
         setMapReady(true);
+        setMapFailed(false);
       });
     } catch (error) {
       console.error("RouteMap: failed to initialize mapbox-gl", error);
@@ -204,7 +225,13 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
 
   return (
     <div className="relative h-64 w-full overflow-hidden">
-      <div ref={containerRef} data-testid="route-map" className="h-full w-full" role="img" aria-label="Route map" />
+      <div
+        ref={containerRef}
+        data-testid="route-map"
+        className="h-full w-full"
+        role="region"
+        aria-label="Interactive route map"
+      />
       {mapFailed && (
         <div
           data-testid="route-map-unavailable"
@@ -218,7 +245,7 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
           data-testid="route-map-out-of-scope"
           className="absolute inset-0 flex items-center justify-center bg-white/75 p-4 text-center text-xs text-neutral-500"
         >
-          Ruta fora de l'àmbit suís.
+          This route is outside the Swiss transport network.
         </div>
       )}
       {!mapFailed && !outOfScope && !hasLocatedWaypoint && !isResolving && (

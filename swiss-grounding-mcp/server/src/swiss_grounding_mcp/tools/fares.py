@@ -26,12 +26,15 @@ def build_sbb_deep_link(
     origin: str,
     destination: str,
     travel_date: str | None = None,
+    via: str | None = None,
 ) -> str:
     """Return an SBB timetable deep link for the requested journey.
 
     Only *origin* and *destination* are required.  ``travel_date`` is
     optional (``YYYY-MM-DD``); when omitted the SBB website defaults to
-    today.
+    today. ``via`` is an optional intermediate station the trip must pass
+    through, mirroring `find_connections`'s own ``via`` parameter; when
+    given it's added as its own query parameter.
     """
     base_url = "https://sbb.ch/en"
     params: dict[str, str] = {
@@ -40,6 +43,8 @@ def build_sbb_deep_link(
     }
     if travel_date is not None:
         params["date"] = travel_date
+    if via:
+        params["via"] = via
     query = urlencode(params, quote_via=quote)
     return f"{base_url}?{query}"
 

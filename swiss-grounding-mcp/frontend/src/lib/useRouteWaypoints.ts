@@ -34,28 +34,45 @@ function legLabel(leg: RouteLeg): string {
   return leg.line ?? leg.mode;
 }
 
+function normalizeStationName(name: string): string {
+  return name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 /** Builds an ordered origin -> via* -> destination waypoint list from a
  * connection's legs. Walking legs are collapsed (a walk to/from a platform
  * isn't a distinct point of interest); every remaining leg boundary becomes
  * a "via" transfer waypoint carrying the incoming line's arrival and the
- * outgoing line's departure, so the popup can describe the actual change. */
-export function buildRouteWaypointDrafts(connection: RouteConnection): WaypointDraft[] {
+ * outgoing line's departure, so the popup can describe the actual change.
+ * Requested via stops are included even when they aren't a leg boundary. */
+export function buildRouteWaypointDrafts(
+  connection: RouteConnection,
+  viaStopName?: string | null
+): WaypointDraft[] {
   const legs = connection.legs ?? [];
   if (legs.length === 0) return [];
 
+  // The trip's overall origin/destination are its true first and last
+  // legs -- walk legs included. A walk to/from a platform is still part
+  // of getting from the real starting point to the real end point, so
+  // excluding it here (as the via-boundary filtering below intentionally
+  // does) would report the wrong origin/destination, e.g. the station
+  // walked to rather than where the journey actually began.
+  const firstLeg = legs[0];
+  const lastLeg = legs[legs.length - 1];
+
+  // Via (transfer) waypoints, on the other hand, are only derived from
+  // rail-leg boundaries: a walk to/from a platform isn't a distinct point
+  // of interest worth its own marker.
   const railLegs = legs.filter((leg) => leg.mode !== "walk" && leg.mode !== "foot");
   const effectiveLegs = railLegs.length > 0 ? railLegs : legs;
 
-  const originLeg = effectiveLegs[0];
-  const destinationLeg = effectiveLegs[effectiveLegs.length - 1];
-
   const drafts: WaypointDraft[] = [
     {
-      id: `origin:${originLeg.from_name}`,
-      name: originLeg.from_name,
+      id: `origin:${firstLeg.from_name}`,
+      name: firstLeg.from_name,
       kind: "origin",
-      time: originLeg.departure,
-      detail: legLabel(originLeg),
+      time: firstLeg.departure,
+      detail: legLabel(firstLeg),
       lat: connection.origin_latitude,
       lng: connection.origin_longitude,
     },
@@ -76,14 +93,29 @@ export function buildRouteWaypointDrafts(connection: RouteConnection): WaypointD
   }
 
   drafts.push({
-    id: `destination:${destinationLeg.to_name}`,
-    name: destinationLeg.to_name,
+    id: `destination:${lastLeg.to_name}`,
+    name: lastLeg.to_name,
     kind: "destination",
-    time: destinationLeg.arrival,
-    detail: legLabel(destinationLeg),
+    time: lastLeg.arrival,
+    detail: legLabel(lastLeg),
     lat: connection.destination_latitude,
     lng: connection.destination_longitude,
   });
+
+  if (
+    viaStopName?.trim() &&
+    !drafts.some((draft) => normalizeStationName(draft.name) === normalizeStationName(viaStopName))
+  ) {
+    drafts.splice(drafts.length - 1, 0, {
+      id: `via-requested:${viaStopName}`,
+      name: viaStopName,
+      kind: "via",
+      time: null,
+      detail: "Requested stop on the way",
+      lat: null,
+      lng: null,
+    });
+  }
 
   return drafts;
 }
@@ -93,11 +125,11 @@ export function buildRouteWaypointDrafts(connection: RouteConnection): WaypointD
  * today that's every intermediate/transfer stop, since the API only
  * resolves the overall origin and destination. Returns `isResolving: true`
  * while any of those lookups are still in flight. */
-export function useRouteWaypoints(connection: RouteConnection): {
+export function useRouteWaypoints(connection: RouteConnection, viaStopName?: string | null): {
   waypoints: RouteWaypoint[];
   isResolving: boolean;
 } {
-  const drafts = useMemo(() => buildRouteWaypointDrafts(connection), [connection]);
+  const drafts = useMemo(() => buildRouteWaypointDrafts(connection, viaStopName), [connection, viaStopName]);
   const [resolved, setResolved] = useState<Record<string, Coordinates | null>>({});
   const [resolvingIds, setResolvingIds] = useState<ReadonlySet<string>>(new Set());
 
@@ -122,22 +154,30 @@ export function useRouteWaypoints(connection: RouteConnection): {
 
   useEffect(() => {
     const unresolved = drafts.filter((draft) => draft.lat === null || draft.lng === null);
-    if (unresolved.length === 0) return;
+    if (unresolved.length === 0) {
+      // Clear any resolvingIds left over from a previous draft set (e.g.
+      // the user switched to a connection whose via stops are all already
+      // located) -- otherwise this effect returns without ever touching
+      // resolvingIds again, and isResolving stays stuck true forever.
+      setResolvingIds((current) => (current.size > 0 ? new Set() : current));
+      return;
+    }
 
     let cancelled = false;
     setResolvingIds(new Set(unresolved.map((draft) => draft.id)));
 
-    // Resolve one stop at a time, in itinerary order, instead of firing
-    // every lookup independently against a single static proximity: each
-    // step uses the previous *confirmed* stop (falling back to the known
-    // origin for the first one) as Mapbox's proximity hint, so a chain of
-    // transfers converges on the real corridor instead of each being
-    // geocoded in isolation.
-    (async () => {
-      let anchor: Coordinates | null = origin;
-      for (const draft of unresolved) {
-        if (cancelled) return;
-        const coords = await geocodeCached(draft.name, anchor ? { proximity: anchor } : undefined);
+    // Resolve every unresolved stop concurrently (each waypoint's
+    // coordinates are independent of the others, so there's no reason to
+    // wait on one lookup before starting the next) rather than serializing
+    // them one at a time. Each entry still updates `resolved`/
+    // `resolvingIds` for its own draft.id as soon as it individually
+    // settles, so the UI reflects whichever stops resolve first. The known
+    // origin is still passed as a proximity hint for every lookup (biasing
+    // Mapbox toward the real corridor instead of a homonym elsewhere),
+    // just without chaining through each other's resolved coordinates.
+    Promise.all(
+      unresolved.map(async (draft) => {
+        const coords = await geocodeCached(draft.name, origin ? { proximity: origin } : undefined);
         if (cancelled) return;
 
         // Reject a match that's wildly off the known origin -> destination
@@ -162,12 +202,8 @@ export function useRouteWaypoints(connection: RouteConnection): {
           next.delete(draft.id);
           return next;
         });
-
-        // Only chain forward from a confirmed-good match; a rejected one
-        // must not drag the next lookup's proximity off-course too.
-        if (safeCoords) anchor = safeCoords;
-      }
-    })();
+      })
+    );
 
     return () => {
       cancelled = true;
@@ -193,10 +229,6 @@ export function useRouteWaypoints(connection: RouteConnection): {
       }),
     [drafts, resolved]
   );
-
-  if (import.meta.env.DEV) {
-    console.log("WAYPOINTS:", waypoints);
-  }
 
   return { waypoints, isResolving: resolvingIds.size > 0 };
 }

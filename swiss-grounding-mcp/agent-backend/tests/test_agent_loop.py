@@ -60,6 +60,28 @@ def test_system_prompt_includes_the_real_current_date_for_relative_time_words():
     assert "2026-09-24" in system_message["content"]
 
 
+def test_system_prompt_tells_model_to_preserve_origin_destination_when_via_is_ambiguous():
+    # Regression: the disambiguation instructions originally only told the
+    # model to re-call "using that exact name as the station parameter
+    # (origin or destination)", with no mention of 'via'. When the
+    # ambiguous field was actually 'via', a model following that literally
+    # could overwrite origin/destination with the chosen via candidate
+    # instead of restoring it to the via parameter, losing the original
+    # journey.
+    fake_openai = _FakeOpenAI([_text_response("ok")])
+
+    list(run_chat(
+        [{"role": "user", "content": "hi"}],
+        openai_client=fake_openai, ojp_client=None, aviation_client=None,
+        settings=None, model="gpt-4o-mini",
+    ))
+
+    system_message = fake_openai.calls[0]["messages"][0]["content"]
+    assert "via station" in system_message
+    assert "set via=" in system_message
+    assert "do NOT overwrite origin or" in system_message
+
+
 def test_plain_text_reply_emits_token_then_done():
     fake_openai = _FakeOpenAI([_text_response("Hello there.")])
 

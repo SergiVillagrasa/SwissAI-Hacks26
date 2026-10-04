@@ -26,6 +26,12 @@ def _day_windows(flight_date: str) -> list[tuple[str, str]] | None:
         day = date.fromisoformat(flight_date)
     except ValueError:
         return None
+    # date.fromisoformat also accepts non-padded/compact variants in some
+    # Python versions (e.g. "2026-9-5"); require the strict YYYY-MM-DD
+    # form so the echoed-back date and the windows built from the literal
+    # `flight_date` string below always agree with what was parsed.
+    if day.isoformat() != flight_date:
+        return None
     next_day = day + timedelta(days=1)
     midday = f"{flight_date}T12:00"
     return [

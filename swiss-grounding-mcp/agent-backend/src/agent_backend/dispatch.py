@@ -34,7 +34,10 @@ def _coerce_int(value: Any, default: int) -> int:
         return default
     try:
         return int(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
+        # int(float("inf")) (or similarly non-finite float values) raises
+        # OverflowError rather than ValueError -- an LLM sending that as a
+        # numeric argument must fall back to the default too, not crash.
         return default
 
 

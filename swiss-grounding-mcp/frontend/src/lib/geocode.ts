@@ -194,12 +194,31 @@ const geocodeCache = new Map<string, Promise<Coordinates | null>>();
  * so this collapses duplicate concurrent and repeat requests to one
  * network call per place name for the lifetime of the page. The cache key
  * is the name alone (not `proximity`), so the first resolution of a given
- * name wins even if a later call supplies a different proximity hint. */
+ * name wins even if a later call supplies a different proximity hint.
+ *
+ * A `null` outcome (no match, missing token, or network error) is NOT
+ * kept in the cache, though: it's often transient (a blip, a rate limit,
+ * a token that gets configured later), so permanently caching it would
+ * make a station unresolvable for the rest of the page's lifetime after
+ * a single bad lookup. The entry is removed as soon as the result is
+ * known, so the *next* call retries instead of reusing the
+ * ongoing/settled promise. */
 export function geocodeCached(placeName: string, options?: MapboxGeocodeOptions): Promise<Coordinates | null> {
   const key = placeName.trim().toLowerCase();
   let pending = geocodeCache.get(key);
   if (!pending) {
-    pending = geocode(placeName, options);
+    pending = geocode(placeName, options)
+      .then((result) => {
+        if (result === null) {
+          geocodeCache.delete(key);
+        }
+        return result;
+      })
+      .catch((error) => {
+        console.warn(`geocodeCached: lookup failed for "${placeName}"`, error);
+        geocodeCache.delete(key);
+        return null;
+      });
     geocodeCache.set(key, pending);
   }
   return pending;
