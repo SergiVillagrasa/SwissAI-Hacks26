@@ -4,6 +4,16 @@ An AI travel assistant that plans real Swiss journeys — trains, transfers, and
 
 Built during the Swiss AI Weeks hackathon (Zurich, 2026) on top of **OJP 2.0** (Switzerland's open transport data platform), with an LLM agent that calls typed, auditable tools instead of guessing.
 
+## 🎬 Demo
+
+Asking for a real journey (Zürich HB → Genève) streams a sorted list of live connections, then expands into an interactive, markered route map:
+
+![Demo: asking for a Zürich HB to Genève connection, then expanding it into an interactive route map](assets/demo/demo.gif)
+
+| Landing screen | Connection results | Interactive route map |
+| --- | --- | --- |
+| ![Landing screen](assets/demo/01-home.png) | ![Connection results with live OJP data](assets/demo/02-connections.png) | ![Expanded connection with Mapbox route map](assets/demo/03-route-map.png) |
+
 ## ✨ Highlights
 
 - **Multimodal journey planning** — train connections with transfers, intermediate "via" stops, and flight-to-train handoffs at Zurich Airport (ZRH), all resolved against the live timetable.
@@ -61,29 +71,34 @@ cp swiss-grounding-mcp/frontend/.env.example swiss-grounding-mcp/frontend/.env.l
 
 ```bash
 # Backend (FastAPI agent, http://127.0.0.1:3001)
-cd swiss-grounding-mcp/agent-backend && uv sync
-npm run dev:api   # from the repo root, in a separate terminal
+cd swiss-grounding-mcp/agent-backend
+uv sync
+uv run uvicorn agent_backend.main:app --reload --port 3001
 
-# Frontend (Vite, http://localhost:3000)
-cd swiss-grounding-mcp/frontend && npm install
-npm run dev:web   # from the repo root, in a separate terminal
+# Frontend (Vite, http://localhost:3000), in a separate terminal
+cd swiss-grounding-mcp/frontend
+npm install
+npm run dev
 ```
 
-(`npm run dev:api` / `npm run dev:web` are defined in the root [`package.json`](package.json); a [`Makefile`](Makefile) with equivalent `make dev-api` / `make dev-web` targets is also available.)
+Equivalent one-liners (`npm run dev:api` / `npm run dev:web`) are defined in the root [`package.json`](package.json); a [`Makefile`](Makefile) with `make dev-api` / `make dev-web` targets is also available.
 
 ## ✅ Running the tests
 
 ```bash
-# Python backends (from the repo root)
-npm run test:server   # MCP server: pytest
-npm run test:api       # Agent backend: pytest
+# MCP server (233 tests)
+cd swiss-grounding-mcp/server && uv run pytest
 
-# Frontend (from swiss-grounding-mcp/frontend)
-npm run test           # vitest
+# Agent backend (67 tests)
+cd swiss-grounding-mcp/agent-backend && uv run pytest
+
+# Frontend (133 tests)
+cd swiss-grounding-mcp/frontend
+npm test              # vitest
 npx tsc --noEmit       # TypeScript type-check
 ```
 
-Or run everything in one go: `npm run test:all` from the repo root.
+Or run everything in one go from the repo root: `npm run test:all` (wraps the three `pytest`/`npm test` commands above).
 
 ## 📄 License
 
