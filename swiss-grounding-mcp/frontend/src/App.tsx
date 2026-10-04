@@ -131,7 +131,13 @@ function AppContent() {
     <AppShell page={page} onNavigate={navigate}>
       {page === "workflow" ? (
         <WorkflowBoundary onGoHome={() => navigate("home")}>
-          <Suspense fallback={null}>
+          <Suspense
+            fallback={
+              <section className="workflow-page workflow-empty" aria-busy="true" aria-live="polite">
+                <h1 className="text-neutral-600">Loading workflow…</h1>
+              </section>
+            }
+          >
             <WorkflowPage onGoHome={() => navigate("home")} />
           </Suspense>
         </WorkflowBoundary>
