@@ -57,12 +57,16 @@ function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Zurich" }).format(new Date(iso));
 }
 
-/** Client-built SBB timetable deep link for the selected connection, matching
- * the server's `build_sbb_deep_link` URL shape (https://sbb.ch/en?von=..&nach=..&date=..[&via=..]).
- * `viaStopName` is the intermediate station the user asked the trip to pass
- * through (echoed back by find_connections as `via_stop_name`); when present
- * it must be included so the booking link reflects the same journey the
- * card is showing, not just its endpoints. */
+/** Client-built SBB timetable deep link for the selected connection. This
+ * mirrors the server's `build_sbb_deep_link` URL shape
+ * (https://sbb.ch/en?von=..&nach=..&date=..), with a client-side-only
+ * extension: when `viaStopName` is given (the intermediate station the
+ * user asked the trip to pass through, echoed back by find_connections as
+ * `via_stop_name`), a `via=` query parameter is appended here so the
+ * booking link reflects the same journey the card is showing, not just
+ * its endpoints. The server's own `check_public_transport_fares` tool
+ * does not thread a `via` through to its deep link today, so this and the
+ * server-built link can differ in that one respect. */
 function sbbDeepLink(connection: Connection, viaStopName?: string | null): string | null {
   const legs = connection.legs ?? [];
   if (legs.length === 0) return null;

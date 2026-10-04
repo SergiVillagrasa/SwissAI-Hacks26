@@ -123,9 +123,12 @@ describe("TrainConnectionsCard", () => {
   });
 
   it("includes the via stop in the SBB booking link when the journey has an intermediate stop", () => {
+    // "Olten" is distinct from both the sample journey's origin (Bern)
+    // and destination (Zürich HB), so this can't pass merely because
+    // `via=` happens to collide with an endpoint already in the URL.
     render(
       <TrainConnectionsCard
-        data={{ ...sampleData, via_stop_name: "Bern" }}
+        data={{ ...sampleData, via_stop_name: "Olten" }}
         onSelect={() => {}}
       />
     );
@@ -133,7 +136,7 @@ describe("TrainConnectionsCard", () => {
     fireEvent.click(screen.getByRole("button", { name: /103 min/ }));
 
     const bookLink = screen.getByRole("link", { name: /book on sbb/i });
-    expect(bookLink).toHaveAttribute("href", expect.stringContaining("via=Bern"));
+    expect(bookLink).toHaveAttribute("href", expect.stringContaining("via=Olten"));
   });
 
   it("omits the via parameter from the SBB booking link when no intermediate stop was requested", () => {
