@@ -1,19 +1,26 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { act, render, screen, fireEvent } from "@testing-library/react";
 import { TrainConnectionsCard } from "./TrainConnectionsCard";
 
-vi.mock("mapbox-gl", () => {
-  class FakeMap {
-    on = vi.fn();
-    remove = vi.fn();
-    addControl = vi.fn();
-  }
-  class FakeMarker {
-    setLngLat = vi.fn().mockReturnThis();
-    addTo = vi.fn().mockReturnThis();
-  }
-  return { default: { accessToken: "", Map: FakeMap, Marker: FakeMarker } };
-});
+// TrainConnectionsCard lazy-loads RouteMap (`lazy(() => import("./RouteMap"))`)
+// behind a Suspense boundary. Even with a trivially fast module, `lazy()`
+// always defers to at least one microtask before committing, which -- if
+// triggered by a plain `fireEvent.click` outside `act()` -- produces a
+// "not wrapped in act(...)" warning. Mocking the module to a synchronous
+// stub (and awaiting an `act()` tick around the click, below) avoids that
+// without exercising mapbox-gl/RouteMap internals this file isn't testing.
+vi.mock("./RouteMap", () => ({
+  RouteMap: () => null,
+}));
+
+/** Clicks `element` and flushes the microtask the lazy-loaded RouteMap's
+ * Suspense boundary needs to settle, so assertions right after don't race
+ * it and React doesn't warn about an unwrapped state update. */
+async function clickAndFlush(element: HTMLElement) {
+  await act(async () => {
+    fireEvent.click(element);
+  });
+}
 
 const sampleData = {
   connections: [
@@ -46,11 +53,11 @@ describe("TrainConnectionsCard", () => {
     );
   });
 
-  it("calls onSelect with the chosen connection", () => {
+  it("calls onSelect with the chosen connection", async () => {
     const onSelect = vi.fn();
     render(<TrainConnectionsCard data={sampleData} onSelect={onSelect} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /103 min/ }));
+    await clickAndFlush(screen.getByRole("button", { name: /103 min/ }));
 
     expect(onSelect).toHaveBeenCalledWith(sampleData.connections[0]);
   });
@@ -85,13 +92,13 @@ describe("TrainConnectionsCard", () => {
     expect(screen.getByTestId("via-badge").textContent).toBe("Via Bern");
   });
 
-  it("expands the leg detail and SBB booking link on selection", () => {
+  it("expands the leg detail and SBB booking link on selection", async () => {
     render(<TrainConnectionsCard data={sampleData} onSelect={() => {}} />);
 
     const row = screen.getByRole("button", { name: /103 min/ });
     expect(row).toHaveAttribute("aria-expanded", "false");
 
-    fireEvent.click(row);
+    await clickAndFlush(row);
 
     expect(row).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText(/IC 8/)).toBeInTheDocument();
@@ -109,7 +116,7 @@ describe("TrainConnectionsCard", () => {
     expect(screen.getByText(/20:04 → 21:47/)).toBeInTheDocument();
   });
 
-  it("lists the transfer stations when a connection has more than one rail leg", () => {
+  it("lists the transfer stations when a connection has more than one rail leg", async () => {
     const connectionWithTransfer = {
       ...sampleData.connections[0],
       changes: 1,
@@ -125,13 +132,13 @@ describe("TrainConnectionsCard", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /103 min/ }));
+    await clickAndFlush(screen.getByRole("button", { name: /103 min/ }));
 
     const changeAtLine = screen.getByText(/Change at:/).closest("div");
     expect(changeAtLine).toHaveTextContent("Olten");
   });
 
-  it("includes the via stop in the SBB booking link when the journey has an intermediate stop", () => {
+  it("includes the via stop in the SBB booking link when the journey has an intermediate stop", async () => {
     // "Olten" is distinct from both the sample journey's origin (Bern)
     // and destination (Zürich HB), so this can't pass merely because
     // `via=` happens to collide with an endpoint already in the URL.
@@ -142,22 +149,22 @@ describe("TrainConnectionsCard", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /103 min/ }));
+    await clickAndFlush(screen.getByRole("button", { name: /103 min/ }));
 
     const bookLink = screen.getByRole("link", { name: /book on sbb/i });
     expect(bookLink).toHaveAttribute("href", expect.stringContaining("via=Olten"));
   });
 
-  it("omits the via parameter from the SBB booking link when no intermediate stop was requested", () => {
+  it("omits the via parameter from the SBB booking link when no intermediate stop was requested", async () => {
     render(<TrainConnectionsCard data={sampleData} onSelect={() => {}} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /103 min/ }));
+    await clickAndFlush(screen.getByRole("button", { name: /103 min/ }));
 
     const bookLink = screen.getByRole("link", { name: /book on sbb/i });
     expect(bookLink).toHaveAttribute("href", expect.not.stringContaining("via="));
   });
 
-  it("builds the SBB deep link date from Swiss local time, not the raw UTC date", () => {
+  it("builds the SBB deep link date from Swiss local time, not the raw UTC date", async () => {
     const lateNightConnection = {
       ...sampleData.connections[0],
       departure: "2026-09-24T23:10:00Z",
@@ -173,7 +180,7 @@ describe("TrainConnectionsCard", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /103 min/ }));
+    await clickAndFlush(screen.getByRole("button", { name: /103 min/ }));
 
     const bookLink = screen.getByRole("link", { name: /book on sbb/i });
     // 23:10 UTC is already 2026-09-25 in Europe/Zurich (CEST, UTC+2); the
@@ -181,14 +188,14 @@ describe("TrainConnectionsCard", () => {
     expect(bookLink).toHaveAttribute("href", expect.stringContaining("date=2026-09-25"));
   });
 
-  it("collapses the detail when the same connection is selected again", () => {
+  it("collapses the detail when the same connection is selected again", async () => {
     render(<TrainConnectionsCard data={sampleData} onSelect={() => {}} />);
 
     const row = screen.getByRole("button", { name: /103 min/ });
-    fireEvent.click(row);
+    await clickAndFlush(row);
     expect(row).toHaveAttribute("aria-expanded", "true");
 
-    fireEvent.click(row);
+    await clickAndFlush(row);
     expect(row).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("link", { name: /book on sbb/i })).not.toBeInTheDocument();
   });

@@ -239,7 +239,11 @@ describe("useRouteWaypoints", () => {
     expect(via?.coords).toBeNull();
   });
 
-  it("uses the previous confirmed stop as the next lookup's proximity hint (chained geocoding)", async () => {
+  it("geocodes every unresolved via stop using the known origin as a proximity hint", async () => {
+    // Via stops resolve concurrently (not chained through each other's
+    // coordinates), but each lookup is still biased toward the real
+    // corridor by passing the connection's own known origin as proximity,
+    // instead of falling back to a fixed default.
     const threeLegConnection = {
       legs: [
         { mode: "rail", line: "IC1", from_name: "Genève", to_name: "Bern", departure: "2026-09-25T07:00:00Z", arrival: "2026-09-25T08:30:00Z" },
@@ -273,10 +277,7 @@ describe("useRouteWaypoints", () => {
 
     await waitFor(() => expect(result.current.isResolving).toBe(false));
 
-    // Bern is geocoded with the origin (Genève) as proximity; Olten is
-    // then geocoded with Bern's own just-resolved coordinates as
-    // proximity, not the static default.
-    expect(seenProximities[0]).toBe("6.1432,46.2044");
-    expect(seenProximities[1]).toBe("7.4474,46.9481");
+    expect(seenProximities).toHaveLength(2);
+    expect(seenProximities.every((proximity) => proximity === "6.1432,46.2044")).toBe(true);
   });
 });

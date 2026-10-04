@@ -85,7 +85,10 @@ def test_trip_request_with_via_adds_via_point_between_origin_and_destination():
     trip_request = root.find(".//ojp:OJPTripRequest", NS)
     assert trip_request is not None
 
-    via_ref = trip_request.find("ojp:Via/ojp:ViaPoint/siri:StopPointRef", NS)
+    # ViaPoint is a PlaceContextRefStructure: its StopPointRef is nested
+    # inside a <PlaceRef>, unlike Origin/Destination's own PlaceRef (which
+    # directly contains StopPointRef).
+    via_ref = trip_request.find("ojp:Via/ojp:ViaPoint/ojp:PlaceRef/siri:StopPointRef", NS)
     assert via_ref is not None
     assert via_ref.text == "ch:1:sloid:7000"
 

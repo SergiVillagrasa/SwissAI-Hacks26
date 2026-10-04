@@ -55,4 +55,17 @@ describe("StationBoardCard", () => {
     fireEvent.click(row);
     expect(screen.queryByText(/Mode:/)).not.toBeInTheDocument();
   });
+
+  it("renders the actual delay in minutes when the departure is running late", () => {
+    const delayedData = {
+      ...sampleData,
+      events: [{ ...sampleData.events[0], delay_minutes: 5 }],
+    };
+    render(<StationBoardCard data={delayedData} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /IC 8/ }));
+
+    expect(screen.getByText(/Delay:/)).toBeInTheDocument();
+    expect(screen.getByText("5 min")).toBeInTheDocument();
+  });
 });

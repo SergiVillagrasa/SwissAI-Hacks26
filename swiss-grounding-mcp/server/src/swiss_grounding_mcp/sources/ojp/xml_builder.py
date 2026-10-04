@@ -112,15 +112,15 @@ def build_trip_request(
     # OJP 2.0's TripRequest schema (TripRequestGroup -> TripViaStructure)
     # requires Via *after* Destination in element order (Origin,
     # Destination, Via, ViaSystem, NotVia, NoChangeAt, Params -- a strict
-    # xs:sequence). ViaPoint's type is PlaceRefStructure itself (the same
-    # group Origin/Destination use inside their own PlaceRef element), so
-    # StopPointRef/LocationName sit directly inside <ViaPoint>, with no
-    # nested <PlaceRef> wrapper. Per the OJP 2.0 schema, PlaceRefStructure's
-    # display-name element is <LocationName>, not <Name>.
+    # xs:sequence). ViaPoint is a PlaceContextRefStructure, whose
+    # StopPointRef sits inside a nested <PlaceRef> -- unlike Origin/
+    # Destination's own PlaceRef, which IS that direct child. Its
+    # display-name sibling is <LocationName>, not <Name>.
     if via_ref:
         via = ET.SubElement(trip_request, _ojp("Via"))
         via_point = ET.SubElement(via, _ojp("ViaPoint"))
-        ET.SubElement(via_point, _siri("StopPointRef")).text = via_ref
+        via_place_ref = ET.SubElement(via_point, _ojp("PlaceRef"))
+        ET.SubElement(via_place_ref, _siri("StopPointRef")).text = via_ref
         ET.SubElement(
             ET.SubElement(via_point, _ojp("LocationName")), _ojp("Text")
         ).text = (via_name or via_ref)

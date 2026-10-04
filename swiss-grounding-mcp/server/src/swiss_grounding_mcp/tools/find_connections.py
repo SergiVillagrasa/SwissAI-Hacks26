@@ -9,6 +9,9 @@ from swiss_grounding_mcp.evidence.provenance import build_provenance
 from swiss_grounding_mcp.sources.ojp.client import OjpSourceError
 from swiss_grounding_mcp.tools.resolution import is_swiss_stop, resolve_station
 
+# 3 workers: one each for the concurrent origin, destination, and (when
+# requested) via LocationInformationRequest lookups below, so all three
+# can run in parallel instead of queuing behind each other.
 _LIR_POOL = ThreadPoolExecutor(max_workers=3, thread_name_prefix="ojp-lir")
 
 _OUT_OF_SCOPE_MESSAGE = (
@@ -59,7 +62,11 @@ def find_train_connections(
         )
 
     clamped_results = max(1, min(5, results))
-    via = via.strip() if via else None
+    # Guard the type before calling .strip(): an LLM-supplied tool argument
+    # is JSON, so `via` could in principle arrive as a non-string (e.g. a
+    # number or bool) rather than the declared str | None, which would
+    # otherwise raise AttributeError here instead of degrading gracefully.
+    via = via.strip() if isinstance(via, str) and via.strip() else None
 
     origin_future = _LIR_POOL.submit(client.location_information, origin)
     destination_future = _LIR_POOL.submit(client.location_information, destination)
