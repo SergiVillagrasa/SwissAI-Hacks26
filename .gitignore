@@ -22,8 +22,8 @@ coverage/
 .DS_Store
 *.swp
 .idea/
-.vscode/*
-!.vscode/extensions.json
+**/.vscode/*
+!**/.vscode/extensions.json
 
 # Logs
 *.log

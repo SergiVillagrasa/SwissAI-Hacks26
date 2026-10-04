@@ -18,7 +18,7 @@ Asking for a real journey (Zürich HB → Genève) streams a sorted list of live
 
 - **Multimodal journey planning** — train connections with transfers, intermediate "via" stops, and flight-to-train handoffs at Zurich Airport (ZRH), all resolved against the live timetable.
 - **Interactive dynamic map** — Mapbox GL JS renders every leg of the journey with corridor-aware geocoding, so intermediate stops land in the right place even for stations the API doesn't geocode directly.
-- **Official SBB booking links** — every result links straight to SBB's own timetable/booking page, with the departure date computed in Swiss local time (not naively sliced from a UTC timestamp).
+- **Official SBB rail links** — public-transport fare and flight-to-train results link straight to SBB's own timetable/booking page, with the departure date computed in Swiss local time (not naively sliced from a UTC timestamp).
 - **LLM agent with function calling (MCP)** — the assistant exposes its data sources as typed [Model Context Protocol](https://modelcontextprotocol.io/) tools; the LLM decides which to call, and every answer carries a source citation instead of being invented.
 - **Voice input/output** — ask by speaking (OpenAI Whisper transcription) and get a spoken reply back (OpenAI TTS).
 
@@ -59,7 +59,7 @@ cd SwissAI-Hacks26
 
 **2. Configure environment variables**
 
-Copy each package's `.env.example` to `.env` and fill in your own API keys (OpenAI, Mapbox, OJP, ...):
+Copy each package's `.env.example` to its local environment file and fill in your own API keys (OpenAI, Mapbox, OJP, ...):
 
 ```bash
 cp swiss-grounding-mcp/server/.env.example swiss-grounding-mcp/server/.env
@@ -78,7 +78,7 @@ uv run uvicorn agent_backend.main:app --reload --port 3001
 # Frontend (Vite, http://localhost:3000), in a separate terminal
 cd swiss-grounding-mcp/frontend
 npm install
-npm run dev
+npm run dev -- --port 3000
 ```
 
 Equivalent one-liners (`npm run dev:api` / `npm run dev:web`) are defined in the root [`package.json`](package.json); a [`Makefile`](Makefile) with `make dev-api` / `make dev-web` targets is also available.
@@ -87,15 +87,13 @@ Equivalent one-liners (`npm run dev:api` / `npm run dev:web`) are defined in the
 
 ```bash
 # MCP server (233 tests)
-cd swiss-grounding-mcp/server && uv run pytest
+(cd swiss-grounding-mcp/server && uv run pytest)
 
 # Agent backend (67 tests)
-cd swiss-grounding-mcp/agent-backend && uv run pytest
+(cd swiss-grounding-mcp/agent-backend && uv run pytest)
 
-# Frontend (133 tests)
-cd swiss-grounding-mcp/frontend
-npm test              # vitest
-npx tsc --noEmit       # TypeScript type-check
+# Frontend (133 tests + type-check)
+(cd swiss-grounding-mcp/frontend && npm test && npx tsc --noEmit)
 ```
 
 Or run everything in one go from the repo root: `npm run test:all` (wraps the three `pytest`/`npm test` commands above).
