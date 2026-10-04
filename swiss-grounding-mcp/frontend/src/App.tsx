@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Composer } from "./components/Composer";
 import { ChatThread } from "./components/ChatThread";
 import { VoiceBorderGlow } from "./components/VoiceBorderGlow";
@@ -10,8 +10,15 @@ import { isExecutionEvent, type ChatMessage, type WidgetEvent } from "./lib/type
 import { usePage } from "./navigation/usePage";
 import { RunProvider } from "./workflow/RunProvider";
 import { useRun } from "./workflow/runContext";
-import { WorkflowPage } from "./pages/WorkflowPage";
 import { WorkflowBoundary } from "./workflow/WorkflowBoundary";
+
+// WorkflowPage pulls in @xyflow/react (plus its CSS), which is only needed
+// by users who actually open the Workflow tab. Lazy-loading it keeps that
+// library out of the initial bundle, the same way RouteMap/mapbox-gl is
+// split out of the main chat widgets.
+const WorkflowPage = lazy(() =>
+  import("./pages/WorkflowPage").then((m) => ({ default: m.WorkflowPage }))
+);
 
 export interface Turn {
   id: string;
@@ -123,7 +130,17 @@ function AppContent() {
   return (
     <AppShell page={page} onNavigate={navigate}>
       {page === "workflow" ? (
-        <WorkflowBoundary onGoHome={() => navigate("home")}><WorkflowPage onGoHome={() => navigate("home")} /></WorkflowBoundary>
+        <WorkflowBoundary onGoHome={() => navigate("home")}>
+          <Suspense
+            fallback={
+              <section className="workflow-page workflow-empty" aria-busy="true" aria-live="polite">
+                <h1 className="text-neutral-600">Loading workflow…</h1>
+              </section>
+            }
+          >
+            <WorkflowPage onGoHome={() => navigate("home")} />
+          </Suspense>
+        </WorkflowBoundary>
       ) : <div className="flex h-full flex-col overflow-hidden">
       {voiceActive && <VoiceBorderGlow state={voice.state} level={voice.level} />}
       {turns.length === 0 ? (

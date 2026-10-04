@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from time import perf_counter
 from typing import TypedDict
@@ -11,6 +12,8 @@ from agent_backend.dispatch import UnknownToolError, dispatch
 from agent_backend.execution_events import ExecutionEventEmitter
 from agent_backend.tools_registry import TOOL_SCHEMAS
 from agent_backend.widget_mapper import map_result
+
+logger = logging.getLogger(__name__)
 
 
 class AgentState(TypedDict):
@@ -53,8 +56,15 @@ def build_agent_graph(dependencies: AgentDependencies):
                 messages=state["chat_messages"],
                 tools=TOOL_SCHEMAS,
                 temperature=0.2,
+                # Explicit per-call timeout as defense in depth alongside
+                # the client-level timeout/max_retries set at construction
+                # (see agent_backend.main._build_openai_client) -- a
+                # wedged connection must not hold a chat turn open
+                # indefinitely.
+                timeout=30.0,
             )
         except Exception:
+            logger.exception("OpenAI chat.completions.create failed")
             events.extend([
                 emitter.emit(
                     "node_failed",
@@ -154,6 +164,7 @@ def build_agent_graph(dependencies: AgentDependencies):
                 event_type = "tool_failed"
                 summary = "The requested data tool is unavailable"
             except Exception:
+                logger.exception("Tool %s failed", name)
                 mapped = {"status": "source_error", "data": {"message": f"{name} failed"}}
                 event_type = "tool_failed"
                 summary = "The source request failed"

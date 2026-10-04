@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
 from openai import OpenAI
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 from agent_backend.agent_loop import run_chat
 from agent_backend.clients import build_aviation_client, build_flight_fares_client, build_ojp_client
@@ -38,7 +39,10 @@ def _build_openai_client(api_key: str) -> OpenAI | None:
     if not api_key:
         return None
     try:
-        return OpenAI(api_key=api_key)
+        # Explicit timeout/retries instead of the SDK defaults (~600s
+        # timeout, 2 retries): a wedged OpenAI connection must not hold a
+        # chat turn or voice request open for minutes.
+        return OpenAI(api_key=api_key, timeout=30.0, max_retries=1)
     except Exception:  # noqa: BLE001 - any SDK init failure degrades cleanly
         return None
 
@@ -129,7 +133,12 @@ async def transcribe(audio: UploadFile = File(...)) -> dict:
 
     buffer = io.BytesIO(data)
     buffer.name = audio.filename or "utterance.webm"
-    transcript = _openai_client.audio.transcriptions.create(
+    # The OpenAI SDK call is synchronous; running it directly here would
+    # block the event loop (and every other in-flight request, including
+    # streaming chats) for as long as the transcription takes. Offload it
+    # to FastAPI/Starlette's threadpool instead.
+    transcript = await run_in_threadpool(
+        _openai_client.audio.transcriptions.create,
         model=settings.openai_transcribe_model,
         file=buffer,
     )
