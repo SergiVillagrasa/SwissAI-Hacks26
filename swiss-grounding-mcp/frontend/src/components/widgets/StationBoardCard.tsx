@@ -18,7 +18,12 @@ export interface StationBoardData {
 }
 
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Europe/Zurich",
+  });
 }
 
 export function StationBoardCard({ data }: { data: StationBoardData }) {

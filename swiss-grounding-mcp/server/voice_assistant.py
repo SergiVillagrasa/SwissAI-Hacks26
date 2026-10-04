@@ -584,7 +584,9 @@ TOOL_SCHEMAS = [
          "when": _S, "results": {"type": "integer"}},
         ["station"]),
     _fn("find_disruptions",
-        "Check current service disruptions at a Swiss station.",
+        "Check current service disruptions at a station. Not restricted to "
+        "Swiss stations -- OJP 2.0 also indexes nearby stations in France, "
+        "Germany, Italy, or Austria.",
         {"stop": _S}, ["stop"]),
     _fn("find_flight_by_number",
         "Look up a Zurich Airport flight by number and date (YYYY-MM-DD).",

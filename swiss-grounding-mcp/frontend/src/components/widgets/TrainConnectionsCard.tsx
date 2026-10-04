@@ -47,11 +47,19 @@ interface TrainConnectionsCardProps {
 }
 
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Europe/Zurich",
+  });
 }
 
+/** YYYY-MM-DD in Swiss local time -- the UTC date alone can be off by one
+ * day for departures close to midnight (e.g. 23:10 UTC is already past
+ * midnight in Zurich), which would build a deep link for the wrong date. */
 function formatDate(iso: string): string {
-  return iso.slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Zurich" }).format(new Date(iso));
 }
 
 /** Client-built SBB timetable deep link for the selected connection, matching

@@ -1,5 +1,10 @@
 from swiss_grounding_mcp.config.settings import Settings
-from swiss_grounding_mcp.domain.models import Connection, FareProduct, StopCandidate
+from swiss_grounding_mcp.domain.models import (
+    Connection,
+    ConnectionSearchResult,
+    FareProduct,
+    StopCandidate,
+)
 from swiss_grounding_mcp.sources.aerodatabox.client import AerodataboxSourceError
 from swiss_grounding_mcp.tools.connect_flight_to_train import connect_flight_to_train
 
@@ -140,7 +145,10 @@ def test_answered_result_includes_sbb_booking_link_and_cheapest_fare():
     assert result.train_booking_url is not None
     assert result.train_booking_url.startswith("https://sbb.ch/en?")
     assert "nach=Bern" in result.train_booking_url
-    assert "date=2026-09-25" in result.train_booking_url
+    # The buffered departure is 2026-09-25T23:10:00Z, which is already
+    # 2026-09-26 in Europe/Zurich (CEST, UTC+2) -- the deep link date must
+    # follow Swiss local time, not the raw UTC date.
+    assert "date=2026-09-26" in result.train_booking_url
     assert result.train_price_chf == 31.0
 
 
@@ -193,3 +201,86 @@ def test_flight_not_found_returns_insufficient_evidence():
     )
 
     assert result.status == "insufficient_evidence"
+
+
+# ── Faithful propagation of find_train_connections statuses ─────────────
+# A previous version of this function collapsed every non-"ok" train
+# result into "source_unavailable", hiding genuine needs_clarification
+# (with candidates) and out_of_scope outcomes behind a generic error.
+
+class _StatusStubOjpClient(StubOjpClient):
+    """Stub whose trip_request is never reached: find_train_connections is
+    monkeypatched to return a canned non-"ok" ConnectionSearchResult."""
+
+
+def test_train_needs_clarification_propagates_as_needs_context_with_candidates(monkeypatch):
+    import swiss_grounding_mcp.tools.connect_flight_to_train as module
+
+    candidates = [
+        StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=0.55),
+        StopCandidate(name="Berlin Hbf", stop_ref="de:1:sloid:1", probability=0.5),
+    ]
+    monkeypatch.setattr(
+        module,
+        "find_train_connections",
+        lambda *args, **kwargs: ConnectionSearchResult(
+            status="needs_clarification",
+            message="Multiple stations match destination 'Ber'. Please pick one.",
+            candidates=candidates,
+        ),
+    )
+
+    result = connect_flight_to_train(
+        None, None, "2026-09-25T22:00:00+00:00", "Ber", 30, 3,
+        aviation_client=StubAerodataboxClient(),
+        ojp_client=_StatusStubOjpClient(),
+        settings=_settings(),
+    )
+
+    assert result.status == "needs_context"
+    assert len(result.candidates) == 2
+    assert {c.name for c in result.candidates} == {"Bern", "Berlin Hbf"}
+
+
+def test_train_out_of_scope_propagates_as_out_of_scope(monkeypatch):
+    import swiss_grounding_mcp.tools.connect_flight_to_train as module
+
+    monkeypatch.setattr(
+        module,
+        "find_train_connections",
+        lambda *args, **kwargs: ConnectionSearchResult(
+            status="out_of_scope",
+            message="This service covers Swiss public transport only.",
+        ),
+    )
+
+    result = connect_flight_to_train(
+        None, None, "2026-09-25T22:00:00+00:00", "Lyon Part-Dieu", 30, 3,
+        aviation_client=StubAerodataboxClient(),
+        ojp_client=_StatusStubOjpClient(),
+        settings=_settings(),
+    )
+
+    assert result.status == "out_of_scope"
+
+
+def test_train_source_error_propagates_as_source_unavailable(monkeypatch):
+    import swiss_grounding_mcp.tools.connect_flight_to_train as module
+
+    monkeypatch.setattr(
+        module,
+        "find_train_connections",
+        lambda *args, **kwargs: ConnectionSearchResult(
+            status="source_error",
+            message="OJP returned HTTP 503",
+        ),
+    )
+
+    result = connect_flight_to_train(
+        None, None, "2026-09-25T22:00:00+00:00", "Bern", 30, 3,
+        aviation_client=StubAerodataboxClient(),
+        ojp_client=_StatusStubOjpClient(),
+        settings=_settings(),
+    )
+
+    assert result.status == "source_unavailable"

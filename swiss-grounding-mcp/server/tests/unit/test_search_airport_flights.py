@@ -90,6 +90,18 @@ def test_missing_flight_date_returns_needs_context():
     assert result.status == "needs_context"
 
 
+def test_malformed_flight_date_returns_needs_context_instead_of_crashing():
+    client = StubAerodataboxClient(windows=[_TWO_FLIGHTS_WINDOW_1, _TWO_FLIGHTS_WINDOW_2])
+
+    result = search_airport_flights(
+        "departure", "25-09-2026", None, None, None, 10, client=client, settings=_settings()
+    )
+
+    assert result.status == "needs_context"
+    assert "25-09-2026" in result.message
+    assert client.calls == []
+
+
 def test_no_filters_lists_all_flights_for_the_direction():
     client = StubAerodataboxClient(windows=[_TWO_FLIGHTS_WINDOW_1, _TWO_FLIGHTS_WINDOW_2])
 

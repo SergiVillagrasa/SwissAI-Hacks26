@@ -83,13 +83,16 @@ def find_connections(
     sort_by: str | None = None,
     via: str | None = None,
 ) -> ConnectionSearchResult:
-    """Find Swiss passenger-train connections between two stations.
+    """Find passenger-train connections between two stations.
 
-    Scope: the current Swiss public-transport timetable only, via OJP 2.0
+    Scope: the current Swiss public-transport timetable via OJP 2.0
     (opentransportdata.swiss). Covers origin-to-destination connection
-    search with an optional departure or arrival time. Does not cover
-    fares, single-stop departure boards, disruption feeds, or non-Swiss
-    travel. If the origin or destination is outside Switzerland, is not a
+    search with an optional departure or arrival time, including
+    cross-border/international journeys as long as at least one endpoint
+    is in Switzerland (e.g. Basel to Lyon, Zurich to Milan). Does not
+    cover fares, single-stop departure boards, disruption feeds, or
+    journeys that are purely outside Switzerland on both ends. If both the
+    origin and destination are outside Switzerland, neither is a
     recognizable station, or the question is unrelated to travel, this
     tool will say so rather than guess.
 

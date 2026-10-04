@@ -10,6 +10,7 @@ FareStatus = Literal[
     "fallback_link",
     "out_of_scope",
     "needs_clarification",
+    "not_found",
     "source_error",
 ]
 
@@ -223,5 +224,6 @@ class FlightToTrainResult(BaseModel):
     train_connections: list[Connection] = Field(default_factory=list)
     train_booking_url: str | None = None
     train_price_chf: float | None = None
+    candidates: list[StopCandidate] = Field(default_factory=list)
     flight_provenance: AviationProvenance | None = None
     rail_provenance: Provenance | None = None

@@ -68,6 +68,14 @@ def test_cors_rejects_non_local_origin_not_in_allowlist():
 
 
 def test_chat_endpoint_streams_events_from_run_chat(monkeypatch):
+    # The /api/chat handler short-circuits to the "missing key" fallback
+    # whenever _openai_client is None, so this must mock _openai_client
+    # itself (not just run_chat) -- otherwise the test only exercises the
+    # real code path when a real OPENAI_API_KEY happens to be set in the
+    # environment, and silently takes the fallback branch (hiding this
+    # test's own assertions) in a clean CI environment without one.
+    monkeypatch.setattr(main_module, "_openai_client", SimpleNamespace())
+
     def fake_run_chat(messages, **kwargs):
         assert messages == [{"role": "user", "content": "hi"}]
         assert kwargs["run_id"]
@@ -107,15 +115,28 @@ def test_build_openai_client_returns_none_without_key():
     assert main_module._build_openai_client("") is None
 
 
+def _fake_openai_client() -> SimpleNamespace:
+    """A minimal stand-in for the OpenAI SDK client, structured so tests can
+    still monkeypatch individual `.audio.transcriptions.create` /
+    `.audio.speech.create` methods on it."""
+    return SimpleNamespace(
+        audio=SimpleNamespace(
+            transcriptions=SimpleNamespace(create=lambda **kwargs: None),
+            speech=SimpleNamespace(create=lambda **kwargs: None),
+        )
+    )
+
+
 def test_transcribe_endpoint_returns_openai_transcript_text(monkeypatch):
+    fake_client = _fake_openai_client()
+    monkeypatch.setattr(main_module, "_openai_client", fake_client)
+
     def fake_create(*, model, file):
         assert model == main_module.settings.openai_transcribe_model
         assert file.read() == b"fake-audio-bytes"
         return SimpleNamespace(text=" hello there ")
 
-    monkeypatch.setattr(
-        main_module._openai_client.audio.transcriptions, "create", fake_create
-    )
+    monkeypatch.setattr(fake_client.audio.transcriptions, "create", fake_create)
 
     client = TestClient(main_module.app)
     response = client.post(
@@ -127,7 +148,14 @@ def test_transcribe_endpoint_returns_openai_transcript_text(monkeypatch):
     assert response.json() == {"text": "hello there"}
 
 
-def test_transcribe_endpoint_rejects_empty_upload():
+def test_transcribe_endpoint_rejects_empty_upload(monkeypatch):
+    # Must still mock _openai_client: the handler checks for a configured
+    # client before it checks for an empty upload, so without this mock the
+    # test would get a 503 (missing key) instead of exercising the 400
+    # (empty upload) path it's meant to check -- hermetic only by accident
+    # of a real OPENAI_API_KEY being set locally.
+    monkeypatch.setattr(main_module, "_openai_client", _fake_openai_client())
+
     client = TestClient(main_module.app)
 
     response = client.post(
@@ -139,6 +167,9 @@ def test_transcribe_endpoint_rejects_empty_upload():
 
 
 def test_speak_endpoint_returns_mp3_audio_bytes(monkeypatch):
+    fake_client = _fake_openai_client()
+    monkeypatch.setattr(main_module, "_openai_client", fake_client)
+
     def fake_create(*, model, voice, input, response_format):
         assert model == main_module.settings.openai_tts_model
         assert voice == main_module.settings.openai_tts_voice
@@ -146,7 +177,7 @@ def test_speak_endpoint_returns_mp3_audio_bytes(monkeypatch):
         assert response_format == "mp3"
         return SimpleNamespace(read=lambda: b"fake-mp3-bytes")
 
-    monkeypatch.setattr(main_module._openai_client.audio.speech, "create", fake_create)
+    monkeypatch.setattr(fake_client.audio.speech, "create", fake_create)
 
     client = TestClient(main_module.app)
     response = client.post("/api/voice/speak", json={"text": "hello there"})
@@ -156,7 +187,11 @@ def test_speak_endpoint_returns_mp3_audio_bytes(monkeypatch):
     assert response.content == b"fake-mp3-bytes"
 
 
-def test_speak_endpoint_rejects_empty_text():
+def test_speak_endpoint_rejects_empty_text(monkeypatch):
+    # See test_transcribe_endpoint_rejects_empty_upload: the missing-key
+    # check runs before the empty-text check.
+    monkeypatch.setattr(main_module, "_openai_client", _fake_openai_client())
+
     client = TestClient(main_module.app)
 
     response = client.post("/api/voice/speak", json={"text": "   "})

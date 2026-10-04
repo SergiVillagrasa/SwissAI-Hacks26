@@ -6,11 +6,14 @@ TOOL_SCHEMAS: list[dict] = [
         "function": {
             "name": "find_connections",
             "description": (
-                "Find Swiss passenger-train connections between two stations. "
-                "Scope: the current Swiss public-transport timetable only, via "
-                "OJP 2.0 (opentransportdata.swiss). Does not cover fares, "
-                "single-stop departure boards, disruption feeds, or purely "
-                "non-Swiss travel."
+                "Find passenger-train connections between two stations, "
+                "including cross-border/international journeys as long as "
+                "at least one endpoint is in Switzerland (e.g. Basel to "
+                "Lyon, Zurich to Milan). Scope: the current Swiss "
+                "public-transport timetable via OJP 2.0 "
+                "(opentransportdata.swiss). Does not cover fares, "
+                "single-stop departure boards, disruption feeds, or "
+                "journeys that are purely outside Switzerland on both ends."
             ),
             "parameters": {
                 "type": "object",
@@ -32,8 +35,14 @@ TOOL_SCHEMAS: list[dict] = [
         "function": {
             "name": "find_disruptions",
             "description": (
-                "Find current public-transport disruptions affecting a Swiss "
-                "station, using real-time OJP 2.0 stop-event information."
+                "Find current public-transport disruptions affecting a "
+                "station, using real-time OJP 2.0 stop-event information. "
+                "Unlike find_connections and get_station_board, this is not "
+                "restricted to Swiss stations: OJP 2.0 indexes stops across "
+                "the wider network (e.g. nearby stations in France, "
+                "Germany, Italy, or Austria), so call this tool for a "
+                "disruption question about any such stop rather than "
+                "refusing it as out of scope."
             ),
             "parameters": {
                 "type": "object",

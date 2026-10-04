@@ -65,32 +65,29 @@ def find_train_connections(
     destination_future = _LIR_POOL.submit(client.location_information, destination)
     via_future = _LIR_POOL.submit(client.location_information, via) if via else None
 
+    # Resolve origin and destination together before making any scope or
+    # disambiguation decision. Both lookups were already launched
+    # concurrently above; blocking on origin's result first and returning
+    # early on its failure (as a previous version of this function did)
+    # meant a foreign, ambiguous, or unresolvable origin always triggered a
+    # clarification request even when the destination alone already
+    # proved the whole journey out of scope -- e.g. "Paris" to "Lyon"
+    # would ask the user to disambiguate "Paris" instead of answering
+    # out_of_scope immediately. Gathering both results first lets the
+    # combined scope check below run before any such early return.
     try:
         origin_candidates = origin_future.result()
     except OjpSourceError as exc:
         return ConnectionSearchResult(status="source_error", message=str(exc))
-
-    resolved_origin, failure = resolve_station(origin, origin_candidates, "origin")
-    if failure is not None:
-        failure.provenance = build_provenance(settings)
-        return failure
-
     try:
         destination_candidates = destination_future.result()
     except OjpSourceError as exc:
         return ConnectionSearchResult(status="source_error", message=str(exc))
 
-    resolved_via = None
-    if via_future is not None:
-        try:
-            via_candidates = via_future.result()
-        except OjpSourceError as exc:
-            return ConnectionSearchResult(status="source_error", message=str(exc))
-
-        resolved_via, via_failure = resolve_station(via, via_candidates, "via station")
-        if via_failure is not None:
-            via_failure.provenance = build_provenance(settings)
-            return via_failure
+    resolved_origin, origin_failure = resolve_station(origin, origin_candidates, "origin")
+    resolved_destination, destination_failure = resolve_station(
+        destination, destination_candidates, "destination"
+    )
 
     # Fast scope check before any disambiguation: if neither side could
     # possibly resolve to a Swiss stop (resolved stop or any LIR
@@ -104,12 +101,6 @@ def find_train_connections(
             return True  # unresolvable input -> let the failure path answer
         return any(is_swiss_stop(c.stop_ref) for c in candidates)
 
-    resolved_origin, origin_failure = resolve_station(
-        origin, origin_candidates, "origin"
-    )
-    resolved_destination, destination_failure = resolve_station(
-        destination, destination_candidates, "destination"
-    )
     if not _could_be_swiss(resolved_origin, origin_candidates) and not _could_be_swiss(
         resolved_destination, destination_candidates
     ):
@@ -125,6 +116,18 @@ def find_train_connections(
     if destination_failure is not None:
         destination_failure.provenance = build_provenance(settings)
         return destination_failure
+
+    resolved_via = None
+    if via_future is not None:
+        try:
+            via_candidates = via_future.result()
+        except OjpSourceError as exc:
+            return ConnectionSearchResult(status="source_error", message=str(exc))
+
+        resolved_via, via_failure = resolve_station(via, via_candidates, "via station")
+        if via_failure is not None:
+            via_failure.provenance = build_provenance(settings)
+            return via_failure
 
     effective_departure_time = departure_time
     effective_arrival_time = arrival_time if departure_time is None else None

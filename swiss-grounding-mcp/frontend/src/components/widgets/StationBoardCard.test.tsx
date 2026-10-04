@@ -20,6 +20,14 @@ describe("StationBoardCard", () => {
     expect(screen.getByText(/Platform 3/)).toBeInTheDocument();
   });
 
+  it("renders the planned time in Swiss local time, not the browser/runtime timezone", () => {
+    // planned_time is 2026-09-24T18:04:00Z (UTC); in Europe/Zurich (CEST,
+    // UTC+2) that is 20:04, regardless of the test runner's own timezone.
+    render(<StationBoardCard data={sampleData} />);
+
+    expect(screen.getByText("20:04")).toBeInTheDocument();
+  });
+
   it("highlights the selected departure and expands its mode and delay detail", () => {
     render(<StationBoardCard data={sampleData} />);
 

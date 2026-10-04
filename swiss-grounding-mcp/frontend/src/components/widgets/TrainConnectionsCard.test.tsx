@@ -100,6 +100,45 @@ describe("TrainConnectionsCard", () => {
     expect(bookLink).toHaveAttribute("href", expect.stringContaining("nach=Z%C3%BCrich+HB"));
   });
 
+  it("renders departure and arrival times in Swiss local time, not the browser/runtime timezone", () => {
+    // The connection's departure is 2026-09-24T18:04:00Z (UTC). In
+    // Europe/Zurich (CEST, UTC+2) that is 20:04 -- the card must show the
+    // Swiss time regardless of what timezone the test runner itself uses.
+    render(<TrainConnectionsCard data={sampleData} onSelect={() => {}} />);
+
+    expect(screen.getByText(/20:04 → 21:47/)).toBeInTheDocument();
+  });
+
+  it("builds the SBB deep link date from Swiss local time, not the raw UTC date", () => {
+    const lateNightData = {
+      ...sampleData,
+      connections: [
+        {
+          ...sampleData.connections[0],
+          departure: "2026-09-24T23:10:00Z",
+          arrival: "2026-09-25T00:03:00Z",
+          legs: [
+            {
+              mode: "rail",
+              line: "IC 8",
+              from_name: "Bern",
+              to_name: "Zürich HB",
+              departure: "2026-09-24T23:10:00Z",
+              arrival: "2026-09-25T00:03:00Z",
+            },
+          ],
+        },
+      ],
+    };
+    render(<TrainConnectionsCard data={lateNightData} onSelect={() => {}} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /103 min/ }));
+
+    const bookLink = screen.getByRole("link", { name: /book on sbb/i });
+    // 23:10 UTC is already 2026-09-25 in Europe/Zurich (CEST, UTC+2).
+    expect(bookLink).toHaveAttribute("href", expect.stringContaining("date=2026-09-25"));
+  });
+
   it("collapses the detail when the same connection is selected again", () => {
     render(<TrainConnectionsCard data={sampleData} onSelect={() => {}} />);
 
