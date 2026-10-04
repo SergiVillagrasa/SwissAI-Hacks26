@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { geocodeCached, isPlausibleCoordinate, type Coordinates } from "./geocode";
+import { geocodeCached, isPlausibleCoordinate, isWithinCorridor, type Coordinates } from "./geocode";
 import type { RouteWaypoint, WaypointKind } from "../components/widgets/RouteMap";
 
 interface RouteLeg {
@@ -101,6 +101,25 @@ export function useRouteWaypoints(connection: RouteConnection): {
   const [resolved, setResolved] = useState<Record<string, Coordinates | null>>({});
   const [resolvingIds, setResolvingIds] = useState<ReadonlySet<string>>(new Set());
 
+  // The server-resolved origin/destination coordinates define this
+  // itinerary's corridor; memoized on the primitive lat/lng values (not a
+  // fresh object each render) so the geocoding effect below doesn't
+  // re-fire every time this hook's own state updates.
+  const origin = useMemo<Coordinates | null>(
+    () =>
+      connection.origin_latitude !== null && connection.origin_longitude !== null
+        ? { lat: connection.origin_latitude, lng: connection.origin_longitude }
+        : null,
+    [connection.origin_latitude, connection.origin_longitude]
+  );
+  const destination = useMemo<Coordinates | null>(
+    () =>
+      connection.destination_latitude !== null && connection.destination_longitude !== null
+        ? { lat: connection.destination_latitude, lng: connection.destination_longitude }
+        : null,
+    [connection.destination_latitude, connection.destination_longitude]
+  );
+
   useEffect(() => {
     const unresolved = drafts.filter((draft) => draft.lat === null || draft.lng === null);
     if (unresolved.length === 0) return;
@@ -108,30 +127,52 @@ export function useRouteWaypoints(connection: RouteConnection): {
     let cancelled = false;
     setResolvingIds(new Set(unresolved.map((draft) => draft.id)));
 
-    unresolved.forEach((draft) => {
-      geocodeCached(draft.name).then((coords) => {
+    // Resolve one stop at a time, in itinerary order, instead of firing
+    // every lookup independently against a single static proximity: each
+    // step uses the previous *confirmed* stop (falling back to the known
+    // origin for the first one) as Mapbox's proximity hint, so a chain of
+    // transfers converges on the real corridor instead of each being
+    // geocoded in isolation.
+    (async () => {
+      let anchor: Coordinates | null = origin;
+      for (const draft of unresolved) {
         if (cancelled) return;
-        // Only guards against a wildly wrong match (a different continent);
-        // legitimate cross-border stations (Barcelona, Lyon, Milano, ...)
-        // must still resolve, so this is intentionally not restricted to
-        // Switzerland alone.
-        const safeCoords = coords && isPlausibleCoordinate(coords) ? coords : null;
+        const coords = await geocodeCached(draft.name, anchor ? { proximity: anchor } : undefined);
+        if (cancelled) return;
+
+        // Reject a match that's wildly off the known origin -> destination
+        // corridor (e.g. Mapbox resolving a bare "Valence" to a homonym on
+        // another continent) rather than plotting it in the wrong place or
+        // distorting the drawn route. Without both ends known, fall back
+        // to a loose continent-level sanity check.
+        const plausible =
+          coords == null
+            ? false
+            : origin && destination
+              ? isWithinCorridor(coords, origin, destination)
+              : isPlausibleCoordinate(coords);
+        const safeCoords = plausible ? coords : null;
         if (coords && !safeCoords) {
           console.warn(`useRouteWaypoints: discarding implausible geocode result for "${draft.name}"`, coords);
         }
+
         setResolved((current) => ({ ...current, [draft.id]: safeCoords }));
         setResolvingIds((current) => {
           const next = new Set(current);
           next.delete(draft.id);
           return next;
         });
-      });
-    });
+
+        // Only chain forward from a confirmed-good match; a rejected one
+        // must not drag the next lookup's proximity off-course too.
+        if (safeCoords) anchor = safeCoords;
+      }
+    })();
 
     return () => {
       cancelled = true;
     };
-  }, [drafts]);
+  }, [drafts, origin, destination]);
 
   const waypoints = useMemo<RouteWaypoint[]>(
     () =>
