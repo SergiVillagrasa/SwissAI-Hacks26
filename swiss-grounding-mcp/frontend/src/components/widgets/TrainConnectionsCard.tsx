@@ -49,18 +49,29 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+/** YYYY-MM-DD in Swiss local time -- the raw UTC date substring can be off
+ * by one day for departures close to midnight (e.g. 23:10 UTC is already
+ * past midnight in Zurich), which would build a deep link for the wrong
+ * date. */
 function formatDate(iso: string): string {
-  return iso.slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Zurich" }).format(new Date(iso));
 }
 
 /** Client-built SBB timetable deep link for the selected connection, matching
- * the server's `build_sbb_deep_link` URL shape (https://sbb.ch/en?von=..&nach=..&date=..). */
-function sbbDeepLink(connection: Connection): string | null {
+ * the server's `build_sbb_deep_link` URL shape (https://sbb.ch/en?von=..&nach=..&date=..[&via=..]).
+ * `viaStopName` is the intermediate station the user asked the trip to pass
+ * through (echoed back by find_connections as `via_stop_name`); when present
+ * it must be included so the booking link reflects the same journey the
+ * card is showing, not just its endpoints. */
+function sbbDeepLink(connection: Connection, viaStopName?: string | null): string | null {
   const legs = connection.legs ?? [];
   if (legs.length === 0) return null;
   const origin = legs[0].from_name;
   const destination = legs[legs.length - 1].to_name;
   const params = new URLSearchParams({ von: origin, nach: destination, date: formatDate(connection.departure) });
+  if (viaStopName) {
+    params.set("via", viaStopName);
+  }
   return `https://sbb.ch/en?${params.toString()}`;
 }
 
@@ -79,10 +90,10 @@ function useStableCoords(lat: number | null, lng: number | null): { lat: number;
   return useMemo(() => (lat !== null && lng !== null ? { lat, lng } : null), [lat, lng]);
 }
 
-function ConnectionDetail({ connection }: { connection: Connection }) {
+function ConnectionDetail({ connection, viaStopName }: { connection: Connection; viaStopName?: string | null }) {
   const legs = connection.legs ?? [];
   const transfers = transferStations(connection);
-  const bookingUrl = sbbDeepLink(connection);
+  const bookingUrl = sbbDeepLink(connection, viaStopName);
   const originCoords = useStableCoords(connection.origin_latitude, connection.origin_longitude);
   const destinationCoords = useStableCoords(connection.destination_latitude, connection.destination_longitude);
 
@@ -175,7 +186,7 @@ export function TrainConnectionsCard({ data, onSelect }: TrainConnectionsCardPro
               </div>
               <ExpandChevron expanded={isSelected} />
             </button>
-            {isSelected && <ConnectionDetail connection={connection} />}
+            {isSelected && <ConnectionDetail connection={connection} viaStopName={data.via_stop_name} />}
           </div>
         );
       })}

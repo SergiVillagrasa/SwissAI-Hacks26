@@ -31,6 +31,18 @@ export function RouteMap({ origin, destination, originCoords, destinationCoords,
 
       map.on("error", (event) => {
         console.error("RouteMap: mapbox-gl reported an error", event.error);
+        // A runtime error (e.g. an invalid/expired token, a failed tile/style
+        // fetch) leaves the underlying mapbox-gl instance - and its WebGL
+        // context and event listeners - running in the background even
+        // though the UI falls back to the "unavailable" message. Tear it
+        // down here instead of only on unmount/dependency change, or it
+        // leaks for as long as this card stays open.
+        try {
+          map?.remove();
+        } catch (teardownError) {
+          console.error("RouteMap: failed to tear down mapbox-gl after an error", teardownError);
+        }
+        map = null;
         setUnavailable(true);
       });
 

@@ -85,7 +85,7 @@ describe("TrainConnectionsCard", () => {
     expect(screen.getByTestId("via-badge").textContent).toBe("Via Bern");
   });
 
-  it("expands the leg detail, transfer stations, and SBB booking link on selection", () => {
+  it("expands the leg detail and SBB booking link on selection", () => {
     render(<TrainConnectionsCard data={sampleData} onSelect={() => {}} />);
 
     const row = screen.getByRole("button", { name: /103 min/ });
@@ -98,6 +98,75 @@ describe("TrainConnectionsCard", () => {
     const bookLink = screen.getByRole("link", { name: /book on sbb/i });
     expect(bookLink).toHaveAttribute("href", expect.stringContaining("von=Bern"));
     expect(bookLink).toHaveAttribute("href", expect.stringContaining("nach=Z%C3%BCrich+HB"));
+  });
+
+  it("lists the transfer stations when a connection has more than one rail leg", () => {
+    const connectionWithTransfer = {
+      ...sampleData.connections[0],
+      changes: 1,
+      legs: [
+        { mode: "rail", line: "IC 1", from_name: "Bern", to_name: "Olten", departure: "2026-09-24T18:04:00Z", arrival: "2026-09-24T18:30:00Z" },
+        { mode: "rail", line: "IC 8", from_name: "Olten", to_name: "Zürich HB", departure: "2026-09-24T18:35:00Z", arrival: "2026-09-24T18:57:00Z" },
+      ],
+    };
+    render(
+      <TrainConnectionsCard
+        data={{ ...sampleData, connections: [connectionWithTransfer] }}
+        onSelect={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /103 min/ }));
+
+    const changeAtLine = screen.getByText(/Change at:/).closest("div");
+    expect(changeAtLine).toHaveTextContent("Olten");
+  });
+
+  it("includes the via stop in the SBB booking link when the journey has an intermediate stop", () => {
+    render(
+      <TrainConnectionsCard
+        data={{ ...sampleData, via_stop_name: "Bern" }}
+        onSelect={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /103 min/ }));
+
+    const bookLink = screen.getByRole("link", { name: /book on sbb/i });
+    expect(bookLink).toHaveAttribute("href", expect.stringContaining("via=Bern"));
+  });
+
+  it("omits the via parameter from the SBB booking link when no intermediate stop was requested", () => {
+    render(<TrainConnectionsCard data={sampleData} onSelect={() => {}} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /103 min/ }));
+
+    const bookLink = screen.getByRole("link", { name: /book on sbb/i });
+    expect(bookLink).toHaveAttribute("href", expect.not.stringContaining("via="));
+  });
+
+  it("builds the SBB deep link date from Swiss local time, not the raw UTC date", () => {
+    const lateNightConnection = {
+      ...sampleData.connections[0],
+      departure: "2026-09-24T23:10:00Z",
+      arrival: "2026-09-25T00:03:00Z",
+      legs: [
+        { mode: "rail", line: "IC 8", from_name: "Bern", to_name: "Zürich HB", departure: "2026-09-24T23:10:00Z", arrival: "2026-09-25T00:03:00Z" },
+      ],
+    };
+    render(
+      <TrainConnectionsCard
+        data={{ ...sampleData, connections: [lateNightConnection] }}
+        onSelect={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /103 min/ }));
+
+    const bookLink = screen.getByRole("link", { name: /book on sbb/i });
+    // 23:10 UTC is already 2026-09-25 in Europe/Zurich (CEST, UTC+2); the
+    // naive `iso.slice(0, 10)` this replaced would have said 2026-09-24.
+    expect(bookLink).toHaveAttribute("href", expect.stringContaining("date=2026-09-25"));
   });
 
   it("collapses the detail when the same connection is selected again", () => {
