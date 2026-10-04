@@ -126,13 +126,27 @@ export function useRouteWaypoints(connection: RouteConnection, viaStopName?: str
 
   useEffect(() => {
     const unresolved = drafts.filter((draft) => draft.lat === null || draft.lng === null);
-    if (unresolved.length === 0) return;
+    if (unresolved.length === 0) {
+      // Clear any resolvingIds left over from a previous draft set (e.g.
+      // the user switched to a connection whose via stops are all already
+      // located) -- otherwise this effect returns without ever touching
+      // resolvingIds again, and isResolving stays stuck true forever.
+      setResolvingIds((current) => (current.size > 0 ? new Set() : current));
+      return;
+    }
 
     let cancelled = false;
     setResolvingIds(new Set(unresolved.map((draft) => draft.id)));
 
-    unresolved.forEach((draft) => {
-      geocodeCached(draft.name).then((coords) => {
+    // Resolve one stop at a time, in itinerary order, instead of firing
+    // every lookup independently/in parallel: the via stops must keep
+    // their real sequential order (origin -> via1 -> via2 -> ... ->
+    // destination) as drafted, which a parallel race between lookups
+    // does not guarantee.
+    (async () => {
+      for (const draft of unresolved) {
+        if (cancelled) return;
+        const coords = await geocodeCached(draft.name);
         if (cancelled) return;
         // Only guards against a wildly wrong match (a different continent);
         // legitimate cross-border stations (Barcelona, Lyon, Milano, ...)
@@ -148,8 +162,8 @@ export function useRouteWaypoints(connection: RouteConnection, viaStopName?: str
           next.delete(draft.id);
           return next;
         });
-      });
-    });
+      }
+    })();
 
     return () => {
       cancelled = true;

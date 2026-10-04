@@ -89,11 +89,26 @@ def find_train_connections(
         destination, destination_candidates, "destination"
     )
 
-    # Fast scope check before any disambiguation: if neither side could
-    # possibly resolve to a Swiss stop (resolved stop or any LIR
-    # candidate), no user pick can produce a Swiss-connected journey --
-    # answer out_of_scope directly instead of entering a clarification
-    # loop on foreign stations that can never succeed.
+    # Resolve via (if requested) before the scope check below, not after:
+    # a foreign origin and destination with a Swiss via stop (e.g. Paris to
+    # Milan via Bern) is still an in-scope, Swiss-connected journey, so the
+    # scope decision must already know about via by the time it's made.
+    resolved_via = None
+    via_candidates: list = []
+    via_failure = None
+    if via_future is not None:
+        try:
+            via_candidates = via_future.result()
+        except OjpSourceError as exc:
+            return ConnectionSearchResult(status="source_error", message=str(exc))
+        resolved_via, via_failure = resolve_station(via, via_candidates, "via station")
+
+    # Fast scope check before any disambiguation: if neither the origin,
+    # the destination, nor a requested via stop could possibly resolve to
+    # a Swiss stop (resolved stop or any LIR candidate), no user pick can
+    # produce a Swiss-connected journey -- answer out_of_scope directly
+    # instead of entering a clarification loop on foreign stations that
+    # can never succeed.
     def _could_be_swiss(resolved, candidates) -> bool:
         if resolved is not None:
             return is_swiss_stop(resolved.stop_ref)
@@ -101,8 +116,14 @@ def find_train_connections(
             return True  # unresolvable input -> let the failure path answer
         return any(is_swiss_stop(c.stop_ref) for c in candidates)
 
-    if not _could_be_swiss(resolved_origin, origin_candidates) and not _could_be_swiss(
-        resolved_destination, destination_candidates
+    # A via that was never requested can't rescue an otherwise out-of-scope
+    # route, so it only counts toward scope when the caller actually gave one.
+    via_could_be_swiss = bool(via) and _could_be_swiss(resolved_via, via_candidates)
+
+    if (
+        not _could_be_swiss(resolved_origin, origin_candidates)
+        and not _could_be_swiss(resolved_destination, destination_candidates)
+        and not via_could_be_swiss
     ):
         return ConnectionSearchResult(
             status="out_of_scope",
@@ -116,18 +137,9 @@ def find_train_connections(
     if destination_failure is not None:
         destination_failure.provenance = build_provenance(settings)
         return destination_failure
-
-    resolved_via = None
-    if via_future is not None:
-        try:
-            via_candidates = via_future.result()
-        except OjpSourceError as exc:
-            return ConnectionSearchResult(status="source_error", message=str(exc))
-
-        resolved_via, via_failure = resolve_station(via, via_candidates, "via station")
-        if via_failure is not None:
-            via_failure.provenance = build_provenance(settings)
-            return via_failure
+    if via_failure is not None:
+        via_failure.provenance = build_provenance(settings)
+        return via_failure
 
     effective_departure_time = departure_time
     effective_arrival_time = arrival_time if departure_time is None else None

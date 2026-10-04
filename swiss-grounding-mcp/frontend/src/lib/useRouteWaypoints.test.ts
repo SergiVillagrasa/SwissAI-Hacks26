@@ -6,6 +6,7 @@ import { clearGeocodeCache } from "./geocode";
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
   clearGeocodeCache();
 });
 
@@ -127,6 +128,40 @@ describe("useRouteWaypoints", () => {
 
     const viaAfterResolve = result.current.waypoints.find((w) => w.kind === "via");
     expect(viaAfterResolve?.coords).toEqual({ lat: 46.9481, lng: 7.4474 });
+  });
+
+  it("clears isResolving when switching to a connection with nothing left to resolve", () => {
+    // Regression: the effect used to `return` early when `unresolved` was
+    // empty without ever touching resolvingIds, so if the hook had
+    // previously been resolving stops for a different connection, a
+    // leftover (now-stale) resolvingIds set from that earlier render kept
+    // isResolving stuck true forever.
+    let resolveFetch: (value: unknown) => void = () => {};
+    vi.stubEnv("VITE_MAPBOX_TOKEN", "test-token");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveFetch = resolve;
+          })
+      )
+    );
+
+    const { result, rerender } = renderHook(
+      ({ connection }) => useRouteWaypoints(connection),
+      { initialProps: { connection: connectionWithTransfer } }
+    );
+
+    expect(result.current.isResolving).toBe(true);
+
+    rerender({ connection: directConnection });
+
+    expect(result.current.isResolving).toBe(false);
+
+    // Let the now-abandoned lookup settle so it doesn't surface as an
+    // unhandled promise warning once the test finishes.
+    resolveFetch({ ok: true, json: async () => ({ features: [] }) });
   });
 
   it("settles a rejected via geocode with no coordinates", async () => {

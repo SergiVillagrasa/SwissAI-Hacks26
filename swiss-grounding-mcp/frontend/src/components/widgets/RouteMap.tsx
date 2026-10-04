@@ -139,20 +139,12 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
         const resourceEvent = event as mapboxgl.ErrorEvent & { sourceId?: string; tile?: unknown };
         // Only pre-load non-resource errors (e.g. a bad token or failed style)
         // are fatal; a harmless failed tile/resource fetch after the map is
-        // already up must not nuke an otherwise-working map.
+        // already up must not nuke an otherwise-working map. A fatal error
+        // may still be followed by a successful "load" (e.g. after mapbox-gl
+        // retries internally), which clears this flag below -- so the map
+        // instance itself is deliberately left alone here rather than torn
+        // down; teardown still happens on unmount via the effect cleanup.
         if (!loaded && !("sourceId" in resourceEvent || "tile" in resourceEvent)) {
-          // A fatal pre-load error leaves the underlying mapbox-gl instance -
-          // and its WebGL context and event listeners - running in the
-          // background even though the UI falls back to the "unavailable"
-          // message. Tear it down here instead of only on unmount/dependency
-          // change, or it leaks for as long as this card stays open.
-          try {
-            map?.remove();
-          } catch (teardownError) {
-            console.error("RouteMap: failed to tear down mapbox-gl after an error", teardownError);
-          }
-          map = null;
-          mapRef.current = null;
           setMapFailed(true);
         }
       });

@@ -227,18 +227,6 @@ describe("RouteMap", () => {
     expect(errorSpy).toHaveBeenCalledWith("RouteMap: mapbox-gl reported an error", expect.any(Error));
   });
 
-  it("tears down the mapbox-gl instance on a fatal pre-load error, instead of leaking it", () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
-    const map = renderWithUnloadedMap();
-
-    expect(map.remove).not.toHaveBeenCalled();
-
-    act(() => map.fire("error", { error: new Error("style failed to load") }));
-
-    expect(map.remove).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId("route-map-unavailable")).toBeInTheDocument();
-  });
-
   it("keeps the map and markers after resource errors once loaded", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const map = renderWithUnloadedMap();
