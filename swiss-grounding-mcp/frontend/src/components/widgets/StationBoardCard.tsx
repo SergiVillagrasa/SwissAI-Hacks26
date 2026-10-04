@@ -18,7 +18,16 @@ export interface StationBoardData {
 }
 
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  // An explicit locale (rather than [] -- the runtime's default) keeps the
+  // output deterministic regardless of the browser/OS locale: some locales
+  // render a 24-hour time differently (digits, separators) even with
+  // hour12 forced to false.
+  return new Date(iso).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Europe/Zurich",
+  });
 }
 
 export function StationBoardCard({ data }: { data: StationBoardData }) {

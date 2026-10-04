@@ -100,6 +100,15 @@ describe("TrainConnectionsCard", () => {
     expect(bookLink).toHaveAttribute("href", expect.stringContaining("nach=Z%C3%BCrich+HB"));
   });
 
+  it("renders departure and arrival times in Swiss local time, not the browser/runtime timezone", () => {
+    // The connection's departure is 2026-09-24T18:04:00Z (UTC). In
+    // Europe/Zurich (CEST, UTC+2) that is 20:04 -- the card must show the
+    // Swiss time regardless of what timezone the test runner itself uses.
+    render(<TrainConnectionsCard data={sampleData} onSelect={() => {}} />);
+
+    expect(screen.getByText(/20:04 → 21:47/)).toBeInTheDocument();
+  });
+
   it("lists the transfer stations when a connection has more than one rail leg", () => {
     const connectionWithTransfer = {
       ...sampleData.connections[0],

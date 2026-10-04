@@ -114,14 +114,15 @@ def build_trip_request(
     # Destination, Via, ViaSystem, NotVia, NoChangeAt, Params -- a strict
     # xs:sequence). ViaPoint's type is PlaceRefStructure itself (the same
     # group Origin/Destination use inside their own PlaceRef element), so
-    # StopPointRef/Name sit directly inside <ViaPoint>, with no nested
-    # <PlaceRef> wrapper.
+    # StopPointRef/LocationName sit directly inside <ViaPoint>, with no
+    # nested <PlaceRef> wrapper. Per the OJP 2.0 schema, PlaceRefStructure's
+    # display-name element is <LocationName>, not <Name>.
     if via_ref:
         via = ET.SubElement(trip_request, _ojp("Via"))
         via_point = ET.SubElement(via, _ojp("ViaPoint"))
         ET.SubElement(via_point, _siri("StopPointRef")).text = via_ref
         ET.SubElement(
-            ET.SubElement(via_point, _ojp("Name")), _ojp("Text")
+            ET.SubElement(via_point, _ojp("LocationName")), _ojp("Text")
         ).text = (via_name or via_ref)
 
     params = ET.SubElement(trip_request, _ojp("Params"))

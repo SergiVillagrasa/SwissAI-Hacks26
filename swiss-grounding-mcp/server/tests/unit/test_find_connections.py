@@ -179,6 +179,64 @@ def test_purely_foreign_route_returns_out_of_scope_without_trip_request():
     assert client.trip_calls == []
 
 
+def test_ambiguous_foreign_origin_with_foreign_destination_returns_out_of_scope():
+    # Regression: a previous version resolved+returned on the origin
+    # before checking scope, so an ambiguous foreign origin (e.g. "Paris"
+    # matching multiple Paris stations) triggered a needs_clarification
+    # loop even though the destination alone already proves the whole
+    # journey is out of scope (purely foreign, no Swiss endpoint). The
+    # combined scope check must run first and answer out_of_scope
+    # directly instead.
+    client = StubOjpClient(
+        candidates_by_name={
+            "Paris": [
+                StopCandidate(name="Paris Gare de Lyon", stop_ref="fr:1:sloid:1", probability=0.52),
+                StopCandidate(name="Paris Nord", stop_ref="fr:1:sloid:2", probability=0.48),
+            ],
+            "Lyon": [
+                StopCandidate(name="Lyon Part-Dieu", stop_ref="fr:1:sloid:3", probability=1.0)
+            ],
+        },
+        connections=[_connection()],
+    )
+
+    result = find_train_connections(
+        "Paris", "Lyon", None, None, 3, client=client, settings=_settings()
+    )
+
+    assert result.status == "out_of_scope"
+    assert client.trip_calls == []
+
+
+def test_foreign_origin_and_destination_with_swiss_via_stop_is_in_scope():
+    # Regression: the fast out_of_scope check only looked at origin and
+    # destination, so a route between two foreign cities that passes
+    # through a Swiss via stop (e.g. Paris to Milan via Bern) was
+    # incorrectly rejected as out_of_scope before the via station was
+    # ever considered.
+    client = StubOjpClient(
+        candidates_by_name={
+            "Paris Gare de Lyon": [
+                StopCandidate(name="Paris Gare de Lyon", stop_ref="fr:1:sloid:1", probability=1.0)
+            ],
+            "Milano Centrale": [
+                StopCandidate(name="Milano Centrale", stop_ref="it:1:sloid:1", probability=1.0)
+            ],
+            "Bern": [StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=1.0)],
+        },
+        connections=[_connection()],
+    )
+
+    result = find_train_connections(
+        "Paris Gare de Lyon", "Milano Centrale", None, None, 3, None, "Bern",
+        client=client, settings=_settings(),
+    )
+
+    assert result.status == "ok"
+    assert result.via_stop_name == "Bern"
+    assert client.trip_calls[0]["via_ref"] == "ch:1:sloid:7000"
+
+
 def test_inbound_cross_border_route_returns_ok():
     client = StubOjpClient(
         candidates_by_name={

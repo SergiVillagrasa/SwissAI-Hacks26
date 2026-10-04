@@ -16,10 +16,22 @@ _DIRECTION_PARAM = {"arrival": "Arrival", "departure": "Departure"}
 _ISO_UTC_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
-def _day_windows(flight_date: str) -> list[tuple[str, str]]:
+def _day_windows(flight_date: str) -> list[tuple[str, str]] | None:
     # AeroDataBox's FIDS endpoint caps each call's range at 12 hours, so a
-    # full day requires two calls.
-    day = date.fromisoformat(flight_date)
+    # full day requires two calls. flight_date is caller-supplied (and may
+    # ultimately originate from an LLM-extracted date); an unparsable value
+    # must not crash the request, so return None instead of letting
+    # date.fromisoformat raise ValueError.
+    try:
+        day = date.fromisoformat(flight_date)
+    except ValueError:
+        return None
+    # date.fromisoformat also accepts non-padded/compact variants in some
+    # Python versions (e.g. "2026-9-5"); require the strict YYYY-MM-DD
+    # form so the echoed-back date and the windows built from the literal
+    # `flight_date` string below always agree with what was parsed.
+    if day.isoformat() != flight_date:
+        return None
     next_day = day + timedelta(days=1)
     midday = f"{flight_date}T12:00"
     return [
@@ -130,12 +142,19 @@ def search_airport_flights(
             ),
         )
 
+    windows = _day_windows(flight_date)
+    if windows is None:
+        return FlightSearchResult(
+            status="needs_context",
+            message=f"'{flight_date}' is not a valid date. Please provide flight_date in YYYY-MM-DD format.",
+        )
+
     clamped_limit = max(1, min(100, limit))
     adb_direction = _DIRECTION_PARAM[direction]
 
     all_flights = []
     try:
-        for from_local, to_local in _day_windows(flight_date):
+        for from_local, to_local in windows:
             body = client.get_airport_flights(
                 "iata", _ZRH_IATA, from_local, to_local, direction=adb_direction
             )

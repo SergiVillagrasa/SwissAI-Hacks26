@@ -89,8 +89,10 @@ def test_trip_request_with_via_adds_via_point_between_origin_and_destination():
     assert via_ref is not None
     assert via_ref.text == "ch:1:sloid:7000"
 
+    # PlaceRefStructure's display-name element is <LocationName>, not
+    # <Name>, per the OJP 2.0 schema.
     via_name = trip_request.find(
-        "ojp:Via/ojp:ViaPoint/ojp:Name/ojp:Text", NS
+        "ojp:Via/ojp:ViaPoint/ojp:LocationName/ojp:Text", NS
     )
     assert via_name.text == "Bern"
 

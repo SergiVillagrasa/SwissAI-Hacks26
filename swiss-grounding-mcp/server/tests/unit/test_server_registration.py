@@ -136,7 +136,9 @@ def test_aviation_tools_are_registered_and_callable(monkeypatch):
                 {
                     "origin_city": "Zurich",
                     "destination_city": "Geneva",
-                    "outbound_date": "2026-09-25",
+                    # Must stay in the future relative to whenever this
+                    # suite runs, since get_flight_fares rejects past dates.
+                    "outbound_date": "2030-06-15",
                 },
             )
             assert fare_result.structured_content["status"] == "ok"

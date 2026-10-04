@@ -9,6 +9,7 @@ from swiss_grounding_mcp.sources.ojp.client import OjpClient, OjpSourceError
 from swiss_grounding_mcp.tools.fares import (
     build_sbb_deep_link,
     check_public_transport_fares,
+    extract_travel_date,
 )
 
 FIXTURES = Path(__file__).parent.parent / "fixtures" / "ojp"
@@ -83,6 +84,30 @@ class TestBuildSbbDeepLink:
         url = build_sbb_deep_link("Bern", "Zürich HB")
 
         assert "via=" not in url
+
+
+# ── Deep-link date extraction (UTC -> Europe/Zurich) ────────────────
+
+class TestExtractTravelDate:
+    def test_none_returns_none(self):
+        assert extract_travel_date(None) is None
+
+    def test_invalid_string_returns_none(self):
+        assert extract_travel_date("not-a-date") is None
+
+    def test_utc_timestamp_converted_to_zurich_date_same_day(self):
+        # 14:30 UTC in September (CEST, UTC+2) is 16:30 in Zurich -- same
+        # calendar day either way.
+        assert extract_travel_date("2026-09-24T14:30:00Z") == "2026-09-24"
+
+    def test_utc_timestamp_near_midnight_rolls_over_to_next_zurich_day(self):
+        # 23:10 UTC is 01:10 the next day in Zurich (CEST, UTC+2):
+        # naively slicing the UTC date would report the wrong day for the
+        # SBB deep link.
+        assert extract_travel_date("2026-09-25T23:10:00+00:00") == "2026-09-26"
+
+    def test_naive_timestamp_is_treated_as_utc(self):
+        assert extract_travel_date("2026-09-25T23:10:00") == "2026-09-26"
 
 
 # ── Successful fare lookup ──────────────────────────────────────────
@@ -243,7 +268,10 @@ class TestCheckFaresFallback:
         assert "sbb.ch" in result.booking_url
         assert result.provenance is not None
         assert result.provenance.booking_url == result.booking_url
-        assert "OJP Fare Beta" in result.message
+        # The message must not invent unconfirmed specifics (e.g. "OJP Fare
+        # Beta backend limits") about why live prices are unavailable.
+        assert "beta" not in result.message.lower()
+        assert "sbb" in result.message.lower()
         assert result.fares == []
 
 
@@ -274,7 +302,12 @@ class TestCheckFaresOutOfScope:
         assert result.fares == []
         assert client.fare_calls == []
 
-    def test_non_existent_origin_returns_out_of_scope(self):
+    def test_non_existent_origin_returns_not_found(self):
+        # A typo or unrecognized station name (e.g. "Zuerch" for "Zürich")
+        # must be reported as not_found/needs_clarification, never
+        # out_of_scope -- out_of_scope is reserved for journeys that are
+        # genuinely outside the declared scope (e.g. purely international),
+        # not for misspelled Swiss stations.
         client = StubOjpClient(
             candidates_by_name={
                 "Barcelona Sants": [],
@@ -289,12 +322,11 @@ class TestCheckFaresOutOfScope:
             settings=_settings(),
         )
 
-        assert result.status == "out_of_scope"
+        assert result.status == "not_found"
         assert "Barcelona Sants" in result.message
-        assert "Swiss" in result.message
         assert result.fares == []
 
-    def test_non_existent_destination_returns_out_of_scope(self):
+    def test_non_existent_destination_returns_not_found(self):
         client = StubOjpClient(
             candidates_by_name={
                 "Bern": [StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=1.0)],
@@ -309,9 +341,26 @@ class TestCheckFaresOutOfScope:
             settings=_settings(),
         )
 
-        assert result.status == "out_of_scope"
+        assert result.status == "not_found"
         assert "Berlin Hauptbahnhof" in result.message
         assert result.fares == []
+
+    def test_typo_in_swiss_station_name_returns_not_found_not_out_of_scope(self):
+        client = StubOjpClient(
+            candidates_by_name={
+                "Zuerch": [],
+                "Bern": [StopCandidate(name="Bern", stop_ref="ch:1:sloid:7000", probability=1.0)],
+            },
+        )
+
+        result = check_public_transport_fares(
+            "Zuerch",
+            "Bern",
+            client=client,
+            settings=_settings(),
+        )
+
+        assert result.status == "not_found"
 
 
 # ── Guardrails: needs-clarification ─────────────────────────────────

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import logging
+from xml.etree.ElementTree import ParseError
+
 import httpx
 
 from swiss_grounding_mcp.config.settings import Settings
@@ -25,6 +28,9 @@ from swiss_grounding_mcp.sources.ojp.xml_parser import (
     parse_stop_event_response,
     parse_trip_response,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 class OjpSourceError(Exception):
@@ -121,11 +127,29 @@ class OjpClient:
             response_body = self._post(
                 request_body, url=self._settings.ojp_fare_url
             )
-        except OjpSourceError:
+        except OjpSourceError as exc:
+            # The OJP Fare endpoint is unreliable enough that callers treat
+            # "no fares" as a normal outcome (falling back to the SBB deep
+            # link), but that must not mean the failure goes unrecorded --
+            # log it with enough context to diagnose a real outage, without
+            # inventing specifics (e.g. "beta backend limits") that have
+            # not actually been confirmed.
+            logger.warning(
+                "OJP fare_request failed for %s -> %s: %s",
+                origin_ref,
+                destination_ref,
+                exc,
+            )
             return []
         try:
             return parse_fare_response(response_body)
-        except Exception:
+        except ParseError as exc:
+            logger.warning(
+                "OJP fare_request response for %s -> %s could not be parsed: %s",
+                origin_ref,
+                destination_ref,
+                exc,
+            )
             return []
 
     def get_stop_events(

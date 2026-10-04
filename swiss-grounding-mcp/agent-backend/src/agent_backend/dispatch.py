@@ -20,6 +20,27 @@ class UnknownToolError(Exception):
         self.tool_name = tool_name
 
 
+def _coerce_int(value: Any, default: int) -> int:
+    """Best-effort int coercion for LLM-supplied tool arguments.
+
+    The model's function-calling output is JSON, but a numeric parameter
+    can still arrive as a numeric string (e.g. "3") or other odd type.
+    Tool implementations do unguarded arithmetic on these (e.g.
+    ``max(1, min(5, results))``), which raises TypeError when comparing a
+    str to an int. Falling back to *default* on anything uncoercible keeps
+    dispatch robust instead of crashing the whole turn.
+    """
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError, OverflowError):
+        # int(float("inf")) (or similarly non-finite float values) raises
+        # OverflowError rather than ValueError -- an LLM sending that as a
+        # numeric argument must fall back to the default too, not crash.
+        return default
+
+
 def dispatch(
     tool_name: str,
     arguments: dict[str, Any],
@@ -35,7 +56,7 @@ def dispatch(
             arguments["destination"],
             arguments.get("departure_time"),
             arguments.get("arrival_time"),
-            arguments.get("results", 3),
+            _coerce_int(arguments.get("results"), 3),
             arguments.get("sort_by"),
             arguments.get("via"),
             client=ojp_client,
@@ -50,7 +71,7 @@ def dispatch(
             arguments["station"],
             arguments.get("mode", "departures"),
             arguments.get("when"),
-            arguments.get("results", 5),
+            _coerce_int(arguments.get("results"), 5),
             client=ojp_client,
             settings=settings,
         )
@@ -89,7 +110,7 @@ def dispatch(
             arguments.get("airport_iata"),
             arguments.get("airport_icao"),
             arguments.get("airline_iata"),
-            arguments.get("limit", 10),
+            _coerce_int(arguments.get("limit"), 10),
             client=aviation_client,
             settings=settings,
         )
@@ -101,8 +122,8 @@ def dispatch(
             arguments.get("flight_date"),
             arguments.get("confirmed_arrival_time"),
             arguments["destination_station"],
-            arguments["transfer_buffer_minutes"],
-            arguments.get("rail_results", 3),
+            _coerce_int(arguments.get("transfer_buffer_minutes"), 0),
+            _coerce_int(arguments.get("rail_results"), 3),
             aviation_client=aviation_client,
             ojp_client=ojp_client,
             settings=settings,

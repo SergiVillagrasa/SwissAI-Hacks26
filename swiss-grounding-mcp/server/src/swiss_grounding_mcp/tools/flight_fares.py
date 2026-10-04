@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 import unicodedata
 
 from swiss_grounding_mcp.config.settings import Settings
@@ -59,6 +60,7 @@ _SUPPORTED = "ZRH/Zurich, GVA/Geneva, BSL/EAP/MLH/Basel, LUG/Lugano, ACH/Altenrh
 _OUT_OF_SCOPE_MESSAGE = (
     "This tool only covers domestic flight connections and fares within Switzerland."
 )
+_ZURICH_TZ = ZoneInfo("Europe/Zurich")
 
 
 def _normalize_location(value: str) -> str:
@@ -141,13 +143,22 @@ def get_flight_fares(
             message="Origin and destination must be different Swiss airports.",
         )
 
-    requested_date = outbound_date or (date.today() + timedelta(days=1)).isoformat()
+    today_in_zurich = datetime.now(_ZURICH_TZ).date()
+    requested_date = outbound_date or (today_in_zurich + timedelta(days=1)).isoformat()
     try:
-        date.fromisoformat(requested_date)
+        parsed_date = date.fromisoformat(requested_date)
     except ValueError:
         return FlightFareSearchResult(
             status="needs_clarification",
             message="Please provide outbound_date in YYYY-MM-DD format.",
+        )
+    if parsed_date < today_in_zurich:
+        return FlightFareSearchResult(
+            status="needs_clarification",
+            message=(
+                f"outbound_date '{requested_date}' is in the past. Please "
+                "provide today's date or a future date (Europe/Zurich)."
+            ),
         )
     normalized_currency = currency.strip().upper()
     if len(normalized_currency) != 3 or not normalized_currency.isalpha():

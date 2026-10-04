@@ -538,6 +538,11 @@ all real data. Rules:
 - For flight_date, default to today: {today}.
 - Scope: Swiss domestic journeys, cross-border journeys touching
   Switzerland, and ZRH flights. Politely refuse anything else.
+- find_disruptions is an exception to that Swiss-only scope: unlike
+  find_connections and get_station_board, OJP 2.0 also indexes nearby
+  stations just across the border (e.g. in France, Germany, Italy, or
+  Austria), so call find_disruptions for a disruption question about any
+  such station instead of refusing it as out of scope.
 - When giving facts, briefly name the source (opentransportdata.swiss or
   aerodatabox.com)."""
 
@@ -584,7 +589,9 @@ TOOL_SCHEMAS = [
          "when": _S, "results": {"type": "integer"}},
         ["station"]),
     _fn("find_disruptions",
-        "Check current service disruptions at a Swiss station.",
+        "Check current service disruptions at a station. Not restricted to "
+        "Swiss stations -- OJP 2.0 also indexes nearby stations in France, "
+        "Germany, Italy, or Austria.",
         {"stop": _S}, ["stop"]),
     _fn("find_flight_by_number",
         "Look up a Zurich Airport flight by number and date (YYYY-MM-DD).",

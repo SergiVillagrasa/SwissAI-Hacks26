@@ -179,3 +179,147 @@ def test_get_flight_fares_uses_flight_fares_client(monkeypatch):
 def test_unknown_tool_raises():
     with pytest.raises(UnknownToolError):
         dispatch("not_a_real_tool", {}, ojp_client=None, aviation_client=None, settings=None)
+
+
+# ── Numeric argument coercion (LLM tool-calling args are JSON, but a ────
+# ── numeric field can still arrive as a string) ─────────────────────────
+
+def test_find_connections_coerces_string_results_to_int(monkeypatch):
+    captured = {}
+
+    def fake_find_train_connections(origin, destination, departure_time, arrival_time, results, sort_by=None, via=None, *, client, settings):
+        captured["results"] = results
+        return "connections-result"
+
+    monkeypatch.setattr(dispatch_module, "find_train_connections", fake_find_train_connections)
+
+    dispatch(
+        "find_connections",
+        {"origin": "Bern", "destination": "Zürich HB", "results": "2"},
+        ojp_client=_Sentinel(), aviation_client=_Sentinel(), settings=_Sentinel(),
+    )
+
+    assert captured["results"] == 2
+    assert isinstance(captured["results"], int)
+
+
+def test_find_connections_falls_back_to_default_on_uncoercible_results(monkeypatch):
+    captured = {}
+
+    def fake_find_train_connections(origin, destination, departure_time, arrival_time, results, sort_by=None, via=None, *, client, settings):
+        captured["results"] = results
+        return "connections-result"
+
+    monkeypatch.setattr(dispatch_module, "find_train_connections", fake_find_train_connections)
+
+    dispatch(
+        "find_connections",
+        {"origin": "Bern", "destination": "Zürich HB", "results": "a lot"},
+        ojp_client=_Sentinel(), aviation_client=_Sentinel(), settings=_Sentinel(),
+    )
+
+    assert captured["results"] == 3
+
+
+def test_get_station_board_coerces_string_results_to_int(monkeypatch):
+    captured = {}
+
+    def fake_get_station_board(station, mode, when, results, *, client, settings):
+        captured.update(station=station, mode=mode, when=when, results=results)
+        return "station-board-result"
+
+    monkeypatch.setattr(dispatch_module, "get_station_board", fake_get_station_board)
+
+    result = dispatch(
+        "get_station_board",
+        {"station": "Bern", "results": "3"},
+        ojp_client=_Sentinel(), aviation_client=_Sentinel(), settings=_Sentinel(),
+    )
+
+    assert result == "station-board-result"
+    assert captured["results"] == 3
+    assert isinstance(captured["results"], int)
+
+
+def test_get_station_board_falls_back_to_default_on_uncoercible_results(monkeypatch):
+    captured = {}
+
+    def fake_get_station_board(station, mode, when, results, *, client, settings):
+        captured["results"] = results
+        return "station-board-result"
+
+    monkeypatch.setattr(dispatch_module, "get_station_board", fake_get_station_board)
+
+    dispatch(
+        "get_station_board",
+        {"station": "Bern", "results": "a lot"},
+        ojp_client=_Sentinel(), aviation_client=_Sentinel(), settings=_Sentinel(),
+    )
+
+    assert captured["results"] == 5
+
+
+def test_find_connections_falls_back_to_default_on_non_finite_float_results(monkeypatch):
+    # int(float("inf")) raises OverflowError, not ValueError/TypeError --
+    # _coerce_int must catch that too instead of crashing the whole turn.
+    captured = {}
+
+    def fake_find_train_connections(origin, destination, departure_time, arrival_time, results, sort_by=None, via=None, *, client, settings):
+        captured["results"] = results
+        return "connections-result"
+
+    monkeypatch.setattr(dispatch_module, "find_train_connections", fake_find_train_connections)
+
+    dispatch(
+        "find_connections",
+        {"origin": "Bern", "destination": "Zürich HB", "results": float("inf")},
+        ojp_client=_Sentinel(), aviation_client=_Sentinel(), settings=_Sentinel(),
+    )
+
+    assert captured["results"] == 3
+
+
+def test_search_airport_flights_coerces_string_limit(monkeypatch):
+    captured = {}
+
+    def fake_search_airport_flights(direction, flight_date, airport_iata, airport_icao, airline_iata, limit, *, client, settings):
+        captured["limit"] = limit
+        return "flight-search-result"
+
+    monkeypatch.setattr(dispatch_module, "search_airport_flights", fake_search_airport_flights)
+
+    dispatch(
+        "search_airport_flights",
+        {"direction": "departure", "flight_date": "2026-09-25", "limit": "7"},
+        ojp_client=_Sentinel(), aviation_client=_Sentinel(), settings=_Sentinel(),
+    )
+
+    assert captured["limit"] == 7
+
+
+def test_connect_flight_to_train_coerces_string_buffer_and_rail_results(monkeypatch):
+    captured = {}
+
+    def fake_connect_flight_to_train(
+        flight_number, flight_date, confirmed_arrival_time, destination_station,
+        transfer_buffer_minutes, rail_results, *, aviation_client, ojp_client, settings,
+    ):
+        captured.update(transfer_buffer_minutes=transfer_buffer_minutes, rail_results=rail_results)
+        return "flight-to-train-result"
+
+    monkeypatch.setattr(dispatch_module, "connect_flight_to_train", fake_connect_flight_to_train)
+
+    dispatch(
+        "connect_flight_to_train",
+        {
+            "destination_station": "Luzern",
+            "transfer_buffer_minutes": "45",
+            "rail_results": "4",
+            "flight_number": "LX14",
+            "flight_date": "2026-09-25",
+        },
+        ojp_client=_Sentinel(), aviation_client=_Sentinel(), settings=_Sentinel(),
+    )
+
+    assert captured["transfer_buffer_minutes"] == 45
+    assert captured["rail_results"] == 4

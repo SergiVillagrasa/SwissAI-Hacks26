@@ -5,12 +5,28 @@ from datetime import datetime, timedelta
 from swiss_grounding_mcp.config.settings import Settings
 from swiss_grounding_mcp.domain.models import FlightToTrainResult
 from swiss_grounding_mcp.evidence.provenance import build_provenance
-from swiss_grounding_mcp.tools.fares import build_sbb_deep_link, check_public_transport_fares
+from swiss_grounding_mcp.tools.fares import (
+    build_sbb_deep_link,
+    check_public_transport_fares,
+    extract_travel_date,
+)
 from swiss_grounding_mcp.tools.find_connections import find_train_connections
 from swiss_grounding_mcp.tools.find_flight_by_number import find_flight_by_number
 
 _ZRH_STATION_NAME = "Zürich Flughafen"
 _MIN_BUFFER_MINUTES = 15
+
+# find_train_connections's Status values, translated to this tool's
+# AviationStatus vocabulary. Collapsing every non-"ok" status into
+# "source_unavailable" (as a previous version of this function did) hid a
+# genuine "needs_clarification" (with candidate stations to disambiguate)
+# and "out_of_scope" result behind a generic, unactionable error.
+_TRAIN_STATUS_MAP: dict[str, str] = {
+    "needs_clarification": "needs_context",
+    "not_found": "insufficient_evidence",
+    "out_of_scope": "out_of_scope",
+    "source_error": "source_unavailable",
+}
 
 
 def _add_minutes(iso_timestamp: str, minutes: int) -> str:
@@ -99,14 +115,15 @@ def connect_flight_to_train(
 
     if train_result.status != "ok":
         return FlightToTrainResult(
-            status="insufficient_evidence" if train_result.status == "not_found" else "source_unavailable",
+            status=_TRAIN_STATUS_MAP.get(train_result.status, "source_unavailable"),
             message=train_result.message,
             flight=flight,
+            candidates=train_result.candidates,
             flight_provenance=flight_provenance,
         )
 
     train_booking_url = build_sbb_deep_link(
-        _ZRH_STATION_NAME, destination_station, train_departure_time[:10]
+        _ZRH_STATION_NAME, destination_station, extract_travel_date(train_departure_time)
     )
     train_price_chf = None
     if hasattr(ojp_client, "fare_request"):

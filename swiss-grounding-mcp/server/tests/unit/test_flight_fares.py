@@ -1,4 +1,5 @@
-from datetime import date, timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import httpx
 
@@ -6,14 +7,20 @@ from swiss_grounding_mcp.config.settings import Settings
 from swiss_grounding_mcp.sources.serpapi.flight_client import SerpApiFlightClient
 from swiss_grounding_mcp.tools.flight_fares import get_flight_fares
 
+# A date far enough in the future to stay valid against get_flight_fares's
+# "reject past dates" check regardless of when this suite runs. The exact
+# value is immaterial to these tests -- only that it parses and is not in
+# the past -- so a fixed far-future date is used rather than a shifting
+# "N days from now" value that would make fixtures harder to read.
+_FUTURE_DATE = "2030-06-15"
 
 SERPAPI_RESPONSE = {
     "best_flights": [
         {
             "flights": [
                 {
-                    "departure_airport": {"id": "ZRH", "time": "2026-09-25 08:00"},
-                    "arrival_airport": {"id": "GVA", "time": "2026-09-25 08:50"},
+                    "departure_airport": {"id": "ZRH", "time": f"{_FUTURE_DATE} 08:00"},
+                    "arrival_airport": {"id": "GVA", "time": f"{_FUTURE_DATE} 08:50"},
                     "airline": "SWISS",
                     "flight_number": "LX 2802",
                 }
@@ -27,8 +34,8 @@ SERPAPI_RESPONSE = {
         {
             "flights": [
                 {
-                    "departure_airport": {"id": "ZRH", "time": "2026-09-25 10:00"},
-                    "arrival_airport": {"id": "GVA", "time": "2026-09-25 10:55"},
+                    "departure_airport": {"id": "ZRH", "time": f"{_FUTURE_DATE} 10:00"},
+                    "arrival_airport": {"id": "GVA", "time": f"{_FUTURE_DATE} 10:55"},
                     "airline": "SWISS",
                     "flight_number": "LX 2806",
                 }
@@ -91,7 +98,7 @@ def test_mock_serpapi_response_is_parsed_to_essential_fields():
     result = get_flight_fares(
         "Zurich",
         "Geneva",
-        "2026-09-25",
+        _FUTURE_DATE,
         client=StubSerpApiClient(SERPAPI_RESPONSE),
         settings=_settings(),
     )
@@ -101,8 +108,8 @@ def test_mock_serpapi_response_is_parsed_to_essential_fields():
     assert result.flights[0].model_dump() == {
         "airline": "SWISS",
         "flight_number": "LX 2802",
-        "departure_time": "2026-09-25 08:00",
-        "arrival_time": "2026-09-25 08:50",
+        "departure_time": f"{_FUTURE_DATE} 08:00",
+        "arrival_time": f"{_FUTURE_DATE} 08:50",
         "price": 149.0,
         "currency": "CHF",
         "duration_minutes": 50,
@@ -117,7 +124,7 @@ def test_domestic_swiss_route_aliases_are_normalized():
     client = StubSerpApiClient(SERPAPI_RESPONSE)
 
     result = get_flight_fares(
-        "eap", "Lugano", "2026-09-25", client=client, settings=_settings()
+        "eap", "Lugano", _FUTURE_DATE, client=client, settings=_settings()
     )
 
     assert result.status == "ok"
@@ -129,7 +136,7 @@ def test_foreign_flight_is_refused_without_api_call():
     client = StubSerpApiClient(SERPAPI_RESPONSE)
 
     result = get_flight_fares(
-        "Zurich", "Paris", "2026-09-25", client=client, settings=_settings()
+        "Zurich", "Paris", _FUTURE_DATE, client=client, settings=_settings()
     )
 
     assert result.status == "out_of_scope"
@@ -141,7 +148,7 @@ def test_missing_origin_returns_needs_clarification():
     client = StubSerpApiClient(SERPAPI_RESPONSE)
 
     result = get_flight_fares(
-        "", "Geneva", "2026-09-25", client=client, settings=_settings()
+        "", "Geneva", _FUTURE_DATE, client=client, settings=_settings()
     )
 
     assert result.status == "needs_clarification"
@@ -153,7 +160,7 @@ def test_unrecognized_destination_returns_needs_clarification():
     client = StubSerpApiClient(SERPAPI_RESPONSE)
 
     result = get_flight_fares(
-        "Zurich", "somewhere", "2026-09-25", client=client, settings=_settings()
+        "Zurich", "somewhere", _FUTURE_DATE, client=client, settings=_settings()
     )
 
     assert result.status == "needs_clarification"
@@ -166,14 +173,27 @@ def test_omitted_date_defaults_to_tomorrow():
 
     get_flight_fares("ZRH", "GVA", client=client, settings=_settings())
 
-    assert client.calls[0]["outbound_date"] == (date.today() + timedelta(days=1)).isoformat()
+    today_in_zurich = datetime.now(ZoneInfo("Europe/Zurich")).date()
+    assert client.calls[0]["outbound_date"] == (today_in_zurich + timedelta(days=1)).isoformat()
+
+
+def test_past_date_is_rejected_with_needs_clarification():
+    client = StubSerpApiClient(SERPAPI_RESPONSE)
+
+    result = get_flight_fares(
+        "ZRH", "GVA", "2020-01-01", client=client, settings=_settings()
+    )
+
+    assert result.status == "needs_clarification"
+    assert "past" in result.message.lower()
+    assert client.calls == []
 
 
 def test_empty_results_return_not_found():
     result = get_flight_fares(
         "ZRH",
         "Sion",
-        "2026-09-25",
+        _FUTURE_DATE,
         client=StubSerpApiClient({}),
         settings=_settings(),
     )
