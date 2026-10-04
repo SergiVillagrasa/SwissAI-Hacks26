@@ -55,21 +55,33 @@ function formatTime(iso: string): string {
   });
 }
 
-/** YYYY-MM-DD in Swiss local time -- the UTC date alone can be off by one
- * day for departures close to midnight (e.g. 23:10 UTC is already past
- * midnight in Zurich), which would build a deep link for the wrong date. */
+/** YYYY-MM-DD in Swiss local time -- the raw UTC date substring can be off
+ * by one day for departures close to midnight (e.g. 23:10 UTC is already
+ * past midnight in Zurich), which would build a deep link for the wrong
+ * date. */
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Zurich" }).format(new Date(iso));
 }
 
-/** Client-built SBB timetable deep link for the selected connection, matching
- * the server's `build_sbb_deep_link` URL shape (https://sbb.ch/en?von=..&nach=..&date=..). */
-function sbbDeepLink(connection: Connection): string | null {
+/** Client-built SBB timetable deep link for the selected connection. This
+ * mirrors the server's `build_sbb_deep_link` URL shape
+ * (https://sbb.ch/en?von=..&nach=..&date=..), with a client-side-only
+ * extension: when `viaStopName` is given (the intermediate station the
+ * user asked the trip to pass through, echoed back by find_connections as
+ * `via_stop_name`), a `via=` query parameter is appended here so the
+ * booking link reflects the same journey the card is showing, not just
+ * its endpoints. The server's own `check_public_transport_fares` tool
+ * does not thread a `via` through to its deep link today, so this and the
+ * server-built link can differ in that one respect. */
+function sbbDeepLink(connection: Connection, viaStopName?: string | null): string | null {
   const legs = connection.legs ?? [];
   if (legs.length === 0) return null;
   const origin = legs[0].from_name;
   const destination = legs[legs.length - 1].to_name;
   const params = new URLSearchParams({ von: origin, nach: destination, date: formatDate(connection.departure) });
+  if (viaStopName) {
+    params.set("via", viaStopName);
+  }
   return `https://sbb.ch/en?${params.toString()}`;
 }
 
@@ -88,7 +100,7 @@ function ConnectionDetail({
 }) {
   const legs = connection.legs ?? [];
   const transfers = transferStations(connection);
-  const bookingUrl = sbbDeepLink(connection);
+  const bookingUrl = sbbDeepLink(connection, viaStopName);
   const { waypoints, isResolving } = useRouteWaypoints(connection, viaStopName);
 
   return (

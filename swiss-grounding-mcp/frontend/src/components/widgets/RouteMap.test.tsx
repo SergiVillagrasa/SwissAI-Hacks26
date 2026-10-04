@@ -4,9 +4,13 @@ import { RouteMap, type RouteWaypoint } from "./RouteMap";
 import mapboxgl from "mapbox-gl";
 
 const addedMarkers: Array<{ color: string; popupHtml: string | null; lngLat: [number, number] | null }> = [];
+interface FakeMapInstance {
+  fire: (event: string, payload?: unknown) => void;
+  remove: ReturnType<typeof vi.fn>;
+}
 const mapMock = vi.hoisted(() => ({
   autoLoad: true,
-  instances: [] as Array<{ fire: (event: string, payload?: unknown) => void }>,
+  instances: [] as Array<FakeMapInstance>,
 }));
 
 vi.mock("mapbox-gl", () => {
@@ -188,12 +192,20 @@ describe("RouteMap", () => {
     expect(addedMarkers[2].popupHtml).toContain("Arrival");
   });
 
-  it("exposes a Fit route button once at least one waypoint is located", async () => {
+  it("exposes a Fit route button once at least one waypoint is located, and fits the map bounds on click", async () => {
     render(<RouteMap waypoints={[originWaypoint, destinationWaypoint]} />);
 
     const fitButton = await screen.findByTestId("route-map-fit");
     expect(fitButton).toBeInTheDocument();
+
+    // The map auto-fits once on load too, so assert the click causes an
+    // additional call rather than asserting an absolute count.
+    const map = mapMock.instances[0] as unknown as { fitBounds: ReturnType<typeof vi.fn> };
+    const callsBeforeClick = map.fitBounds.mock.calls.length;
+
     fireEvent.click(fitButton);
+
+    expect(map.fitBounds.mock.calls.length).toBeGreaterThan(callsBeforeClick);
   });
 
   it("shows an unavailable message instead of crashing when no access token is configured", () => {
@@ -213,6 +225,18 @@ describe("RouteMap", () => {
 
     expect(screen.getByTestId("route-map-unavailable")).toBeInTheDocument();
     expect(errorSpy).toHaveBeenCalledWith("RouteMap: mapbox-gl reported an error", expect.any(Error));
+  });
+
+  it("tears down the mapbox-gl instance on a fatal pre-load error, instead of leaking it", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const map = renderWithUnloadedMap();
+
+    expect(map.remove).not.toHaveBeenCalled();
+
+    act(() => map.fire("error", { error: new Error("style failed to load") }));
+
+    expect(map.remove).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("route-map-unavailable")).toBeInTheDocument();
   });
 
   it("keeps the map and markers after resource errors once loaded", async () => {

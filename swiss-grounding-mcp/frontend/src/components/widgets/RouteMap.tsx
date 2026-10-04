@@ -137,8 +137,22 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
       map.on("error", (event) => {
         console.error("RouteMap: mapbox-gl reported an error", event.error);
         const resourceEvent = event as mapboxgl.ErrorEvent & { sourceId?: string; tile?: unknown };
-        // Only pre-load non-resource errors (e.g. a bad token or failed style) are fatal.
+        // Only pre-load non-resource errors (e.g. a bad token or failed style)
+        // are fatal; a harmless failed tile/resource fetch after the map is
+        // already up must not nuke an otherwise-working map.
         if (!loaded && !("sourceId" in resourceEvent || "tile" in resourceEvent)) {
+          // A fatal pre-load error leaves the underlying mapbox-gl instance -
+          // and its WebGL context and event listeners - running in the
+          // background even though the UI falls back to the "unavailable"
+          // message. Tear it down here instead of only on unmount/dependency
+          // change, or it leaks for as long as this card stays open.
+          try {
+            map?.remove();
+          } catch (teardownError) {
+            console.error("RouteMap: failed to tear down mapbox-gl after an error", teardownError);
+          }
+          map = null;
+          mapRef.current = null;
           setMapFailed(true);
         }
       });
@@ -211,7 +225,13 @@ export function RouteMap({ waypoints, isResolving = false }: RouteMapProps) {
 
   return (
     <div className="relative h-64 w-full overflow-hidden">
-      <div ref={containerRef} data-testid="route-map" className="h-full w-full" role="img" aria-label="Route map" />
+      <div
+        ref={containerRef}
+        data-testid="route-map"
+        className="h-full w-full"
+        role="region"
+        aria-label="Interactive route map"
+      />
       {mapFailed && (
         <div
           data-testid="route-map-unavailable"
