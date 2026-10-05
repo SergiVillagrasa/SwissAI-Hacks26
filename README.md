@@ -1,10 +1,10 @@
-# 🇨🇭 Swiss Transport Assistant
+# Swiss Transport Assistant
 
 An AI travel assistant that plans real Swiss journeys — trains, transfers, and Zurich Airport flights — grounded in live official data, with an interactive map and voice input.
 
 Built during the Swiss AI Weeks hackathon (Zurich, 2026) on top of **OJP 2.0** (Switzerland's open transport data platform), with an LLM agent that calls typed, auditable tools instead of guessing.
 
-## 🎬 Demo
+## Demo
 
 Asking for a real journey (Zürich HB → Genève) streams a sorted list of live connections, then expands into an interactive, markered route map:
 
@@ -14,7 +14,7 @@ Asking for a real journey (Zürich HB → Genève) streams a sorted list of live
 | --- | --- | --- |
 | ![Landing screen](assets/demo/01-home.png) | ![Connection results with live OJP data](assets/demo/02-connections.png) | ![Expanded connection with Mapbox route map](assets/demo/03-route-map.png) |
 
-## ✨ Highlights
+## Highlights
 
 - **Multimodal journey planning** — train connections with transfers, intermediate "via" stops, and flight-to-train handoffs at Zurich Airport (ZRH), all resolved against the live timetable.
 - **Interactive dynamic map** — Mapbox GL JS renders every leg of the journey with corridor-aware geocoding, so intermediate stops land in the right place even for stations the API doesn't geocode directly.
@@ -22,7 +22,7 @@ Asking for a real journey (Zürich HB → Genève) streams a sorted list of live
 - **LLM agent with function calling (MCP)** — the assistant exposes its data sources as typed [Model Context Protocol](https://modelcontextprotocol.io/) tools; the LLM decides which to call, and every answer carries a source citation instead of being invented.
 - **Voice input/output** — ask by speaking (OpenAI Whisper transcription) and get a spoken reply back (OpenAI TTS).
 
-## 🏗️ Architecture & Tech Stack
+## Architecture & Tech Stack
 
 ```mermaid
 flowchart LR
@@ -48,7 +48,7 @@ The project is split into three independent packages under [`swiss-grounding-mcp
 
 See [`swiss-grounding-mcp/README.md`](swiss-grounding-mcp/README.md) for the full technical reference (MCP tool schemas, declared scope, credentials, and evaluation notes).
 
-## 🚀 Quick Start
+## Quick Start
 
 **1. Clone the repository**
 
@@ -83,7 +83,7 @@ npm run dev -- --port 3000
 
 Equivalent one-liners (`npm run dev:api` / `npm run dev:web`) are defined in the root [`package.json`](package.json); a [`Makefile`](Makefile) with `make dev-api` / `make dev-web` targets is also available.
 
-## ✅ Running the tests
+## Running the tests
 
 ```bash
 # MCP server (233 tests)
@@ -98,6 +98,6 @@ Equivalent one-liners (`npm run dev:api` / `npm run dev:web`) are defined in the
 
 Or run everything in one go from the repo root: `npm run test:all` — it chains `test:server`, `test:api`, and `test:web` (the latter runs `vitest` **and** `tsc --noEmit`, matching the commands above exactly).
 
-## 📄 License
+## License
 
 [MIT](LICENSE)
