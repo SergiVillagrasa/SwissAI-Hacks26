@@ -4,10 +4,10 @@
   "scripts": {
     "dev:web": "npm --prefix frontend run dev -- --port 3000",
     "dev:api": "uv run --project agent-backend uvicorn agent_backend.main:app --reload --port 3001",
-    "dev:mcp": "cd server && .venv\\Scripts\\python.exe -m swiss_grounding_mcp.server --transport streamable-http --port 8000",
-    "dev:voice": "cd server && .venv\\Scripts\\python.exe voice_assistant.py",
-    "test:server": "cd server && .venv\\Scripts\\python.exe -m pytest tests",
-    "test:api": "cd agent-backend && .venv\\Scripts\\python.exe -m pytest tests",
+    "dev:mcp": "uv run --directory server python -m swiss_grounding_mcp.server --transport streamable-http --port 8000",
+    "dev:voice": "uv run --directory server python voice_assistant.py",
+    "test:server": "uv run --directory server python -m pytest tests",
+    "test:api": "uv run --directory agent-backend python -m pytest tests",
     "test:web": "npm --prefix frontend run test",
     "test:all": "npm run test:server && npm run test:api && npm run test:web"
   }
