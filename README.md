@@ -70,17 +70,15 @@ cp swiss-grounding-mcp/agent-backend/.env.example swiss-grounding-mcp/agent-back
 cp swiss-grounding-mcp/frontend/.env.example swiss-grounding-mcp/frontend/.env.local
 ```
 
-Then fill in the keys:
+Then fill in these values:
 
-| Key | File | Needed for |
-| --- | --- | --- |
-| `OPENAI_API_KEY` | `agent-backend/.env` | **Required** — the chat agent and voice |
-| `OJP_API_TOKEN` | `server/.env` | **Required** — live Swiss timetable data ([opentransportdata.swiss](https://opentransportdata.swiss/)) |
-| `VITE_MAPBOX_TOKEN` | `frontend/.env.local` | **Required** — the interactive route map |
-| `AERODATABOX_API_KEY` | `server/.env` | Optional — Zurich Airport flights |
-| `SERPAPI_API_KEY` | `server/.env` | Optional — flight fares |
+- `OPENAI_API_KEY` in `agent-backend/.env` — **Required** — chat agent and voice
+- `OJP_API_TOKEN` in `server/.env` — **Required** — live Swiss timetable data ([opentransportdata.swiss](https://opentransportdata.swiss/))
+- `VITE_MAPBOX_TOKEN` in `frontend/.env.local` — **Required** — interactive route map
+- `AERODATABOX_API_KEY` in `server/.env` — Optional — Zurich Airport flights
+- `SERPAPI_API_KEY` in `server/.env` — Optional — flight fares
 
-The backend also reads `server/.env`, so the data-source keys only need to be set once.
+`server/.env` is also read by the backend, so the data-source keys only need to be set once.
 
 ### 3. Install and run
 
