@@ -50,16 +50,19 @@ See [`swiss-grounding-mcp/README.md`](swiss-grounding-mcp/README.md) for the ful
 
 ## Quick Start
 
-**1. Clone the repository**
+### Prerequisites
+
+- [**uv**](https://docs.astral.sh/uv/getting-started/installation/) — manages the Python backend. It downloads a compatible Python (3.10+) automatically if you don't have one.
+- [**Node.js**](https://nodejs.org/) **22.12+** (with npm) — runs the frontend.
+
+### 1. Clone
 
 ```bash
 git clone https://github.com/SergiVillagrasa/SwissAI-Hacks26.git
 cd SwissAI-Hacks26
 ```
 
-**2. Configure environment variables**
-
-Copy each package's `.env.example` to its local environment file and fill in your own API keys (OpenAI, Mapbox, OJP, ...):
+### 2. Add your API keys
 
 ```bash
 cp swiss-grounding-mcp/server/.env.example swiss-grounding-mcp/server/.env
@@ -67,21 +70,37 @@ cp swiss-grounding-mcp/agent-backend/.env.example swiss-grounding-mcp/agent-back
 cp swiss-grounding-mcp/frontend/.env.example swiss-grounding-mcp/frontend/.env.local
 ```
 
-**3. Install dependencies and start the app**
+Then fill in these values:
+
+- `OPENAI_API_KEY` in `swiss-grounding-mcp/agent-backend/.env` — **Required** — chat agent and voice
+- `OJP_API_TOKEN` in `swiss-grounding-mcp/server/.env` — **Required** — live Swiss timetable data ([opentransportdata.swiss](https://opentransportdata.swiss/))
+- `VITE_MAPBOX_TOKEN` in `swiss-grounding-mcp/frontend/.env.local` — **Required** — interactive route map
+- `AERODATABOX_API_KEY` in `swiss-grounding-mcp/server/.env` — Optional — Zurich Airport flights
+- `SERPAPI_API_KEY` in `swiss-grounding-mcp/server/.env` — Optional — flight fares
+
+`swiss-grounding-mcp/server/.env` is also read by the backend, so the data-source keys only need to be set once.
+
+### 3. Install and run
 
 ```bash
-# Backend (FastAPI agent, http://127.0.0.1:3001)
-cd swiss-grounding-mcp/agent-backend
-uv sync
-uv run uvicorn agent_backend.main:app --reload --port 3001
-
-# Frontend (Vite, http://localhost:3000), in a separate terminal
-cd swiss-grounding-mcp/frontend
-npm install
-npm run dev -- --port 3000
+npm install --prefix swiss-grounding-mcp/frontend
 ```
 
-Equivalent one-liners (`npm run dev:api` / `npm run dev:web`) are defined in the root [`package.json`](package.json); a [`Makefile`](Makefile) with `make dev-api` / `make dev-web` targets is also available.
+Then start each part in its own terminal from the repo root. `uv` installs the Python dependencies when the backend first starts.
+
+Backend (`http://127.0.0.1:3001`):
+
+```bash
+npm run dev:api
+```
+
+Frontend (`http://localhost:3000`):
+
+```bash
+npm run dev:web
+```
+
+Open **http://localhost:3000** and ask for a journey, e.g. *"Zürich HB to Genève tomorrow at 9"*.
 
 ## Running the tests
 
