@@ -5,10 +5,10 @@ tool call (find_connections / get_station_board / find_disruptions /
 aviation tools) -> spoken-summary renderer -> ElevenLabs TTS -> speaker.
 
 Usage (from server/):
-    ./.venv/Scripts/python voice_assistant.py              # full voice loop
-    ./.venv/Scripts/python voice_assistant.py --text       # type instead of speak
-    ./.venv/Scripts/python voice_assistant.py --self-test  # mock end-to-end check
-    ./.venv/Scripts/python voice_assistant.py --list-devices
+    uv run python voice_assistant.py              # full voice loop
+    uv run python voice_assistant.py --text       # type instead of speak
+    uv run python voice_assistant.py --self-test  # mock end-to-end check
+    uv run python voice_assistant.py --list-devices
 
 Requires ELEVENLABS_API_KEY in .env or .env.local.
 """

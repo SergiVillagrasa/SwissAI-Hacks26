@@ -53,7 +53,7 @@ See [`swiss-grounding-mcp/README.md`](swiss-grounding-mcp/README.md) for the ful
 ### Prerequisites
 
 - [**uv**](https://docs.astral.sh/uv/getting-started/installation/) — manages the Python backend. It downloads a compatible Python (3.10+) automatically if you don't have one.
-- [**Node.js**](https://nodejs.org/) **20.19+ or 22.12+** (with npm) — runs the frontend.
+- [**Node.js**](https://nodejs.org/) **22.12+** (with npm) — runs the frontend.
 
 ### 1. Clone
 
@@ -72,13 +72,13 @@ cp swiss-grounding-mcp/frontend/.env.example swiss-grounding-mcp/frontend/.env.l
 
 Then fill in these values:
 
-- `OPENAI_API_KEY` in `agent-backend/.env` — **Required** — chat agent and voice
-- `OJP_API_TOKEN` in `server/.env` — **Required** — live Swiss timetable data ([opentransportdata.swiss](https://opentransportdata.swiss/))
-- `VITE_MAPBOX_TOKEN` in `frontend/.env.local` — **Required** — interactive route map
-- `AERODATABOX_API_KEY` in `server/.env` — Optional — Zurich Airport flights
-- `SERPAPI_API_KEY` in `server/.env` — Optional — flight fares
+- `OPENAI_API_KEY` in `swiss-grounding-mcp/agent-backend/.env` — **Required** — chat agent and voice
+- `OJP_API_TOKEN` in `swiss-grounding-mcp/server/.env` — **Required** — live Swiss timetable data ([opentransportdata.swiss](https://opentransportdata.swiss/))
+- `VITE_MAPBOX_TOKEN` in `swiss-grounding-mcp/frontend/.env.local` — **Required** — interactive route map
+- `AERODATABOX_API_KEY` in `swiss-grounding-mcp/server/.env` — Optional — Zurich Airport flights
+- `SERPAPI_API_KEY` in `swiss-grounding-mcp/server/.env` — Optional — flight fares
 
-`server/.env` is also read by the backend, so the data-source keys only need to be set once.
+`swiss-grounding-mcp/server/.env` is also read by the backend, so the data-source keys only need to be set once.
 
 ### 3. Install and run
 
@@ -86,11 +86,18 @@ Then fill in these values:
 npm install --prefix swiss-grounding-mcp/frontend
 ```
 
-Then start each part in its own terminal from the repo root:
+Then start each part in its own terminal from the repo root. `uv` installs the Python dependencies when the backend first starts.
+
+Backend (`http://127.0.0.1:3001`):
 
 ```bash
-npm run dev:api   # backend  → http://127.0.0.1:3001  (uv installs Python deps on first run)
-npm run dev:web   # frontend → http://localhost:3000
+npm run dev:api
+```
+
+Frontend (`http://localhost:3000`):
+
+```bash
+npm run dev:web
 ```
 
 Open **http://localhost:3000** and ask for a journey, e.g. *"Zürich HB to Genève tomorrow at 9"*.
